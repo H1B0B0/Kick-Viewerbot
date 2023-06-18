@@ -210,7 +210,7 @@ class ViewerBotGUI(customtkinter.CTk):
             self.channel_name = self.channel_name_entry.get()
             self.bot = ViewerBot(nb_of_threads, self.channel_name, self.proxylist, self.segemented_button_var, self.proxy_imported, self.slider.get())
             self.thread = Thread(target=self.bot.main)
-            app.after(500, app.configure_label)
+            app.after(50, app.configure_label)
             self.thread.daemon = True
             self.thread.start()
             # Change status and disable/enable buttons
@@ -238,7 +238,8 @@ class ViewerBotGUI(customtkinter.CTk):
 
     def configure_label(self):
         self.nb_requests_label.configure(text=f"Number of requests: {self.bot.nb_requests}")
-        app.after(500, app.configure_label)
+        self.update_idletasks()
+        app.after(50, app.configure_label)
 
     def show_dialog(self):
         self.proxylist = []
