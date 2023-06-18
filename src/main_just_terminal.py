@@ -27,7 +27,7 @@ session.set_option("http-headers", {
 
 class ViewerBot:
     def __init__(self, nb_of_threads, channel_name):
-        self.channel_url = "https://kick.com/" + channel_name
+        self.channel_url = "https://www.kick.com/" + channel_name
         self.nb_of_threads = nb_of_threads
         self.request_count = 0  # initialize the counter variable
         self.all_proxies = []

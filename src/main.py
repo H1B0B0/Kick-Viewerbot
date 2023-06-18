@@ -25,7 +25,7 @@ class ViewerBot:
         self.type_of_proxy = type_of_proxy.get()
         self.proxy_imported = proxy_imported
         self.timeout = timeout
-        self.channel_url = "https://kick.com/" + channel_name
+        self.channel_url = "https://www.kick.com/" + channel_name
         self.proxyreturned1time = False 
 
     def create_session(self):
@@ -117,24 +117,25 @@ class ViewerBot:
         proxies = self.get_proxies()
         start = datetime.datetime.now()
         self.create_session()
-        with concurrent.futures.ThreadPoolExecutor(max_workers=int(self.nb_of_threads)) as executor:
-            while not self.stop_event:
-                elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
+        while not self.stop_event:
+            elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
 
-                for p in proxies:
-                    # Add each proxy to the all_proxies list
-                    self.all_proxies.append({'proxy': p, 'time': time.time(), 'url': ""})
+            for p in proxies:
+                # Add each proxy to the all_proxies list
+                self.all_proxies.append({'proxy': p, 'time': time.time(), 'url': ""})
 
-                for _ in range(int(self.nb_of_threads)):
-                    # Open the URL using a random proxy from the all_proxies list
-                    executor.submit(self.open_url, self.all_proxies[random.randrange(len(self.all_proxies))])
+            for i in range(0, int(self.nb_of_threads)):
+                # Open the URL using a random proxy from the all_proxies list
+                self.threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
+                self.threaded.daemon = True  # This thread dies when the main thread (only non-daemon thread) exits.
+                self.threaded.start()
 
-                if elapsed_seconds >= 300 and not self.proxy_imported:
-                    # Refresh the proxies after 300 seconds (5 minutes)
-                    start = datetime.datetime.now()
-                    proxies = self.get_proxies()
-                    elapsed_seconds = 0  # Reset elapsed time
-                    self.proxyrefreshed = False
+            if elapsed_seconds >= 300 and not self.proxy_imported:
+                # Refresh the proxies after 300 seconds (5 minutes)
+                start = datetime.datetime.now()
+                proxies = self.get_proxies()
+                elapsed_seconds = 0  # Reset elapsed time
+                self.proxyrefreshed = False
 
 class ViewerBotGUI(customtkinter.CTk):
     def __init__(self):
