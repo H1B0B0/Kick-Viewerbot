@@ -120,12 +120,16 @@ if __name__ == '__main__':
     plugin_file = os.path.join(plugins_dir, "kick.py")
 
     if not os.path.exists(plugin_file):
+        # Chemin du fichier du plugin source
         plugin_source = os.path.dirname(os.path.abspath(__file__)) + "/streamlinks_plugins/kick.py"
         
+        # Copier le fichier du plugin vers le dossier des plugins de Streamlink
         shutil.copy(plugin_source, plugins_dir)
-        print("Le plugin a été ajouté avec succès.")
+        print("the plugin Kick as been added successful")
     else:
-        pass
+        plugin_source = os.path.dirname(os.path.abspath(__file__)) + "/streamlinks_plugins/kick.py"
+        shutil.copy(plugin_source, plugins_dir)
+        print("the plugin Kick as been updated successful")
     parser = argparse.ArgumentParser()
     parser.add_argument('-threads', type=int, help='Number of threads')
     parser.add_argument('-kickname', type=str, help='Kick channel name')

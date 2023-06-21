@@ -1,9 +1,3 @@
-"""
-$description Kick, a gaming livestreaming platform
-$url kick.com
-$type live, vod
-"""
-
 import re
 import cloudscraper
 import logging
@@ -20,14 +14,12 @@ log = logging.getLogger(__name__)
 
 @pluginmatcher(
     re.compile(
-        # https://github.com/yt-dlp/yt-dlp/blob/9b7a48abd1b187eae1e3f6c9839c47d43ccec00b/yt_dlp/extractor/kick.py#LL33-L33C111
         r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)$",
     ),
     name="live",
 )
 @pluginmatcher(
     re.compile(
-        # https://github.com/yt-dlp/yt-dlp/blob/2d5cae9636714ff922d28c548c349d5f2b48f317/yt_dlp/extractor/kick.py#LL84C18-L84C104
         r"https?://(?:www\.)?kick\.com/video/(?P<video_id>[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12})",
     ),
     name="vod",
@@ -133,13 +125,14 @@ class KICK(Plugin):
         except (PluginError, TypeError) as err:
             log.debug(err)
             return
-        
+
         finally:
             scraper.close()
 
-
         if live or vod:
-            yield from HLSStream.parse_variant_playlist(self.session, url).items()
+            streams = HLSStream.parse_variant_playlist(self.session, url)
+            for stream in streams.values():
+                yield stream
         elif (
             clip and self.author.casefold() == self.match["channel"].casefold()
         ):  # Sanity check if the clip channel is the same as the one in the URL

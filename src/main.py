@@ -292,8 +292,10 @@ if __name__ == '__main__':
         
         # Copier le fichier du plugin vers le dossier des plugins de Streamlink
         shutil.copy(plugin_source, plugins_dir)
-        print("Le plugin a été ajouté avec succès.")
+        print("the plugin Kick as been added successful")
     else:
-        print("Le plugin est déjà présent dans le dossier des plugins.")
+        plugin_source = os.path.dirname(os.path.abspath(__file__)) + "/streamlinks_plugins/kick.py"
+        shutil.copy(plugin_source, plugins_dir)
+        print("the plugin Kick as been updated successful")
     app = ViewerBotGUI()
     app.mainloop()
