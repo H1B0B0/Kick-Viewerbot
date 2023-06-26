@@ -5,7 +5,6 @@ import logging
 from streamlink.plugin import Plugin, pluginmatcher
 from streamlink.plugin.api import validate
 from streamlink.stream import HLSStream, HTTPStream
-from streamlink.utils.parse import parse_json
 from streamlink.exceptions import PluginError
 
 
@@ -14,19 +13,19 @@ log = logging.getLogger(__name__)
 
 @pluginmatcher(
     re.compile(
-        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)$",
+        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)$"
     ),
     name="live",
 )
 @pluginmatcher(
     re.compile(
-        r"https?://(?:www\.)?kick\.com/video/(?P<video_id>[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12})",
+        r"https?://(?:www\.)?kick\.com/video/(?P<video_id>[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12})"
     ),
     name="vod",
 )
 @pluginmatcher(
     re.compile(
-        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)\?clip=(?P<clip_id>[\d_]+)$",
+        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)\?clip=(?P<clip_id>[\d_]+)$"
     ),
     name="clip",
 )
@@ -125,14 +124,12 @@ class KICK(Plugin):
         except (PluginError, TypeError) as err:
             log.debug(err)
             return
-
+        
         finally:
             scraper.close()
 
         if live or vod:
-            streams = HLSStream.parse_variant_playlist(self.session, url)
-            for stream in streams.values():
-                yield stream
+            yield from HLSStream.parse_variant_playlist(self.session, url).items()
         elif (
             clip and self.author.casefold() == self.match["channel"].casefold()
         ):  # Sanity check if the clip channel is the same as the one in the URL

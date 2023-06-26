@@ -6,8 +6,8 @@ import streamlink
 import customtkinter
 import datetime
 import requests
-import concurrent.futures
 from sys import exit
+from streamlink.session import NoPluginError
 from random import shuffle
 from threading import Thread
 from tkinter import filedialog
@@ -67,8 +67,9 @@ class ViewerBot:
         # Retrieve the URL for the channel's stream
         try:
             streams = self.session.streams(self.channel_url)
-            try:
+            try: 
                 url = streams['audio_only'].url
+                print(self.session.get_option())
             except:
                 url = streams['worst'].url
         except:
