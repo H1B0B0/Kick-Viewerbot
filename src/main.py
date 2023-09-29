@@ -145,7 +145,10 @@ class ViewerBotGUI(customtkinter.CTk):
         customtkinter.set_default_color_theme("green")
         self.title("Viewerbot")
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.wm_iconbitmap(f"{self.current_dir}/R.ico")
+        try:
+            self.wm_iconbitmap(f"{self.current_dir}/R.ico")
+        except:
+            pass
         self.nb_requests = 0
         self.slider = 0
         
