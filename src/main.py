@@ -250,7 +250,10 @@ class ViewerBotGUI(customtkinter.CTk):
         # create new window for the parameters
         self.dialog = customtkinter.CTkToplevel(self)
         self.dialog.title("Parameters")
-        self.dialog.iconbitmap(f"{self.current_dir}/R.ico")
+        try:
+            self.dialog.iconbitmap(f"{self.current_dir}/R.ico")
+        except:
+            pass
 
         # Button for import proxy list
         open_file_button = customtkinter.CTkButton(self.dialog, text="import your proxy list")
