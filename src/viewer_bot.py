@@ -106,8 +106,8 @@ class ViewerBot:
     def get_url(self):
         # Retrieve the URL for the channel's stream
         try:
-            proxy = self.all_proxies[random.randrange(len(self.all_proxies))]['proxy']
-            self.session.set_option("http-proxy", proxy)
+            # proxy = self.all_proxies[random.randrange(len(self.all_proxies))]['proxy']
+            # self.session.set_option("http-proxy", proxy)
             streams = self.session.streams(self.channel_url)
             try:
                 url = streams['audio_only'].url

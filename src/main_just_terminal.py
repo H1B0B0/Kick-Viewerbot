@@ -70,7 +70,7 @@ class ViewerBot:
                         return lines
                 except FileNotFoundError:
                     print(f"Proxy file {self.proxy_file} not found.")
-                    sys.exit(1)
+                    sys.exit()
             else:
                 try:
                     response = requests.get(f"https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all")
@@ -89,8 +89,8 @@ class ViewerBot:
     def get_url(self):
         url = ""
         try:
-            proxy = self.all_proxies[random.randrange(len(self.all_proxies))]['proxy']
-            session.set_option("http-proxy", proxy)
+            # proxy = self.all_proxies[random.randrange(len(self.all_proxies))]['proxy']
+            # session.set_option("http-proxy", proxy)
             try:
                 streams = session.streams(self.channel_url)
                 if 'audio_only' in streams:
@@ -133,7 +133,7 @@ class ViewerBot:
                 
                 live.update(table)
                 if self.should_stop:
-                        sys.exit()
+                    sys.exit()
 
     def open_url(self, proxy_data):
         self.active_threads += 1
@@ -158,7 +158,7 @@ class ViewerBot:
                     self.all_proxies[current_index] = proxy_data
             except requests.exceptions.RequestException as e:
                 if self.debug_mode:
-                    console.print(f"Error opening URL: {e}", style="bold red")
+                    console.print(f"Error opening URL: {e}, proxy used for that{proxy_data['proxy']}", style="bold red")
                 else:
                     pass
             finally:
@@ -242,4 +242,4 @@ if __name__ == '__main__':
         bot.main()
     except KeyboardInterrupt:
         bot.stop()
-        sys.exit()
+        sys.exit(1)
