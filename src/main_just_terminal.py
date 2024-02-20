@@ -93,7 +93,6 @@ class ViewerBot:
             session.set_option("http-proxy", proxy)
             try:
                 streams = session.streams(self.channel_url)
-                print(streams)
                 if 'audio_only' in streams:
                     url = streams['audio_only'].url
                 elif 'worst' in streams:
