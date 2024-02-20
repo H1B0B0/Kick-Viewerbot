@@ -1,10 +1,17 @@
+"""
+$description Kick, a gaming livestreaming platform
+$url kick.com
+$type live, vod
+"""
+
 import re
 import cloudscraper
 import logging
 
 from streamlink.plugin import Plugin, pluginmatcher
 from streamlink.plugin.api import validate
-from streamlink.stream import HLSStream, HTTPStream
+from streamlink.stream import HLSStream
+from streamlink.utils.parse import parse_json
 from streamlink.exceptions import PluginError
 
 
@@ -13,19 +20,21 @@ log = logging.getLogger(__name__)
 
 @pluginmatcher(
     re.compile(
-        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)$"
+        # https://github.com/yt-dlp/yt-dlp/blob/9b7a48abd1b187eae1e3f6c9839c47d43ccec00b/yt_dlp/extractor/kick.py#LL33-L33C111
+        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)$",
     ),
     name="live",
 )
 @pluginmatcher(
     re.compile(
-        r"https?://(?:www\.)?kick\.com/video/(?P<video_id>[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12})"
+        # https://github.com/yt-dlp/yt-dlp/blob/2d5cae9636714ff922d28c548c349d5f2b48f317/yt_dlp/extractor/kick.py#LL84C18-L84C104
+        r"https?://(?:www\.)?kick\.com/video/(?P<video_id>[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12})",
     ),
     name="vod",
 )
 @pluginmatcher(
     re.compile(
-        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)\?clip=(?P<clip_id>[\d_]+)$"
+        r"https?://(?:www\.)?kick\.com/(?!(?:video|categories|search|auth)(?:[/?#]|$))(?P<channel>[\w_-]+)\?clip=(?P<clip_id>[\w_]+)$",
     ),
     name="clip",
 )
@@ -78,8 +87,8 @@ class KICK(Plugin):
             validate.parse_json(),
             {
                 "clip": {
-                    "video_url": validate.url(path=validate.endswith(".mp4")),
-                    "id": int,
+                    "video_url": validate.url(path=validate.endswith(".m3u8")),
+                    "id": str,
                     "channel": {"username": str},
                     "title": str,
                     "category": {"name": str},
@@ -133,7 +142,7 @@ class KICK(Plugin):
         elif (
             clip and self.author.casefold() == self.match["channel"].casefold()
         ):  # Sanity check if the clip channel is the same as the one in the URL
-            yield "source", HTTPStream(self.session, url)
+            yield "source", HLSStream(self.session, url)
 
 
 __plugin__ = KICK
