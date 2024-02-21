@@ -20,6 +20,7 @@ class ViewerBot:
         self.all_proxies = []
         self.proxyrefreshed = True
         self.stream_info = None
+        self.debug_mode = False
         try:
             self.type_of_proxy = type_of_proxy.get()
         except:
