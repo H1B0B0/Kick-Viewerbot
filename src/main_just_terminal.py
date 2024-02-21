@@ -46,6 +46,7 @@ session.set_option("http-headers", {
 class ViewerBot:
     def __init__(self, nb_of_threads, channel_name, proxy_file=None, proxy_imported=False, debug_mode=False):
         self.debug_mode = debug_mode
+        self.stream_info = None
         self.proxy_imported = proxy_imported
         self.proxy_file = proxy_file
         self.nb_of_threads = int(nb_of_threads)
@@ -87,16 +88,13 @@ class ViewerBot:
                     pass
 
     def get_url(self):
-        url = ""
-        try:
-            # proxy = self.all_proxies[random.randrange(len(self.all_proxies))]['proxy']
-            # session.set_option("http-proxy", proxy)
+        if self.stream_info is None:
             try:
                 streams = session.streams(self.channel_url)
                 if 'audio_only' in streams:
-                    url = streams['audio_only'].url
+                    self.stream_info = streams['audio_only'].url
                 elif 'worst' in streams:
-                    url = streams['worst'].url
+                    self.stream_info = streams['worst'].url
                 else:
                     if self.debug_mode:
                         console.print(f"No suitable stream found for URL: {self.channel_url}", style="bold red")
@@ -106,11 +104,10 @@ class ViewerBot:
             except streamlink.exceptions.PluginError as e:
                 if self.debug_mode:
                     console.print(f"Plugin error: {str(e)}", style="bold red")
-        except Exception as e:
-            if self.debug_mode:
-                console.print(f"Error getting URL: {e}", style="bold red")
-            pass
-        return url
+            except Exception as e:
+                if self.debug_mode:
+                    console.print(f"Error getting URL: {e}", style="bold red")
+        return self.stream_info
     
     def stop(self):
         console.print("[bold red]Bot has been stopped[/bold red]")        
@@ -191,7 +188,7 @@ class ViewerBot:
                     threaded.daemon = True  # This thread dies when main thread (only non-daemon thread) exits.
                     threaded.start()
 
-            if elapsed_seconds >= 300 and self.proxy_imported == False:
+            if elapsed_seconds >= 300 and self.proxy_imported == False or len(self.all_proxies) < 10:
                 # Refresh the proxies after 300 seconds (5 minutes)
                 start = datetime.datetime.now()
                 self.proxyrefreshed = False

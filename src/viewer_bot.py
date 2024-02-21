@@ -19,6 +19,7 @@ class ViewerBot:
         self.proxylist = proxylist
         self.all_proxies = []
         self.proxyrefreshed = True
+        self.stream_info = None
         try:
             self.type_of_proxy = type_of_proxy.get()
         except:
@@ -104,21 +105,26 @@ class ViewerBot:
         
 
     def get_url(self):
-        # Retrieve the URL for the channel's stream
-        try:
-            # proxy = self.all_proxies[random.randrange(len(self.all_proxies))]['proxy']
-            # self.session.set_option("http-proxy", proxy)
-            streams = self.session.streams(self.channel_url)
+        if self.stream_info is None:
             try:
-                url = streams['audio_only'].url
-            except:
-                url = streams['worst'].url
-        except:
-            pass
-        try: 
-            return url
-        except:
-            exit()
+                streams = self.session.streams(self.channel_url)
+                if 'audio_only' in streams:
+                    self.stream_info = streams['audio_only'].url
+                elif 'worst' in streams:
+                    self.stream_info = streams['worst'].url
+                else:
+                    if self.debug_mode:
+                        print(f"No suitable stream found for URL: {self.channel_url}")
+            except streamlink.exceptions.NoPluginError:
+                if self.debug_mode:
+                    print(f"No plugin to handle URL: {self.channel_url}")
+            except streamlink.exceptions.PluginError as e:
+                if self.debug_mode:
+                    print(f"Plugin error: {str(e)}")
+            except Exception as e:
+                if self.debug_mode:
+                    print(f"Error getting URL: {e}")
+        return self.stream_info
 
     def open_url(self, proxy_data):
         # Open the stream URL using the given proxy
