@@ -1,0 +1,116 @@
+name: Python package
+
+on:
+  push:
+    tags:
+      - "*"
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11"]
+
+    steps:
+      - name: code download
+        uses: actions/checkout@v2
+
+      - name: python configuration ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Installation of dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build pytest
+          pip install .[dev]
+
+      - name: pytest
+        run: |
+          pytest
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/checkout@v1
+      - name: Install Python
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/setup-python@v1
+        with:
+          python-version: "3.11"
+          architecture: "x64"
+      - name: Install requirements
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+          python -m pip install crypto
+          pip install .[dev]
+
+      - name: Get Python site packages path
+        if: startsWith(github.ref, 'refs/tags/')
+        id: get-site-packages-path
+        run: |
+          echo "::set-output name=site-packages-path::$(python -c "import site; print(site.getsitepackages()[0].replace('\\\\', '\\\\\\\\'))")"
+
+      - name: Run PyInstaller for the first program
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          pyinstaller --noconfirm --onefile --windowed --icon "D:\\a\\Kick-Viewerbot\\src\\R.ico" --name "Kick ViewerBOT" --clean `
+          --add-data "D:\\a\\Kick-Viewerbot\\Ksrc\\interface_assets;interface_assets/" `
+          --add-data "D:\\a\\Kick-Viewerbot\\src;src/" `
+          --add-data "${env:pythonLocation}\\Lib\\site-packages\\customtkinter;customtkinter/" `
+          --add-data "${env:pythonLocation}\\Lib\\site-packages\\streamlink;streamlink/" `
+          --add-data "${env:pythonLocation}\\Lib\\site-packages\\fake_useragent;fake_useragent/" `
+          --add-data "${env:pythonLocation}\\Lib\\site-packages\\Crypto;Crypto/" `
+          --add-data "${env:pythonLocation}\\Lib\\site-packages\\cffi;cffi/" `
+          "D:\\a\\Kick-Viewerbot\\src\\main.py"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Windows_qwiklabs
+          path: dist/qwiklab_badge_checker.exe
+
+      - name: Create release
+        if: startsWith(github.ref, 'refs/tags/')
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.RELEASE_TOKEN}}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            # Fix
+            - Viewer.bot.performance Software  removed because he can't be compiled for this time
+          draft: false
+          prerelease: false
+
+      - name: Set Release Asset Data
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_ENV
+          echo "asset_path=dist/Kick ViewerBOT.exe" >> $GITHUB_ENV
+          echo "asset_name=Kick ViewerBOT.exe" >> $GITHUB_ENV
+          echo "asset_content_type=application/exe" >> $GITHUB_ENV
+
+      - name: Upload Release Asset 1
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.RELEASE_TOKEN}}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/Kick ViewerBOT.exe
+          asset_name: Kick ViewerBOT.exe
+          asset_content_type: application/exe
