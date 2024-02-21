@@ -4,7 +4,7 @@ from viewer_bot import ViewerBot
 def test_valid_parameters():
     bot = ViewerBot(nb_of_threads=5, channel_name='test_channel', proxylist=None, type_of_proxy='http', proxy_imported=False, timeout=1000)
     assert bot.nb_of_threads == 5
-    assert bot.channel_url == 'https://www.twitch.tv/test_channel'
+    assert bot.channel_url == 'https://www.kick.com/test_channel'
     assert bot.proxylist == None
     assert bot.type_of_proxy == 'http'
     assert bot.proxy_imported == False
