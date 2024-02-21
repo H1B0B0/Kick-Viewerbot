@@ -4,7 +4,6 @@ import time
 import random
 import datetime
 import requests
-from sys import exit
 from threading import Thread, Semaphore
 from streamlink import Streamlink
 from fake_useragent import UserAgent
