@@ -1,5 +1,5 @@
 import requests
-from twitchbot.viewer_bot import ViewerBot
+from viewer_bot import ViewerBot
 
 def test_valid_parameters():
     bot = ViewerBot(nb_of_threads=5, channel_name='test_channel', proxylist=None, type_of_proxy='http', proxy_imported=False, timeout=1000)
