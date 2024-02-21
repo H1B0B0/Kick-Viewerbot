@@ -32,10 +32,7 @@ if 'kick' not in session.get_plugins():
     sys.exit(1)
 session.set_option("http-headers", {
     "Accept-Language": "en-US,en;q=0.5",
-    'Accept': 'application/json',
-    'Connection': 'keep-alive',
-    'Cache-Control': 'no-cache',
-    'Pragma': 'no-cache',
+    "Connection": "keep-alive",
     "DNT": "1",
     "Upgrade-Insecure-Requests": "1",
     "User-Agent": ua.random,
