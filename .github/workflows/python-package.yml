@@ -67,7 +67,6 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src\\R.ico" --name "Kick ViewerBOT" --clean `
-          --add-data "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src\\interface_assets;interface_assets/" `
           --add-data "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src;src/" `
           --add-data "${env:pythonLocation}\\Lib\\site-packages\\customtkinter;customtkinter/" `
           --add-data "${env:pythonLocation}\\Lib\\site-packages\\streamlink;streamlink/" `
