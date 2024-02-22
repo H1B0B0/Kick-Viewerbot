@@ -90,8 +90,8 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            # Fix
-            - Viewer.bot.performance Software  removed because he can't be compiled for this time
+            # First Version
+            - Enjoy the first version of the program in version compiled
           draft: false
           prerelease: false
 
