@@ -2,7 +2,9 @@
 
 This is a Python script for generating Kick views using proxies. It is implemented as a GUI application with the help of the tkinter module.
 
-## My patreon to support me
+## My patreon to support me or buy me a coffee
+
+> :warning: Buy me a [coffee](https://www.buymeacoffee.com/hibobo)✓.
 
 [My Patreon](https://www.patreon.com/HIBO)
 
