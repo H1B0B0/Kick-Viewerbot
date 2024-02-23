@@ -90,8 +90,8 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            # First Version
-            - Enjoy the first version of the program in version compiled
+            # Fix
+            - Icon path
           draft: false
           prerelease: false
 
