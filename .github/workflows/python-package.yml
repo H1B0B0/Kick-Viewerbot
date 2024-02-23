@@ -68,7 +68,7 @@ jobs:
         run: |
           pyinstaller --noconfirm --onefile --windowed --icon "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src\\R.ico" --name "Kick ViewerBOT" --clean `
           --add-data "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src;src/" `
-          --add-data "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src\\R.ico" `
+          --add-data "D:\\a\\Kick-Viewerbot\\Kick-Viewerbot\\src\\R.ico:R.ico" `
           --add-data "${env:pythonLocation}\\Lib\\site-packages\\customtkinter;customtkinter/" `
           --add-data "${env:pythonLocation}\\Lib\\site-packages\\streamlink;streamlink/" `
           --add-data "${env:pythonLocation}\\Lib\\site-packages\\fake_useragent;fake_useragent/" `
