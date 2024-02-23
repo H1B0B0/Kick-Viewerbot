@@ -7,7 +7,7 @@ from tkinter import filedialog
 from viewer_bot import ViewerBot
 
 current_path = Path(__file__).resolve().parent
-ICON = current_path/"interface_assets"/"R.ico"
+ICON = current_path/"R.ico"
 
 SLIDER_MIN = 1000
 SLIDER_MAX = 20000
