@@ -18,7 +18,6 @@ class ViewerBot:
         self.proxylist = proxylist
         self.all_proxies = []
         self.proxyrefreshed = True
-        self.stream_info = None
         self.debug_mode = False
         try:
             self.type_of_proxy = type_of_proxy.get()
@@ -46,23 +45,24 @@ class ViewerBot:
             print("the plugin Kick as been updated successful")
         
 
-    def create_session(self):
+    def create_session(self, proxy):
         # Create a session for making requests
         self.ua = UserAgent()
-        self.session = Streamlink()
-        if 'kick' not in self.session.get_plugins():
+        session = Streamlink()
+        if 'kick' not in session.get_plugins():
             print("The Kick plugin is not installed, please install it and try again.")
             return
-        self.session.set_option("http-headers", {
+        session.set_option("http-headers", {
             "Accept-Language": "en-US,en;q=0.5",
             "Connection": "keep-alive",
             "DNT": "1",
             "Upgrade-Insecure-Requests": "1",
             "User-Agent": self.ua.random,
             "Client-ID": "ewvlchtxgqq88ru9gmfp1gmyt6h2b93",
-            "Referer": "https://www.google.com/"
+            "Referer": "https://www.google.com/",
+            "http-proxy": proxy,
         })
-        return self.session
+        return session
     
     def make_request_with_retry(self, session, url, proxy, headers, proxy_used, max_retries=3):
         for _ in range(max_retries):
@@ -104,36 +104,41 @@ class ViewerBot:
             return self.proxylist
         
 
-    def get_url(self):
-        if self.stream_info is None:
-            try:
-                streams = self.session.streams(self.channel_url)
-                if 'audio_only' in streams:
-                    self.stream_info = streams['audio_only'].url
-                elif 'worst' in streams:
-                    self.stream_info = streams['worst'].url
-                else:
-                    if self.debug_mode:
-                        print(f"No suitable stream found for URL: {self.channel_url}")
-            except streamlink.exceptions.NoPluginError:
+    def get_url(self, session):
+        stream_info = None
+        try:
+            streams = session.streams(self.channel_url)
+            print(streams)
+            if 'audio_only' in streams:
+                stream_info = streams['audio_only'].url
+            elif '160p' in streams:
+                stream_info = streams['160p'].url
+            elif 'worst' in streams:
+                stream_info = streams['worst'].url
+            elif 'best' in streams:
+                stream_info = streams['best'].url
+            else:
                 if self.debug_mode:
-                    print(f"No plugin to handle URL: {self.channel_url}")
-            except streamlink.exceptions.PluginError as e:
-                if self.debug_mode:
-                    print(f"Plugin error: {str(e)}")
-            except Exception as e:
-                if self.debug_mode:
-                    print(f"Error getting URL: {e}")
-        return self.stream_info
+                    print(f"No suitable stream found for URL: {self.channel_url}")
+        except streamlink.exceptions.NoPluginError:
+            if self.debug_mode:
+                print(f"No plugin to handle URL: {self.channel_url}")
+        except streamlink.exceptions.PluginError as e:
+            if self.debug_mode:
+                print(f"Plugin error: {str(e)}")
+        except Exception as e:
+            if self.debug_mode:
+                print(f"Error getting URL: {e}")
+        return stream_info
 
-    def open_url(self, proxy_data):
+    def open_url(self, proxy_data, session):
         # Open the stream URL using the given proxy
         headers = {'User-Agent': self.ua.random}
         current_index = self.all_proxies.index(proxy_data)
 
         if proxy_data['url'] == "":
             # If the URL is not fetched for the current proxy, fetch it
-            proxy_data['url'] = self.get_url()
+            proxy_data['url'] = self.get_url(session)
         current_url = proxy_data['url']
         username = proxy_data.get('username')
         password = proxy_data.get('password')
@@ -167,7 +172,6 @@ class ViewerBot:
 
         self.proxies = self.get_proxies()
         start = datetime.datetime.now()
-        self.create_session()
         while not self.stop_event:
             elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
 
@@ -178,7 +182,8 @@ class ViewerBot:
             for proxy_data in self.all_proxies:
                 # Open the URL using a proxy from the all_proxies list
                 self.thread_semaphore.acquire()  # Acquire the semaphore
-                self.threaded = Thread(target=self.open_url, args=(proxy_data,))
+                session = self.create_session(proxy_data['proxy'])
+                self.threaded = Thread(target=self.open_url, args=(proxy_data, session))
                 self.threaded.daemon = True  # This thread dies when the main thread (only non-daemon thread) exits.
                 self.threaded.start()
 
