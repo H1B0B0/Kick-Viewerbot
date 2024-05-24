@@ -19,6 +19,11 @@ class ViewerBot:
         self.all_proxies = []
         self.proxyrefreshed = True
         self.debug_mode = False
+        # Add a new attribute for the URL
+        self.current_url = None
+        # Start a new thread that refreshes the URL every second
+        self.url_refresh_thread = Thread(target=self.refresh_url)
+        self.url_refresh_thread.start()
         try:
             self.type_of_proxy = type_of_proxy.get()
         except:
@@ -28,6 +33,7 @@ class ViewerBot:
         self.channel_url = "https://www.kick.com/" + channel_name.lower()
         self.proxyreturned1time = False
         self.thread_semaphore = Semaphore(int(nb_of_threads))  # Semaphore to control thread count
+        self.session = self.create_session()
         plugins_dir = streamlink.plugins.__path__[0]
 
         plugin_file = os.path.join(plugins_dir, "kick.py")
@@ -44,8 +50,7 @@ class ViewerBot:
             shutil.copy(plugin_source, plugins_dir)
             print("the plugin Kick as been updated successful")
         
-
-    def create_session(self, proxy):
+    def create_session(self):
         # Create a session for making requests
         self.ua = UserAgent()
         session = Streamlink()
@@ -60,17 +65,22 @@ class ViewerBot:
             "User-Agent": self.ua.random,
             "Client-ID": "ewvlchtxgqq88ru9gmfp1gmyt6h2b93",
             "Referer": "https://www.google.com/",
-            "http-proxy": proxy,
         })
         return session
     
     def make_request_with_retry(self, session, url, proxy, headers, proxy_used, max_retries=3):
+        backoff_time = 1  # Initial backoff time in seconds
         for _ in range(max_retries):
             try:
                 # send requests to the kick service
-                response = session.head(url, proxies=proxy, headers=headers, timeout=((self.timeout/1000)+1))
+                response = session.get(url, proxies=proxy, headers=headers, timeout=((self.timeout/1000)+1))
                 if response.status_code == 200:
                     return response
+                elif response.status_code == 429:  # HTTP status code for "Too Many Requests"
+                    # If rate limit is reached, wait for some time and retry
+                    print(f"Rate limit reached. Waiting for {backoff_time} seconds.")
+                    time.sleep(backoff_time)
+                    backoff_time *= 2  # Double the backoff time
                 else:
                     # Remove bad proxy from the list
                     if proxy_used in self.proxies:
@@ -104,42 +114,43 @@ class ViewerBot:
             return self.proxylist
         
 
-    def get_url(self, session):
-        stream_info = None
-        try:
-            streams = session.streams(self.channel_url)
-            print(streams)
-            if 'audio_only' in streams:
-                stream_info = streams['audio_only'].url
-            elif '160p' in streams:
-                stream_info = streams['160p'].url
-            elif 'worst' in streams:
-                stream_info = streams['worst'].url
-            elif 'best' in streams:
-                stream_info = streams['best'].url
-            else:
+    def get_url(self, session, max_retries=10):
+        backoff_time = 0.1  # Initial backoff time in seconds
+        for _ in range(max_retries):
+            try:
+                streams = session.streams(self.channel_url)
+                if streams != {}: 
+                    if 'worst' in streams:
+                        return streams['worst'].url
+                    elif 'best' in streams:
+                        return streams['best'].url
+                    else:
+                        if self.debug_mode:
+                            print(f"No suitable stream found for URL: {self.channel_url}")
+                else:
+                    # If streams is empty, wait for some time and retry
+                    print(f"No streams found. Waiting for {backoff_time} seconds.")
+                    time.sleep(backoff_time)
+                    backoff_time *= 2  # Double the backoff time
+            except streamlink.exceptions.NoPluginError:
                 if self.debug_mode:
-                    print(f"No suitable stream found for URL: {self.channel_url}")
-        except streamlink.exceptions.NoPluginError:
-            if self.debug_mode:
-                print(f"No plugin to handle URL: {self.channel_url}")
-        except streamlink.exceptions.PluginError as e:
-            if self.debug_mode:
-                print(f"Plugin error: {str(e)}")
-        except Exception as e:
-            if self.debug_mode:
-                print(f"Error getting URL: {e}")
-        return stream_info
+                    print(f"No plugin to handle URL: {self.channel_url}")
+            except streamlink.exceptions.PluginError as e:
+                if self.debug_mode:
+                    print(f"Plugin error: {str(e)}")
+            except Exception as e:
+                if self.debug_mode:
+                    print(f"Error getting URL: {e}")
+        return None
 
-    def open_url(self, proxy_data, session):
+    def open_url(self, proxy_data):
         # Open the stream URL using the given proxy
         headers = {'User-Agent': self.ua.random}
         current_index = self.all_proxies.index(proxy_data)
 
-        if proxy_data['url'] == "":
-            # If the URL is not fetched for the current proxy, fetch it
-            proxy_data['url'] = self.get_url(session)
-        current_url = proxy_data['url']
+        # Use the current URL instead of fetching a new one
+        current_url = self.current_url
+
         username = proxy_data.get('username')
         password = proxy_data.get('password')
         if username and password:
@@ -168,6 +179,15 @@ class ViewerBot:
         # Stop the ViewerBot by setting the stop event
         self.stop_event = True
 
+    def refresh_url(self):
+        while not self.stop_event:
+            # Create a new session without a proxy
+            session = self.create_session()
+            # Update the current URL
+            self.current_url = self.get_url(session)
+            # Wait for 1 second
+            time.sleep(0.1)
+
     def main(self):
 
         self.proxies = self.get_proxies()
@@ -182,8 +202,7 @@ class ViewerBot:
             for proxy_data in self.all_proxies:
                 # Open the URL using a proxy from the all_proxies list
                 self.thread_semaphore.acquire()  # Acquire the semaphore
-                session = self.create_session(proxy_data['proxy'])
-                self.threaded = Thread(target=self.open_url, args=(proxy_data, session))
+                self.threaded = Thread(target=self.open_url, args=(proxy_data,))
                 self.threaded.daemon = True  # This thread dies when the main thread (only non-daemon thread) exits.
                 self.threaded.start()
 

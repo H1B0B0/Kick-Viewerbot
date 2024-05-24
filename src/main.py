@@ -48,7 +48,7 @@ class ViewerBotGUI(customtkinter.CTk):
 
         # select proxy type
         self.segemented_button_var = customtkinter.StringVar(value="http")
-        self.segemented_button = customtkinter.CTkSegmentedButton(self, values=["http"], variable=self.segemented_button_var)
+        self.segemented_button = customtkinter.CTkSegmentedButton(self, values=["http", "socks4", "socks5", "all"], variable=self.segemented_button_var)
         self.segemented_button.grid(column=0, row=3, columnspan=2, padx=10, pady=5)
 
         self.slider = customtkinter.CTkSlider(self, from_=SLIDER_MIN, to=SLIDER_MAX, command=self.slider_event)
