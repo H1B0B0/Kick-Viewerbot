@@ -1,4 +1,5 @@
 import os
+import uuid
 import shutil
 import time
 import random
@@ -145,7 +146,15 @@ class ViewerBot:
 
     def open_url(self, proxy_data):
         # Open the stream URL using the given proxy
-        headers = {'User-Agent': self.ua.random}
+        headers = {
+            'User-Agent': self.ua.random, 
+            'Client-ID': 'ewvlchtxgqq88ru9gmfp1gmyt6h2b93',
+            'Referer': 'https://www.google.com/',
+            'Connection': 'keep-alive',
+            'DNT': '1',
+            'Upgrade-Insecure-Requests': '1',
+            'Accept-Language': 'en-US,en;q=0.5'
+        }
         current_index = self.all_proxies.index(proxy_data)
 
         # Use the current URL instead of fetching a new one
@@ -178,6 +187,7 @@ class ViewerBot:
     def stop(self):
         # Stop the ViewerBot by setting the stop event
         self.stop_event = True
+        print("Stopping the ViewerBot.")
 
     def refresh_url(self):
         while not self.stop_event:
@@ -212,3 +222,5 @@ class ViewerBot:
                 self.proxies = self.get_proxies()
                 elapsed_seconds = 0  # Reset elapsed time
                 self.proxyrefreshed = False
+            if self.stop_event:
+                break

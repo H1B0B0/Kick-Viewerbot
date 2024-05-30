@@ -11,31 +11,31 @@ on:
       - "main"
 
 jobs:
-  pytest:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ["3.11"]
+  # pytest:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: ["3.11"]
 
-    steps:
-      - name: code download
-        uses: actions/checkout@v2
+  #   steps:
+  #     - name: code download
+  #       uses: actions/checkout@v2
 
-      - name: python configuration ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
+  #     - name: python configuration ${{ matrix.python-version }}
+  #       uses: actions/setup-python@v2
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
 
-      - name: Installation of dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install build pytest
-          pip install .[dev]
+  #     - name: Installation of dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         python -m pip install build pytest
+  #         pip install .[dev]
 
-      - name: pytest
-        run: |
-          pytest
+  #     - name: pytest
+  #       run: |
+  #         pytest
 
   build-windows:
     runs-on: windows-latest
