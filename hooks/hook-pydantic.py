@@ -1,0 +1,2 @@
+from PyInstaller.utils.hooks import get_module_attribute, collect_submodules
+from PyInstaller.utils.hooks import is_module_satisfies

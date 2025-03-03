@@ -1,0 +1,56 @@
+
+/* Add these styles for the stability toggle */
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.toggle {
+  position: relative;
+  width: 60px;
+  height: 30px;
+  border-radius: 15px;
+  background-color: #ccc;
+  margin-left: 10px;
+  transition: background-color 0.3s;
+  cursor: pointer;
+}
+
+.toggleActive {
+  background-color: #4CAF50;
+}
+
+.toggleSwitch {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: white;
+  transition: transform 0.3s;
+}
+
+.toggleActive .toggleSwitch {
+  transform: translateX(30px);
+}
+
+.toggleText {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* You can add these styles or merge with existing */
+.formGroup small {
+  display: block;
+  margin-top: 5px;
+  color: #666;
+  font-size: 0.8rem;
+}

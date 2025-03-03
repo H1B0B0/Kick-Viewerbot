@@ -1,21 +1,49 @@
+[build-system]
+requires = ["setuptools>=65.0.0", "wheel>=0.40.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "KickViewerBOT"
-version = "1.2"
+version = "2.3"
 description = "Kick Bot for making fake viewers on your live"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "requests==2.31.0",
-    "streamlink==5.5.1",
-    "fake_useragent==1.1.3",
-    "customtkinter==5.1.3",
-    "cloudscraper==1.2.71",
-    "pycryptodome==3.19.1",
-    "cffi==1.15.1",
-    "rich==13.7"
+    # Core Web Framework
+    "flask>=2.0.0",
+    "flask-cors>=4.0.0",
+    "flask-jwt-extended>=4.5.0",
+    "werkzeug>=2.0.0",
+    "python-dotenv>=0.19.0",
+    "gevent>=23.9.1",
+    
+    # Network and Streaming
+    "requests[socks]>=2.28.0",
+    "streamlink>=7.1.3",
+    "fake-useragent>=1.1.1",
+    
+    # Security
+    "PyJWT>=2.6.0",
+    "cryptography>=40.0.0",
+    
+    # UI and Formatting
+    "rich>=13.0.0",
+
+    # Monitoring
+    "psutil>=7.0.0"
 ]
 
 [project.optional-dependencies]
 test = [
-    "pytest==7.3.1"
+    "pytest>=7.0.0",
+    "pytest-flask>=1.2.0"
 ]
+
+dev = [
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=1.0.0"
+]
+
+[project.scripts]
+kickbot = "backend.main:main"

@@ -1,0 +1,45 @@
+@keyframes gradient-x {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 100%;
+  animation: gradient-x 3s ease infinite;
+}
+
+@keyframes fade-up {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-1rem);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 1s ease-out forwards;
+}
+
+@keyframes bounce-once {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.animate-bounce-once {
+  animation: bounce-once 0.3s ease-in-out;
+}

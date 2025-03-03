@@ -1,109 +1,88 @@
 # Kick Viewer Bot
 
-This is a Python script for generating Kick views using proxies. It is implemented as a GUI application with the help of the tkinter module.
+A modern web application for generating Kick views using proxies, built with a Flask backend and React frontend.
 
-## My patreon to support me or buy me a coffee
+## Table of Contents
 
-> :warning: Buy me a [coffee](https://www.buymeacoffee.com/hibobo)✓.
+- [Features](#features)
+- [Requirements](#requirements)
+- [Installation](#installation)
+- [Installation [DEV]](#installation-dev)
+- [Usage [DEV]](#usage-dev)
+- [How to use with macOS](#how-to-use-with-macos)
+- [Screenshots](#screenshots)
+- [License](#license)
+- [Warning](#warning)
 
-[My Patreon](https://www.patreon.com/HIBO)
+## Features
+
+- 🚀 Multi-threading system supporting up to 1000 simultaneous threads
+- 🔄 Automatic proxy rotation and management
+- 🌐 Support for HTTP, SOCKS4, and SOCKS5 proxies
+- 📊 Real-time statistics dashboard
+- 🔒 SSL/HTTPS support
+- 📱 Responsive web interface
 
 ## Requirements
 
-- Python 3.x
-- streamlink
-- requests
-- fake_useragent
-- tkinter
+- Python 3.9+
+- Modern web browser
+- Internet connection
+- (Optional) Custom proxy list
 
-## Download the folder
+## 💻 Installation
 
-> **Warning**
-> If you don't have Git installed, you can download it from [here](https://git-scm.com/download/win).
+1. Download the executable.
+2. Launch the application.
+3. Login / Register.
+4. Configure your settings.
+5. Start the bot.
 
-1. Open a command prompt and navigate to the location where you want to install the folder. Then use the following command:
+## Installation [DEV]
+
+1. Clone the repository:
    ```shell
    git clone https://github.com/H1B0B0/Kick-Viewerbot.git
    ```
-2. Once the folder installation is complete, navigate into the folder.
+2. Navigate into the folder:
+   ```shell
+   cd Kick-Viewerbot
+   ```
+3. Install the required Python packages:
+   ```shell
+   pip install -r requirements.txt
+   ```
 
-3. Run the file `install.bat`to install the required dependencies.
+## Usage [DEV]
 
-> **Warning**
-> You need Python installed. If you don't have it, you can download it from [here](https://www.python.org/downloads/)
+1. Open your web browser and navigate to `https://velbots.shop`.
+2. Enter the number of threads you want to run.
+3. Enter the name of the Kick channel you want to generate views for.
+4. (Optional) Upload your custom proxy list.
+5. Click the "Start bot" button to start generating views.
 
-4. Run `main.bat` or `main_just_terminal.bat` if you prefer a command-line interface and better performance (the terminal version currently uses HTTP scraped proxies).
+## How to use with macOS
 
-## Usage
+1. Download the application from the [release page](https://github.com/H1B0B0/Kick-Viewerbot/releases).
+   ![macOS version](./images/macos_file.png)
+2. When you try to open the application, macOS will block it because it is not from an identified developer.
+   ![macOS block message](./images/macos_block.png)
+3. Open `Settings` and go to `Security & Privacy`. Under the `Security` tab, you will see a message about the blocked application. Click `Open Anyway`.
+   ![Enable macOS application](images/enable_macos.png)
+4. Confirm that you want to open the application by clicking `Open Anyway` in the dialog that appears.
+   ![Execute the app](./images/use_macos.png)
+5. The application will now open, and you can start using it. Enjoy 🚀
 
-1. Install the requirements:
+## 📸 Screenshots
 
-```shell
-pip install .
-```
-
-2. Run the script:
-
-```shell
-python3 main.py
-```
-
-or
-
-```shell
-python3 main_just_terminal.py
-```
-
-or
-
-```shell
-python3 script.py -threads nb_threads -kickname example_channel
-```
-
-or
-
-```shell
-py -3 main.py
-```
-
-or
-
-```shell
-py -3 main_just_terminal.py
-```
-
-or
-
-```shell
-py -3 script.py -threads nb_threads -kickname example_channel -proxyfile path/to/your/proxylist
-```
-
-3. Fill in the following details in the GUI:
-
-- Number of threads: Enter the number of threads you want to use. Each thread represents 1/10 of a single viewer(So if you want 100 viewers you need to enter 1000 threads).
-- Kick channel name: Enter the name of the Kick channel you want to generate views for.
-
-4. Click the "Start bot" button to start the script.
-   ![](image/6.jpeg) --> ![](image/142.jpeg)
-
-## Code Overview
-
-The script starts by importing the required modules and setting up global variables.
-
-The `ViewerBot` class has methods for reading the list of proxies, getting the URL for the Kick channel, and sending HEAD requests using proxies.
-
-The `ViewerBotGUI` class sets up the GUI and handles button clicks.
-
-The `main()` function creates an instance of the `ViewerBotGUI` class and starts the GUI main loop.
-
-## Interface
-
-![](image/selectproxy.PNG) ![](image/interface.PNG)
+![Screenshot 1](https://github.com/user-attachments/assets/c292df62-3bde-4240-93c3-a83f573af90e)
+![Screenshot 2](https://github.com/user-attachments/assets/ff64062e-7b30-4b14-9faf-0f798197222f)
+![Screenshot 3](https://github.com/user-attachments/assets/349d778e-310a-4899-9667-8e1da2893fa8)
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ## Warning
 
-This code is for educational purposes only
+⚠ This code is for educational purposes only ⚠
