@@ -235,12 +235,28 @@ class ViewerBot_Stability:
         url = ""
         try:
             streams = session.streams(self.channel_url)
-            try:
-                url = streams['audio_only'].url
-            except KeyError:
-                url = streams['worst'].url
+            if streams:
+                # Try to get a lower quality stream first to minimize bandwidth
+                # Since 'audio_only' and 'worst' might not be available, try different qualities
+                # in order of preference from lowest to highest
+                priorities = ['audio_only', '160p', '360p', '480p', '720p', '1080p', 'best', 'worst']
+                
+                for quality in priorities:
+                    if quality in streams:
+                        url = streams[quality].url
+                        logging.debug(f"Found stream quality: {quality}")
+                        break
+                
+                # If none of the specific qualities matched, get the first available one
+                if not url and streams:
+                    quality = next(iter(streams))
+                    url = streams[quality].url
+                    logging.debug(f"Using first available stream quality: {quality}")
+            else:
+                logging.warning("No streams available for the channel")
         except Exception as e:
             logging.error(f"Error getting stream URL: {e}")
+        
         logging.debug(f"Stream URL: {url}")
         return url
 
