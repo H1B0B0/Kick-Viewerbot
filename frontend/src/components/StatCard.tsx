@@ -45,17 +45,99 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
 
   const isRequestCard = title.toLowerCase().includes("request");
 
+  // Determine appropriate icon for the stat card
+  const getCardIcon = () => {
+    if (title.toLowerCase().includes("thread")) {
+      return (
+        <svg
+          className="w-4 h-4 text-green-500 opacity-70"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"
+          />
+        </svg>
+      );
+    } else if (title.toLowerCase().includes("prox")) {
+      return (
+        <svg
+          className="w-4 h-4 text-blue-500 opacity-70"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
+          />
+        </svg>
+      );
+    } else if (title.toLowerCase().includes("request")) {
+      return (
+        <svg
+          className="w-4 h-4 text-purple-500 opacity-70"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+          />
+        </svg>
+      );
+    }
+    return null;
+  };
+
   return (
     <Card
       className={cn(
-        "border-none bg-background/90 backdrop-blur-xl transition-all duration-300 h-full w-full",
+        "border-none glass-card transition-all duration-300 h-full w-full",
         isRequestCard && isIncreasing && "ring-2 ring-green-500/50"
       )}
       shadow="sm"
     >
-      <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full">
-        <h3 className="text-sm font-semibold text-default-600 uppercase tracking-wider flex items-center justify-between">
-          {title}
+      <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full relative overflow-hidden">
+        {/* Subtle background pattern */}
+        <div className="absolute inset-0 pointer-events-none opacity-5">
+          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern
+                id="microGrid"
+                width="10"
+                height="10"
+                patternUnits="userSpaceOnUse"
+              >
+                <path
+                  d="M 10 0 L 0 0 0 10"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#microGrid)" />
+          </svg>
+        </div>
+
+        <h3 className="text-sm font-semibold text-default-600 uppercase tracking-wider flex items-center justify-between z-10">
+          <div className="flex items-center gap-2">
+            {getCardIcon()}
+            {title}
+          </div>
           {isRequestCard && isIncreasing && (
             <span className="flex h-2 w-2">
               <span className="animate-ping absolute h-2 w-2 rounded-full bg-green-400 opacity-75" />
@@ -63,7 +145,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
             </span>
           )}
         </h3>
-        <div className="flex justify-between items-baseline">
+        <div className="flex justify-between items-baseline z-10">
           <div className="flex items-baseline gap-2 relative">
             <span
               className={cn(
@@ -94,14 +176,19 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
           )}
         </div>
         {total && (
-          <Progress
-            value={percentage}
-            classNames={{
-              base: "h-2",
-              indicator: "bg-gradient-to-r from-green-500 to-lime-400",
-              track: "bg-default-100",
-            }}
-          />
+          <div className="z-10">
+            <Progress
+              value={percentage}
+              classNames={{
+                base: "h-2",
+                indicator: "bg-gradient-to-r from-green-500 to-lime-400",
+                track: "bg-default-100",
+              }}
+            />
+            <div className="text-xs text-right mt-1 text-default-500">
+              {Math.round(percentage)}%
+            </div>
+          </div>
         )}
       </CardBody>
     </Card>

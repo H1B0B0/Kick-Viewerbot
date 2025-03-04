@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 @layer base {
@@ -84,6 +84,10 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    background-image: 
+      radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.05) 0, transparent 40%),
+      radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.05) 0, transparent 30%);
+    background-attachment: fixed;
   }
 }
 
@@ -133,13 +137,105 @@ body {
 
 /* Améliorations du scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-background/50;
+  @apply bg-background/30;
+  margin: 3px 0;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-foreground/10 rounded-full hover:bg-foreground/20 transition-colors;
+  @apply bg-foreground/15 rounded-full hover:bg-foreground/25 transition-all;
+}
+
+/* Add these new animations and effects */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 3s ease-in-out infinite;
+}
+
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient-x {
+  animation: gradient-x 5s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes bounce-once {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+.animate-bounce-once {
+  animation: bounce-once 0.5s ease-in-out;
+}
+
+/* Glass card effect */
+.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+}
+
+.dark .glass-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Fancy hover effects */
+.fancy-hover {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.fancy-hover:hover::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  background: linear-gradient(to right, #10b981, #3b82f6);
+  z-index: -1;
+  filter: blur(8px);
+  opacity: 0.7;
+  border-radius: inherit;
+}
+
+/* Page transitions */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+.page-exit {
+  opacity: 1;
+}
+
+.page-exit-active {
+  opacity: 0;
+  transition: opacity 300ms;
 }
