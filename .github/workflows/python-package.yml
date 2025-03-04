@@ -187,14 +187,73 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            # 🚀 KickViewerBOT Release Notes V3.0.8
+            # 🚀 KickViewerBOT Release Notes V2.0
 
-            ## 🎉 New Features
-            - Added stability mode for the bot
-              - The bot now has an enhanced stability mode that reduces the drop of viewers.
-              - Improved error handling to automatically retry failed requests.
+            ## 🎯 Core Features
+            - **Multi-threading System**: Support for up to 10000 simultaneous threads
+            - **Proxy Support**: Compatible with HTTP, SOCKS4, SOCKS5
+            - **Auto-update**: Automatic system updates
+            - **Cross-Platform**: Compatible with Windows, Linux, MacOS
 
-            Some improvements and bug fixes! ✨
+            ## 🆕 New Features
+            ### User Interface
+            - 🖥️ Modern and responsive React interface
+            - 📊 Real-time dashboard with statistics
+            - 🌙 Dark/Light mode
+            ### Bot Features
+            - 📈 Advanced analytics
+            - 🔄 Automatic proxy rotation
+            - ⚡ Optimized performance mode
+
+            ### Security
+            - 🔒 JWT Authentication
+            - 🛡️ Anti-detection protection
+            - 🔑 Secure credentials management
+            - 🌐 HTTPS/SSL Support
+
+            ### Premium Features
+            - 📊 Detailed statistics
+            - 🔄 Auto-restart capability
+            - ⚡ High-performance mode
+            - 📈 Automatic scaling
+
+            ## 🛠️ Technical Improvements
+            - Optimized Flask backend
+            - Asyncio support for better performance
+            - Improved memory management
+            - Detailed logging
+            - Documented RESTful API
+
+            ## 🐛 Bug Fixes
+            - Memory leak fixes
+            - Connection stability improvements
+            - Random disconnection fixes
+            - CPU usage optimization
+
+            ## 📚 Documentation
+            - Detailed installation guide
+            - API documentation
+            - Usage examples
+            - Troubleshooting guide
+
+            ## 🔗 Links
+            - [Discord Support](https://discord.gg/2Sqvx25auv)
+            - [Patreon](https://www.patreon.com/hibo/membership)
+
+            ## 💻 Installation
+            1. Download the executable
+            2. Launch the application
+            3. Login
+            4. Configure your settings
+            5. Start the bot
+
+            ## ⚠️ Requirements
+            - Windows 10/11 64-bit or MacOS 10.15+
+            - 4GB RAM minimum
+            - Stable internet connection
+
+            ## 🆘 Support
+            For assistance, join our Discord or consult the documentation.
 
           draft: false
           prerelease: false
