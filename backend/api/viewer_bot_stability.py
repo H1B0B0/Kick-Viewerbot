@@ -4,6 +4,7 @@ import random
 import logging
 import requests
 import datetime
+import threading
 from threading import Thread
 from streamlink import Streamlink
 from threading import Semaphore
@@ -60,6 +61,10 @@ class ViewerBot_Stability:
             'startup_progress': 0  # Overall startup progress (0-100)
         }
         self.round_robin_index = 0  # Ajout pour répartir l'utilisation des proxies de manière équitable
+        self.stream_url_cache = None
+        self.stream_url_last_updated = 0
+        self.stream_url_lock = threading.Lock()
+        self.stream_url_cache_duration = 0.5  # Cache URL for 0.2 seconds
         logging.debug(f"Type of proxy: {self.type_of_proxy}")
         logging.debug(f"Timeout: {self.timeout}")
         logging.debug(f"Proxy imported: {self.proxy_imported}")
@@ -232,33 +237,45 @@ class ViewerBot_Stability:
             return (self.type_of_proxy, proxy)  # Fallback to raw format
     
     def get_url(self):
-        url = ""
-        try:
-            streams = session.streams(self.channel_url)
-            if streams:
-                # Try to get a lower quality stream first to minimize bandwidth
-                # Since 'audio_only' and 'worst' might not be available, try different qualities
-                # in order of preference from lowest to highest
-                priorities = ['audio_only', '160p', '360p', '480p', '720p', '1080p', 'best', 'worst']
-                
-                for quality in priorities:
-                    if quality in streams:
-                        url = streams[quality].url
-                        logging.debug(f"Found stream quality: {quality}")
-                        break
-                
-                # If none of the specific qualities matched, get the first available one
-                if not url and streams:
-                    quality = next(iter(streams))
-                    url = streams[quality].url
-                    logging.debug(f"Using first available stream quality: {quality}")
-            else:
-                logging.warning("No streams available for the channel")
-        except Exception as e:
-            logging.error(f"Error getting stream URL: {e}")
+        """Get stream URL with caching to prevent rate limiting"""
+        current_time = time.time()
         
-        logging.debug(f"Stream URL: {url}")
-        return url
+        # Use a lock to prevent multiple threads from fetching the URL simultaneously
+        with self.stream_url_lock:
+            # If URL is cached and not expired, return it
+            if (self.stream_url_cache and 
+                current_time - self.stream_url_last_updated < self.stream_url_cache_duration):
+                logging.debug("Using cached stream URL")
+                return self.stream_url_cache
+            
+            # Otherwise, fetch a new URL
+            url = ""
+            try:
+                streams = session.streams(self.channel_url)
+                if streams:
+                    priorities = ['audio_only', '160p', '360p', '480p', '720p', '1080p', 'best', 'worst']
+                    
+                    for quality in priorities:
+                        if quality in streams:
+                            url = streams[quality].url
+                            logging.debug(f"Found stream quality: {quality}")
+                            break
+                    
+                    if not url and streams:
+                        quality = next(iter(streams))
+                        url = streams[quality].url
+                        logging.debug(f"Using first available quality: {quality}")
+                    
+                    # Cache the URL
+                    self.stream_url_cache = url
+                    self.stream_url_last_updated = current_time
+                    logging.debug(f"Updated stream URL cache")
+                else:
+                    logging.warning("No streams available for the channel")
+            except Exception as e:
+                logging.error(f"Error getting stream URL: {e}")
+            
+            return url
 
     def stop(self):
         console.print("[bold red]Bot has been stopped[/bold red]")
@@ -336,8 +353,14 @@ class ViewerBot_Stability:
             self.should_stop = True
             return
 
-        # Initialize all_proxies only once
-        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
+        # Preload stream URL to avoid rate limiting
+        self.update_status('starting', 'Getting stream URL...', startup_progress=50)
+        stream_url = self.get_url()
+        if not stream_url:
+            self.update_status('warning', 'Could not get initial stream URL, will try again later')
+        
+        # Initialize all_proxies with the preloaded URL
+        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies]
         
         self.processes = []
         

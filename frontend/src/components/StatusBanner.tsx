@@ -25,7 +25,7 @@ export const StatusBanner = ({ status }: StatusBannerProps) => {
       case "stopping":
         return "text-orange-600";
       default:
-        return "text-gray-600";
+        return "";
     }
   };
 

@@ -63,7 +63,7 @@ class ViewerBot:
         self.stream_url_cache = None
         self.stream_url_last_updated = 0
         self.stream_url_lock = threading.Lock()
-        self.stream_url_cache_duration = 0.2  # Cache URL for 5 minutes
+        self.stream_url_cache_duration = 0.5  # Cache stream URL for 0.2 seconds
         logging.debug(f"Type of proxy: {self.type_of_proxy}")
         logging.debug(f"Timeout: {self.timeout}")
         logging.debug(f"Proxy imported: {self.proxy_imported}")

@@ -376,7 +376,7 @@ export default function ViewerBotInterface() {
             </Button>
           )}
           <h1 className="text-5xl font-black mb-3 bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
-            Kick Viewer Bot
+            Kick Viewer Bot <span className="text-sm text-gray-500">BETA</span>
           </h1>
           <p className="text-xl font-medium">
             {profile
@@ -445,14 +445,14 @@ export default function ViewerBotInterface() {
                   label="Number of Threads"
                   value={config.threads === 0 ? "" : config.threads.toString()}
                   min={0}
-                  max={1000}
+                  max={10000}
                   onChange={(e) =>
                     setConfig({
                       ...config,
                       threads:
                         e.target.value === ""
                           ? 0
-                          : Math.min(1000, parseInt(e.target.value) || 0),
+                          : Math.min(10000, parseInt(e.target.value) || 0),
                     })
                   }
                 />
@@ -689,6 +689,15 @@ export default function ViewerBotInterface() {
         <div className="transform hover:scale-[1.02] transition-transform duration-300">
           <StatusBanner status={botStatus} />
         </div>
+        {/* Information Panel */}
+        <Card className="border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+          <CardBody className="text-center">
+            <p className="text-lg font-medium">
+              Please note that it may take some time for the viewers to appear
+              on your live stream. This is normal, so please be patient.
+            </p>
+          </CardBody>
+        </Card>
 
         <Button
           variant="solid"
