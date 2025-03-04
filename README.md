@@ -75,9 +75,7 @@ A modern web application for generating Kick views using proxies, built with a F
 
 ## 📸 Screenshots
 
-![Screenshot 1](https://github.com/user-attachments/assets/c292df62-3bde-4240-93c3-a83f573af90e)
-![Screenshot 2](https://github.com/user-attachments/assets/ff64062e-7b30-4b14-9faf-0f798197222f)
-![Screenshot 3](https://github.com/user-attachments/assets/349d778e-310a-4899-9667-8e1da2893fa8)
+Coming soon
 
 ## License
 
