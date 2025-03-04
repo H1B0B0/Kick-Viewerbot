@@ -40,23 +40,29 @@ else:
 
 logger = logging.getLogger(__name__)
 
-# Load environment variables from .env file
-env_path = get_env_path()
-load_dotenv(env_path)
-
-# Parse command line arguments
+# Parse command line arguments - Do this first!
 parser = argparse.ArgumentParser()
 parser.add_argument('--dev', action='store_true', help='Run in development mode without authentication')
 args = parser.parse_args()
 
-# Check for JWT_SECRET in environment variables
-JWT_SECRET = os.getenv('JWT_SECRET')
-if not JWT_SECRET:
-    logger.error(f"JWT_SECRET not found in environment variables. Env path: {env_path}")
-    if os.path.exists(env_path):
-        with open(env_path, 'r') as f:
-            logger.info(f"Env file contents: {f.read()}")
-    raise ValueError("JWT_SECRET must be set in environment variables")
+# Load environment variables from .env file
+env_path = get_env_path()
+load_dotenv(env_path)
+
+# Only check for JWT_SECRET if not in dev mode
+JWT_SECRET = None
+if not args.dev:
+    JWT_SECRET = os.getenv('JWT_SECRET')
+    if not JWT_SECRET:
+        logger.error(f"JWT_SECRET not found in environment variables. Env path: {env_path}")
+        if os.path.exists(env_path):
+            with open(env_path, 'r') as f:
+                logger.info(f"Env file contents: {f.read()}")
+        raise ValueError("JWT_SECRET must be set in environment variables")
+else:
+    # In dev mode, use a dummy secret
+    JWT_SECRET = 'dev_secret_key'
+    logger.warning("Running in development mode - Using dummy JWT secret")
 
 app = Flask(__name__, static_folder='static')
 app.config['JWT_SECRET'] = JWT_SECRET
@@ -216,16 +222,6 @@ if __name__ == '__main__':
 
     if args.dev:
         logger.warning("Running in development mode - Authentication disabled")
-    else:
-        JWT_SECRET = os.getenv('JWT_SECRET')
-        if not JWT_SECRET:
-            logger.error(f"JWT_SECRET not found in environment variables. Env path: {env_path}")
-            if os.path.exists(env_path):
-                with open(env_path, 'r') as f:
-                    logger.info(f"Env file contents: {f.read()}")
-            raise ValueError("JWT_SECRET must be set in environment variables")
-        
-        app.config['JWT_SECRET'] = JWT_SECRET
     
     from threading import Timer
     Timer(1.5, open_browser).start()
