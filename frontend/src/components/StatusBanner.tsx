@@ -76,18 +76,9 @@ export const StatusBanner = ({ status }: StatusBannerProps) => {
       <CardBody className="p-4 relative overflow-hidden">
         {/* Background pulse effect based on status */}
         <div
-          className={`absolute inset-0 opacity-10 ${
-            status.state === "running"
-              ? "bg-green-500"
-              : status.state === "error"
-              ? "bg-red-500"
-              : status.state === "loading_proxies" ||
-                status.state === "starting"
-              ? "bg-blue-500"
-              : status.state === "stopping"
-              ? "bg-orange-500"
-              : "bg-gray-500"
-          } ${status.state === "running" ? "animate-pulse-subtle" : ""}`}
+          className={`absolute inset-0 opacity-10  ${
+            status.state === "running" ? "animate-pulse-subtle" : ""
+          }`}
         ></div>
 
         <div className="space-y-3 relative z-10">

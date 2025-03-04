@@ -84,7 +84,7 @@ export default function RootLayout({
             {!performanceMode && (
               <div className="absolute inset-0">
                 <Spline
-                  scene="https://prod.spline.design/3YlldlyYl8rb0Wew/scene.splinecode"
+                  scene="https://prod.spline.design/yVvMIpbPAQlkge9h/scene.splinecode"
                   className="blur-xl absolute"
                 />
               </div>
