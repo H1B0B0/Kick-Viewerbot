@@ -40,9 +40,6 @@ jobs:
       - name: Create .env file for backend
         run: |
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
-          echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> backend/.env
-          echo "CLIENT_ID=${{ secrets.CLIENT_ID }}" >> backend/.env
-          echo "CLIENT_SECRET=${{ secrets.CLIENT_SECRET }}" >> backend/.env
 
       - name: Create .env file for frontend
         run: |
