@@ -37,23 +37,52 @@ jobs:
           python -m pip install wheel pyinstaller
           pip install -r requirements.txt
 
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: |
-          npm install
-          npm run build
-
-      - name: Create .env file
+      - name: Create .env file for backend
         run: |
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
           echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> backend/.env
           echo "CLIENT_ID=${{ secrets.CLIENT_ID }}" >> backend/.env
           echo "CLIENT_SECRET=${{ secrets.CLIENT_SECRET }}" >> backend/.env
 
-      - name: Execute build script
+      - name: Create .env file for frontend
         run: |
-          chmod +x build.sh
-          ./build.sh
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ github.ref }}" >> frontend/.env
+
+      - name: Build the Frontend
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          Write-Host "=== Starting build process ==="
+
+          # Build Next.js app
+          Write-Host "Building Next.js app..."
+          cd frontend
+          npm install
+          npm run build
+
+          Write-Host "=== Preparing static files ==="
+          # Clean and create static directory
+          if (Test-Path -Path "../backend/static") {
+              Remove-Item -Recurse -Force ../backend/static
+          }
+          New-Item -ItemType Directory -Force -Path ../backend/static
+
+          # Copy the exported Next.js app to Flask static directory
+          Write-Host "Copying files to static directory..."
+          Copy-Item -Recurse -Force out/* ../backend/static/
+
+          # Verify the copy
+          Write-Host "=== Verifying static files ==="
+          if (-not (Test-Path -Path "../backend/static/index.html")) {
+              Write-Host "ERROR: index.html not found in static directory!"
+              exit 1
+          }
+
+          Write-Host "Contents of static directory:"
+          Get-ChildItem -Path ../backend/static
+
+          Write-Host "=== Build complete ==="
 
       - name: Build Windows Executable
         run: |
@@ -112,28 +141,57 @@ jobs:
           python -m pip install pyinstaller
           pip install -r requirements.txt
 
-      - name: Install frontend dependencies
-        working-directory: ./frontend
+      - name: Create .env file for backend
         run: |
+          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
+
+      - name: Create .env file for frontend
+        run: |
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ github.ref }}" >> frontend/.env
+
+      - name: Build the Frontend
+        run: |
+          set -e
+
+          echo "=== Starting build process ==="
+
+          # Build Next.js app
+          echo "Building Next.js app..."
+          cd frontend
           npm install
           npm run build
 
-      - name: Create .env file
-        run: |
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
-          echo "BOT_TOKEN=${{ secrets.BOT_TOKEN }}" >> backend/.env
-          echo "CLIENT_ID=${{ secrets.CLIENT_ID }}" >> backend/.env
-          echo "CLIENT_SECRET=${{ secrets.CLIENT_SECRET }}" >> backend/.env
+          echo "=== Preparing static files ==="
+          # Clean and create static directory
+          rm -rf ../backend/static
+          mkdir -p ../backend/static
 
-      - name: Execute build script
-        run: |
-          chmod +x build.sh
-          ./build.sh
+          # Copy the exported Next.js app to Flask static directory
+          echo "Copying files to static directory..."
+          cp -rv out/* ../backend/static/
+
+          # Ensure proper permissions
+          echo "Setting permissions..."
+          chmod -R 755 ../backend/static
+          find ../backend/static -type f -exec chmod 644 {} \;
+          find ../backend/static -type d -exec chmod 755 {} \;
+
+          # Verify the copy
+          echo "=== Verifying static files ==="
+          if [ ! -f "../backend/static/index.html" ]; then
+              echo "ERROR: index.html not found in static directory!"
+              exit 1
+          fi
+
+          echo "Contents of static directory:"
+          ls -la ../backend/static
+
+          echo "=== Build complete ==="
 
       - name: Build MacOS App
         run: |
           source venv/bin/activate
-          pyinstaller --noconfirm --onefile --uac-admin --icon "frontend/public/favicon.ico" \
+          pyinstaller --noconfirm --onefile --icon "frontend/public/favicon.ico" \
           --paths "venv/lib/python3.11/site-packages" \
           --add-data "backend:." \
           --add-data "backend/.env:." \
@@ -173,6 +231,10 @@ jobs:
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      - name: Extract tag name
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -187,73 +249,12 @@ jobs:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
           body: |
-            # 🚀 KickViewerBOT Release Notes V2.0
+            # 🚀 KickViewerBOT Release Notes V${{ github.ref }}
 
-            ## 🎯 Core Features
-            - **Multi-threading System**: Support for up to 10000 simultaneous threads
-            - **Proxy Support**: Compatible with HTTP, SOCKS4, SOCKS5
-            - **Auto-update**: Automatic system updates
-            - **Cross-Platform**: Compatible with Windows, Linux, MacOS
+            ## 🎉 New Features
+              - UI Improvements
 
-            ## 🆕 New Features
-            ### User Interface
-            - 🖥️ Modern and responsive React interface
-            - 📊 Real-time dashboard with statistics
-            - 🌙 Dark/Light mode
-            ### Bot Features
-            - 📈 Advanced analytics
-            - 🔄 Automatic proxy rotation
-            - ⚡ Optimized performance mode
-
-            ### Security
-            - 🔒 JWT Authentication
-            - 🛡️ Anti-detection protection
-            - 🔑 Secure credentials management
-            - 🌐 HTTPS/SSL Support
-
-            ### Premium Features
-            - 📊 Detailed statistics
-            - 🔄 Auto-restart capability
-            - ⚡ High-performance mode
-            - 📈 Automatic scaling
-
-            ## 🛠️ Technical Improvements
-            - Optimized Flask backend
-            - Asyncio support for better performance
-            - Improved memory management
-            - Detailed logging
-            - Documented RESTful API
-
-            ## 🐛 Bug Fixes
-            - Memory leak fixes
-            - Connection stability improvements
-            - Random disconnection fixes
-            - CPU usage optimization
-
-            ## 📚 Documentation
-            - Detailed installation guide
-            - API documentation
-            - Usage examples
-            - Troubleshooting guide
-
-            ## 🔗 Links
-            - [Discord Support](https://discord.gg/2Sqvx25auv)
-            - [Patreon](https://www.patreon.com/hibo/membership)
-
-            ## 💻 Installation
-            1. Download the executable
-            2. Launch the application
-            3. Login
-            4. Configure your settings
-            5. Start the bot
-
-            ## ⚠️ Requirements
-            - Windows 10/11 64-bit or MacOS 10.15+
-            - 4GB RAM minimum
-            - Stable internet connection
-
-            ## 🆘 Support
-            For assistance, join our Discord or consult the documentation.
+            Some improvements and bug fixes! ✨
 
           draft: false
           prerelease: false
