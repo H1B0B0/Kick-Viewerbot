@@ -218,18 +218,37 @@ class ViewerBot:
 
     def extract_ip_port(self, proxy):
         try:
-            # Gérer les formats avec protocole
+            protocol = self.type_of_proxy
+            credentials = ""
+            
             if '://' in proxy:
-                parsed = urlparse(proxy)
-                protocol = parsed.scheme
-                proxy_address = parsed.netloc
-                # Gérer le cas où il y a des credentials
-                if '@' in proxy_address:
-                    proxy_address = proxy_address.split('@')[1]
+                # Format http://user:pass@host:port or socks5://user:pass@host:port
+                parts = proxy.split('://')
+                protocol = parts[0].lower()
+                proxy_part = parts[1]
             else:
-                protocol = self.type_of_proxy
-                proxy_address = proxy
-
+                # Format IP:PORT or user:pass@host:port without protocol
+                proxy_part = proxy
+            
+            if '@' in proxy_part:
+                credentials_part, host_part = proxy_part.split('@', 1)
+                credentials = credentials_part
+            else:
+                host_part = proxy_part
+                
+            if ':' in host_part:
+                host, port = host_part.split(':', 1)
+                port = port.split('/')[0]
+            else:
+                host = host_part
+                port = '80'
+                
+            if credentials:
+                proxy_address = f"{host}:{port}:{credentials}"
+            else:
+                proxy_address = f"{host}:{port}"
+                
+            logging.debug(f"Parsed proxy: protocol={protocol}, proxy_address={proxy_address}")
             return (protocol, proxy_address)
         except Exception as e:
             logging.error(f"Error parsing proxy {proxy}: {e}")
@@ -322,24 +341,35 @@ class ViewerBot:
             logging.debug("Bot interrupted by user")
 
     def configure_proxies(self, proxy_type, proxy_address):
-        # Split the proxy address to extract IP, port, username, and password
-        parts = proxy_address.split(':')
-        ip = parts[0]
-        port = parts[1]
-        username = parts[2] if len(parts) > 2 else None
-        password = parts[3] if len(parts) > 3 else None
-    
-        if username and password:
-            credentials = f"{username}:{password}@"
-        else:
-            credentials = ""
-    
-        if proxy_type in ["socks4", "socks5"]:
-            return {"http": f"{proxy_type}://{credentials}{ip}:{port}",
-                    "https": f"{proxy_type}://{credentials}{ip}:{port}"}
-        else:  # Default to HTTP
-            return {"http": f"http://{credentials}{ip}:{port}",
-                    "https": f"http://{credentials}{ip}:{port}"}
+        try:
+            parts = proxy_address.split(':')
+            
+            if len(parts) < 2:
+                logging.error(f"Invalid proxy format: {proxy_address}")
+                return {}
+                
+            host = parts[0]
+            port = parts[1]
+            
+            if len(parts) >= 3:
+                credentials = ':'.join(parts[2:])
+                credentials += '@'
+            else:
+                credentials = ""
+            
+            if proxy_type.lower() in ["socks4", "socks5"]:
+                return {
+                    "http": f"{proxy_type}://{credentials}{host}:{port}",
+                    "https": f"{proxy_type}://{credentials}{host}:{port}"
+                }
+            else:
+                return {
+                    "http": f"http://{credentials}{host}:{port}",
+                    "https": f"http://{credentials}{host}:{port}"
+                }
+        except Exception as e:
+            logging.error(f"Error configuring proxy {proxy_address}: {e}")
+            return {}
 
     def main(self):
         self.update_status('starting', 'Starting bot...', startup_progress=0)

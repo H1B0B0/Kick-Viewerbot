@@ -11,6 +11,11 @@ from api import api
 from gevent.pywsgi import WSGIServer
 import argparse
 import platform
+import requests
+import datetime
+import ssl
+import time
+import shutil
 
 if platform.system() != "Windows":
     import resource
@@ -20,12 +25,114 @@ else:
 def get_env_path():
     """Get the correct path for .env file in both dev and PyInstaller environments"""
     if getattr(sys, 'frozen', False):
-        # Running in PyInstaller bundle
         bundle_dir = sys._MEIPASS
         return os.path.join(bundle_dir, '.env')
     else:
-        # Running in normal Python environment
         return os.path.join(os.path.dirname(__file__), '.env')
+
+def check_certificate_expiry(cert_path):
+    """
+    Check if the SSL certificate is expired
+    and return True if it is still valid
+    """
+    try:
+        if not os.path.exists(cert_path):
+            logger.warning(f"Certificate not found at {cert_path}")
+            return False
+            
+        # Use OpenSSL directly to check certificate expiry
+        try:
+            import OpenSSL.crypto as crypto
+            with open(cert_path, 'rb') as f:
+                cert_data = f.read()
+            
+            cert = crypto.load_certificate(crypto.FILETYPE_PEM, cert_data)
+            expiry = cert.get_notAfter().decode('ascii')
+            
+            expiry_date = datetime.datetime.strptime(expiry, '%Y%m%d%H%M%SZ')
+            now = datetime.datetime.now()
+            
+            days_remaining = (expiry_date - now).days
+            logger.info(f"Certificate expires in {days_remaining} days")
+            
+            return days_remaining > 7
+        except ImportError:
+            # Fall back to a simpler check if OpenSSL is not available
+            logger.warning("OpenSSL not available, using simplified certificate check")
+            # Check if the certificate file exists and is not empty
+            return os.path.getsize(cert_path) > 0
+        
+    except Exception as e:
+        logger.error(f"Error checking certificate expiry: {str(e)}")
+        return False
+
+def fetch_certificate():
+    """
+    Directly download the SSL certificate files from the API
+    """
+    cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
+    cert_path = os.path.join(cert_dir, 'velbots.shop.cert')
+    key_path = os.path.join(cert_dir, 'velbots.shop.key')
+    
+    # Ensure the certificates directory exists
+    if not os.path.exists(cert_dir):
+        os.makedirs(cert_dir)
+    
+    try:
+        # Create backups if certificates already exist
+        if os.path.exists(cert_path):
+            shutil.copy2(cert_path, f"{cert_path}.backup")
+        if os.path.exists(key_path):
+            shutil.copy2(key_path, f"{key_path}.backup")
+            
+        # Directly download the certificate
+        logger.info("Downloading certificate from API...")
+        
+        try:
+            import urllib.request
+            
+            certificate_url = "https://api.velbots.shop/auth/certificate"
+            urllib.request.urlretrieve(certificate_url, cert_path)
+            
+            logger.info("Certificate files successfully downloaded")
+            return True
+            
+        except Exception as download_error:
+            logger.error(f"Error downloading certificate files: {str(download_error)}")
+            
+            try:
+                if os.path.exists(f"{cert_path}.backup"):
+                    shutil.copy2(f"{cert_path}.backup", cert_path)
+                logger.info("Restored backup certificates")
+                return os.path.exists(cert_path)
+            except Exception as backup_error:
+                logger.error(f"Error restoring backup certificates: {str(backup_error)}")
+            
+            return False
+            
+    except Exception as e:
+        logger.error(f"Unexpected error in fetch_certificate: {str(e)}")
+
+        return False
+
+def ensure_valid_certificates():
+    """
+    Ensures that valid certificates are available
+    Checks expiry and retrieves new certificates if needed
+    """
+    cert_path = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.cert')
+    key_path = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.key')
+    
+    # If certificates don't exist or are expired, retrieve new ones
+    if not os.path.exists(cert_path) or not os.path.exists(key_path) or not check_certificate_expiry(cert_path):
+        logger.warning("Certificates missing or expired, fetching new ones")
+        # Ajouter un délai aléatoire pour éviter que tous les clients ne demandent en même temps
+        time.sleep(0.5 + (datetime.datetime.now().microsecond / 1000000))  # 0.5-1.5 secondes
+        return fetch_certificate()
+    else:
+        logger.info("Certificates are valid and up to date")
+    
+    return True
 
 # Modify logging configuration
 if getattr(sys, 'frozen', False):
@@ -229,6 +336,7 @@ if __name__ == '__main__':
     CERT_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.cert')
     KEY_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.key')
 
+    ensure_valid_certificates()
 
     if os.path.exists(CERT_PATH) and os.path.exists(KEY_PATH):
         https_server = WSGIServer(
