@@ -77,10 +77,17 @@ class BotManager:
 
     def stop_bot(self):
         if self.bot and self.is_running:
-            self.is_running = False  # Set this to False immediately
-            # Start a new thread to handle the cleanup
+            self.is_running = False
+            proxy_file = getattr(self.bot, 'proxy_file', None)
+            
             def cleanup():
                 self.bot.stop()
+                if proxy_file and os.path.exists(proxy_file):
+                    try:
+                        os.remove(proxy_file)
+                        logger.info(f"Removed proxy file: {proxy_file}")
+                    except Exception as e:
+                        logger.error(f"Failed to remove proxy file: {e}")
                 
             cleanup_thread = Thread(target=cleanup)
             cleanup_thread.daemon = True
@@ -175,6 +182,8 @@ def start_bot():
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             file.save(filepath)
             proxy_file_path = filepath
+            # Assurons-nous que le fichier existe
+            logger.info(f"Saved proxy file to: {filepath}, exists: {os.path.exists(filepath)}")
 
     if not channel_name:
         return jsonify({'error': 'Channel name is required'}), 400
@@ -188,8 +197,6 @@ def start_bot():
         stability_mode=stability_mode
     )
 
-    if proxy_file_path and os.path.exists(proxy_file_path):
-        os.remove(proxy_file_path)
     
     if success:
         return jsonify({'message': 'Bot started successfully'})
