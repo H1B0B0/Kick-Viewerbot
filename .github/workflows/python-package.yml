@@ -249,7 +249,8 @@ jobs:
             # 🚀 KickViewerBOT Release Notes V${{ github.ref }}
 
             ## 🎉 New Features
-              - UI Improvements
+              - Added personnal proxies support to use your own proxies instead of the default ones.
+              - Added login feature for private proxies.
 
             Some improvements and bug fixes! ✨
 
