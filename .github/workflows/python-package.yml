@@ -41,9 +41,13 @@ jobs:
         run: |
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
 
+      - name: Extract tag name
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
       - name: Create .env file for frontend
         run: |
-          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ github.ref }}" >> frontend/.env
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ env.VERSION }}" >> frontend/.env
 
       - name: Build the Frontend
         shell: pwsh
@@ -142,9 +146,13 @@ jobs:
         run: |
           echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
 
+      - name: Extract tag name
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
       - name: Create .env file for frontend
         run: |
-          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ github.ref }}" >> frontend/.env
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ env.VERSION }}" >> frontend/.env
 
       - name: Build the Frontend
         run: |
@@ -230,7 +238,7 @@ jobs:
     steps:
       - name: Extract tag name
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -244,15 +252,45 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Release ${{ steps.get_version.outputs.VERSION }}
           body: |
-            # 🚀 KickViewerBOT Release Notes V${{ github.ref }}
+            # 🚀 KickViewerBOT Release Notes V${{ steps.get_version.outputs.VERSION }}
 
-            ## 🎉 New Features
-              - Added personnal proxies support to use your own proxies instead of the default ones.
-              - Added login feature for private proxies.
+            ## 🔒 SSL Certificate Management - Major Fix
 
-            Some improvements and bug fixes! ✨
+            ### ✅ **Fixed Critical SSL Error**
+            - **Resolved**: `ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN]` that was preventing HTTPS server startup
+            - **Root Cause**: Expired SSL certificates (expired May 18, 2025) and mismatched certificate/private key pairs
+
+            ### 🛠️ **Enhanced Certificate Management**
+            - **Auto-Download**: Now automatically downloads both certificate AND private key from secure API endpoints
+            - **Validation**: SSL certificate/key pair validation before server startup
+            - **Backup System**: Automatic backup creation before certificate updates
+            - **Auto-Restore**: Fallback to backup certificates if new ones fail validation
+
+            ### 🔄 **Improved Resilience**
+            - **Smart Fallback**: Automatically falls back to HTTP mode if HTTPS certificates fail
+            - **Self-Healing**: Auto-renewal of expired certificates with random delays to prevent API overload
+            - **Better Logging**: Enhanced error reporting for SSL certificate debugging
+            - **Graceful Degradation**: Application continues running even with certificate issues
+
+            ### 📋 **Technical Improvements**
+            - Updated `fetch_certificate()` function to handle both cert and key downloads
+            - Enhanced `ensure_valid_certificates()` with better error handling
+            - Added SSL context validation before server startup
+            - Improved certificate expiry checking with OpenSSL integration
+
+            ### 🎯 **Results**
+            - ✅ **HTTPS Server**: Now runs reliably on port 443 with valid certificates
+            - ✅ **Zero Downtime**: No more SSL-related crashes
+            - ✅ **Auto-Recovery**: Handles certificate renewals without manual intervention
+            - ✅ **Future-Proof**: Ready for automatic certificate updates
+
+            ## 🎉 Additional Features  
+            - Enhanced server stability and error handling
+            - Improved logging for better troubleshooting
+
+            **This release ensures your KickViewerBOT runs with secure HTTPS and handles certificate management automatically!** 🔐✨
 
           draft: false
           prerelease: false

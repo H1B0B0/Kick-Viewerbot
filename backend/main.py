@@ -1,6 +1,7 @@
 from flask import Flask, send_file, request, redirect, abort
 from flask_cors import CORS
 from functools import wraps
+import urllib.request
 import os
 import sys
 import logging
@@ -11,7 +12,6 @@ from api import api
 from gevent.pywsgi import WSGIServer
 import argparse
 import platform
-import requests
 import datetime
 import ssl
 import time
@@ -89,22 +89,55 @@ def fetch_certificate():
         logger.info("Downloading certificate from API...")
         
         try:
-            import urllib.request
             
+            # Download certificate
             certificate_url = "https://api.velbots.shop/auth/certificate"
             urllib.request.urlretrieve(certificate_url, cert_path)
+            logger.info("Certificate downloaded successfully")
+            # Download private key from separate endpoint
+            key_url = "https://api.velbots.shop/auth/certificate/key"
+            urllib.request.urlretrieve(key_url, key_path)
+            logger.info("Private key downloaded successfully")
             
-            logger.info("Certificate files successfully downloaded")
-            return True
+            # Verify that both files exist and are not empty
+            if os.path.exists(cert_path) and os.path.exists(key_path) and \
+               os.path.getsize(cert_path) > 0 and os.path.getsize(key_path) > 0:
+                
+                # Additional validation: check if cert and key match
+                try:
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.load_cert_chain(cert_path, key_path)
+                    logger.info("Certificate and key files successfully downloaded and validated - they match!")
+                    return True
+                except ssl.SSLError as ssl_error:
+                    logger.error(f"❌ SSL VALIDATION FAILED: Certificate and private key do not match!")
+                    logger.error(f"SSL Error details: {ssl_error}")
+                    print("\n" + "="*60)
+                    print("🚨 CRITICAL SSL ERROR 🚨")
+                    print("="*60)
+                    print("The downloaded certificate and private key DO NOT MATCH!")
+                    print("This will prevent HTTPS from working properly.")
+                    print("="*60 + "\n")
+                    return False
+                except Exception as validation_error:
+                    logger.error(f"Certificate validation error: {validation_error}")
+                    return False
+            else:
+                logger.error("Downloaded certificate or key files are empty")
+                return False
             
         except Exception as download_error:
             logger.error(f"Error downloading certificate files: {str(download_error)}")
             
             try:
+                # Restore backups if they exist
                 if os.path.exists(f"{cert_path}.backup"):
                     shutil.copy2(f"{cert_path}.backup", cert_path)
-                logger.info("Restored backup certificates")
-                return os.path.exists(cert_path)
+                    logger.info("Restored certificate backup")
+                if os.path.exists(f"{key_path}.backup"):
+                    shutil.copy2(f"{key_path}.backup", key_path)
+                    logger.info("Restored key backup")
+                return os.path.exists(cert_path) and os.path.exists(key_path)
             except Exception as backup_error:
                 logger.error(f"Error restoring backup certificates: {str(backup_error)}")
             
@@ -246,7 +279,7 @@ def auth_middleware(f):
             return redirect('/')
 
         # Check if path should bypass auth
-        is_public_path = path in ['/login', '/register']
+        is_public_path = path in ['/login', '/register', '/ssl_error.html']
         if is_public_path and not is_authenticated:
             return f(*args, **kwargs)
 
@@ -278,6 +311,108 @@ def serve_register():
         return send_file(register_file)
     return abort(404)
 
+@app.route('/ssl_error.html')
+def serve_ssl_error():
+    """Serve the SSL error page without authentication - generated dynamically"""
+    error_html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>TwitchViewerBOT - SSL Certificate Error</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 0;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+            }
+            .container {
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                border-radius: 20px;
+                padding: 40px;
+                max-width: 600px;
+                text-align: center;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .error-icon {
+                font-size: 64px;
+                margin-bottom: 20px;
+            }
+            h1 {
+                margin: 0 0 20px 0;
+                font-size: 2.5em;
+                font-weight: 300;
+            }
+            .error-message {
+                font-size: 1.2em;
+                margin-bottom: 30px;
+                line-height: 1.6;
+            }
+            .details {
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 10px;
+                padding: 20px;
+                margin: 20px 0;
+                text-align: left;
+                font-family: monospace;
+                font-size: 0.9em;
+            }
+            .retry-btn {
+                background: linear-gradient(45deg, #00C9FF, #92FE9D);
+                border: none;
+                padding: 15px 30px;
+                border-radius: 25px;
+                color: #333;
+                font-weight: bold;
+                cursor: pointer;
+                font-size: 1.1em;
+                transition: transform 0.2s;
+            }
+            .retry-btn:hover {
+                transform: translateY(-2px);
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="error-icon">🔒❌</div>
+            <h1>SSL Certificate Error</h1>
+            <div class="error-message">
+                TwitchViewerBOT encountered an SSL certificate validation error.
+                The certificate and private key don't match properly.
+            </div>
+            <div class="details">
+                <strong>Technical Details:</strong><br>
+                • Certificate and private key mismatch<br>
+                • HTTPS server cannot start safely<br>
+                • Running in fallback HTTP mode on port 3001<br>
+                • Check server logs for more information
+            </div>
+            <button class="retry-btn" onclick="window.location.reload()">
+                🔄 Retry Connection
+            </button>
+            <div style="margin-top: 30px; font-size: 0.9em; opacity: 0.8;">
+                The application is still running on <strong>http://localhost:3001</strong>
+            </div>
+        </div>
+        <script>
+            // Manual refresh only - no auto-refresh to avoid spam
+            console.log('SSL Error Page loaded. Click retry button to check if SSL is fixed.');
+        </script>
+    </body>
+    </html>
+    """
+    return error_html
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 @auth_middleware  # Optional if you still want to protect routes
@@ -305,6 +440,11 @@ def open_browser():
     print("Opening browser...")
     webbrowser.open('https://velbots.shop')
 
+def open_ssl_error_page():
+    """Open the SSL error page in browser"""
+    print("Opening SSL error page...")
+    webbrowser.open('http://localhost:3001/ssl_error.html')
+
 def set_resource_limits():
     # Vérifier si le module resource est disponible (systèmes Unix/Linux/macOS)
     if resource:
@@ -330,26 +470,66 @@ if __name__ == '__main__':
     if args.dev:
         logger.warning("Running in development mode - Authentication disabled")
     
-    from threading import Timer
-    Timer(1.5, open_browser).start()
-
     CERT_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.cert')
     KEY_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.key')
 
-    ensure_valid_certificates()
+    cert_status = ensure_valid_certificates()
 
-    if os.path.exists(CERT_PATH) and os.path.exists(KEY_PATH):
-        https_server = WSGIServer(
-            ('0.0.0.0', 443),
-            app,
-            certfile=CERT_PATH,
-            keyfile=KEY_PATH,
-            log=None  # Disable WSGIServer logs in production
-        )
-        logger.info("Starting HTTPS on port 443")
-        https_server.serve_forever()
+    if os.path.exists(CERT_PATH) and os.path.exists(KEY_PATH) and cert_status:
+        # Try to validate certificates before starting HTTPS
+        try:
+            ssl_context = ssl.create_default_context()
+            ssl_context.load_cert_chain(CERT_PATH, KEY_PATH)
+            logger.info("SSL certificates validated successfully")
+            
+            from threading import Timer
+            Timer(1.5, open_browser).start()
+            
+            https_server = WSGIServer(
+                ('0.0.0.0', 443),
+                app,
+                certfile=CERT_PATH,
+                keyfile=KEY_PATH,
+                log=None  # Disable WSGIServer logs in production
+            )
+            logger.info("Starting HTTPS on port 443")
+            https_server.serve_forever()
+        except ssl.SSLError as e:
+            logger.error(f"SSL certificate validation failed: {e}")
+            logger.warning("Certificate and key don't match, falling back to HTTP mode")
+            
+            print("\n" + "="*60)
+            print("🚨 SSL CERTIFICATE ERROR - FALLBACK MODE 🚨")
+            print("="*60)
+            print("HTTPS server cannot start due to SSL certificate issues.")
+            print("The application is running in HTTP fallback mode on port 3001.")
+            print("Access the application at: http://localhost:3001")
+            print("Opening SSL error page in browser...")
+            print("="*60 + "\n")
+            
+            # Open SSL error page once only
+            from threading import Timer
+            Timer(1.5, open_ssl_error_page).start()
+            
+            if getattr(sys, 'frozen', False):
+                # Production mode
+                app.run(debug=False, host='0.0.0.0', port=3001)
+            else:
+                # Development mode
+                app.run(debug=True, host='0.0.0.0', port=3001)
     else:
-        logger.warning("SSL certificates not found, running in development mode")
+        logger.warning("SSL certificates not found or invalid, running in development mode")
+        print("\n" + "="*50)
+        print("🔧 DEVELOPMENT MODE - No SSL certificates")
+        print("="*50)
+        print("Running in HTTP mode on port 3001")
+        print("Access the application at: http://localhost:3001")
+        print("="*50 + "\n")
+        
+        # Open browser once only for development mode (normal app, not SSL error page)
+        from threading import Timer
+        Timer(1.5, lambda: webbrowser.open('http://localhost:3001/ssl_error.html')).start()
+
         if getattr(sys, 'frozen', False):
             # Production mode
             app.run(debug=False, host='0.0.0.0', port=3001)
