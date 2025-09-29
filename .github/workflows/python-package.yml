@@ -43,11 +43,11 @@ jobs:
 
       - name: Extract tag name
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create .env file for frontend
         run: |
-          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ env.VERSION }}" >> frontend/.env
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ steps.get_version.outputs.VERSION }}" >> frontend/.env
 
       - name: Build the Frontend
         shell: pwsh
@@ -148,11 +148,11 @@ jobs:
 
       - name: Extract tag name
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Create .env file for frontend
         run: |
-          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ env.VERSION }}" >> frontend/.env
+          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ steps.get_version.outputs.VERSION }}" >> frontend/.env
 
       - name: Build the Frontend
         run: |
@@ -256,41 +256,7 @@ jobs:
           body: |
             # 🚀 KickViewerBOT Release Notes V${{ steps.get_version.outputs.VERSION }}
 
-            ## 🔒 SSL Certificate Management - Major Fix
-
-            ### ✅ **Fixed Critical SSL Error**
-            - **Resolved**: `ssl.SSLError: [SSL: SSLV3_ALERT_CERTIFICATE_UNKNOWN]` that was preventing HTTPS server startup
-            - **Root Cause**: Expired SSL certificates (expired May 18, 2025) and mismatched certificate/private key pairs
-
-            ### 🛠️ **Enhanced Certificate Management**
-            - **Auto-Download**: Now automatically downloads both certificate AND private key from secure API endpoints
-            - **Validation**: SSL certificate/key pair validation before server startup
-            - **Backup System**: Automatic backup creation before certificate updates
-            - **Auto-Restore**: Fallback to backup certificates if new ones fail validation
-
-            ### 🔄 **Improved Resilience**
-            - **Smart Fallback**: Automatically falls back to HTTP mode if HTTPS certificates fail
-            - **Self-Healing**: Auto-renewal of expired certificates with random delays to prevent API overload
-            - **Better Logging**: Enhanced error reporting for SSL certificate debugging
-            - **Graceful Degradation**: Application continues running even with certificate issues
-
-            ### 📋 **Technical Improvements**
-            - Updated `fetch_certificate()` function to handle both cert and key downloads
-            - Enhanced `ensure_valid_certificates()` with better error handling
-            - Added SSL context validation before server startup
-            - Improved certificate expiry checking with OpenSSL integration
-
-            ### 🎯 **Results**
-            - ✅ **HTTPS Server**: Now runs reliably on port 443 with valid certificates
-            - ✅ **Zero Downtime**: No more SSL-related crashes
-            - ✅ **Auto-Recovery**: Handles certificate renewals without manual intervention
-            - ✅ **Future-Proof**: Ready for automatic certificate updates
-
-            ## 🎉 Additional Features  
-            - Enhanced server stability and error handling
-            - Improved logging for better troubleshooting
-
-            **This release ensures your KickViewerBOT runs with secure HTTPS and handles certificate management automatically!** 🔐✨
+            ## Fix spamming new version notification
 
           draft: false
           prerelease: false
