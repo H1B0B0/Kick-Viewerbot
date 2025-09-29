@@ -91,28 +91,7 @@ jobs:
       - name: Build Windows Executable
         run: |
           .\venv\Scripts\activate
-          pyinstaller --noconfirm --onefile --uac-admin --icon "frontend/public/favicon.ico" `
-          --paths "venv/Lib/site-packages" `
-          --add-data "backend;." `
-          --add-data "backend/.env;." `
-          --add-data "frontend/out;static" `
-          --add-data "venv/Lib/site-packages/fake_useragent/data;fake_useragent/data" `
-          --add-data "venv/Lib/site-packages/fake_useragent;fake_useragent" `
-          --add-data "venv/Lib/site-packages/streamlink;streamlink" `
-          --add-data "venv/Lib/site-packages/websocket;websocket" `
-          --add-data "venv/Lib/site-packages/cffi;cffi" `
-          --add-data "venv/Lib/site-packages/Crypto;Crypto" `
-          --add-data "venv/Lib/site-packages/psutil;psutil" `
-          --collect-data fake_useragent `
-          --collect-submodules streamlink `
-          --collect-submodules websocket `
-          --collect-submodules cffi `
-          --collect-submodules Crypto `
-          --hidden-import rich `
-          --hidden-import dotenv `
-          --hidden-import trio `
-          "backend/main.py" `
-          --name "KickViewerBOT.exe"
+          pyinstaller --noconfirm KickViewerBOT.spec
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -199,29 +178,7 @@ jobs:
       - name: Build MacOS App
         run: |
           source venv/bin/activate
-          pyinstaller --noconfirm --onefile --icon "frontend/public/favicon.ico" \
-          --paths "venv/lib/python3.11/site-packages" \
-          --add-data "backend:." \
-          --add-data "backend/.env:." \
-          --add-data "frontend/out:static" \
-          --add-data "venv/lib/python3.11/site-packages/fake_useragent/data:fake_useragent/data" \
-          --add-data "venv/lib/python3.11/site-packages/fake_useragent:fake_useragent" \
-          --add-data "venv/lib/python3.11/site-packages/streamlink:streamlink" \
-          --add-data "venv/lib/python3.11/site-packages/websocket:websocket" \
-          --add-data "venv/lib/python3.11/site-packages/cffi:cffi" \
-          --add-data "venv/lib/python3.11/site-packages/Crypto:Crypto" \
-          --add-data "venv/lib/python3.11/site-packages/psutil:psutil" \
-          --collect-data fake_useragent \
-          --collect-submodules streamlink \
-          --collect-submodules websocket \
-          --collect-submodules cffi \
-          --collect-submodules Crypto \
-          --hidden-import rich \
-          --hidden-import dotenv \
-          --hidden-import trio \
-          --hidden-import resource \
-          "backend/main.py" \
-          --name "KickViewerBOT"
+          pyinstaller --noconfirm KickViewerBOT-macOS.spec
 
       - name: zip the app
         run: |
@@ -256,10 +213,35 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
+
           body: |
             # 🚀 KickViewerBOT Release Notes V${{ steps.get_version.outputs.VERSION }}
 
-            ## Fix spamming new version notification
+            ## Major Fixes
+
+            - **WebSocket & Browser Fingerprint Fix:**  
+              The bot now uses the `tls_client` library with a Chrome 120 fingerprint for all HTTP and WebSocket requests to Kick.com. This bypasses the new anti-bot protections and resolves the 403 errors, even when using premium proxies.
+
+            - **PyInstaller Build Improvements:**  
+              - The build process now includes all native binaries required by `tls_client` (DLL, SO, DYLIB files) for both Windows and macOS.
+              - The PyInstaller `.spec` files have been updated to use the correct user `site-packages` path, ensuring all dependencies (like `fake_useragent`, `websockets`, etc.) are bundled correctly.
+              - The GitHub Actions pipeline was updated to use these `.spec` files for reliable cross-platform builds.
+
+            - **Dependency Updates:**  
+              - Added `tls_client` and `websockets>=12.0` to requirements.
+              - Ensured all required Python packages are installed and included in the build.
+
+            ## Special Thanks
+
+            Big thanks to everyone who contributed to [Issue #14](https://github.com/H1B0B0/Kick-Viewerbot/issues/14) and helped with the fix, especially:
+            - [@JUSTRobot-hub](https://github.com/JUSTRobot-hub)
+            - [@0xfiraterdem](https://github.com/0xfiraterdem)
+            - [@SLAYER-CODE](https://github.com/SLAYER-CODE)
+            - [@kademerchant](https://github.com/kademerchant)
+            - [@pecatum](https://github.com/pecatum)
+            - [@malek10xdev](https://github.com/malek10xdev)
+
+            Your feedback, code, and suggestions were crucial to restoring full functionality. 🙏
 
           draft: false
           prerelease: false

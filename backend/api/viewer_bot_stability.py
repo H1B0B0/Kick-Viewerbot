@@ -5,6 +5,10 @@ import logging
 import requests
 import datetime
 import threading
+import asyncio
+import websockets
+import json
+import traceback
 from threading import Thread
 from streamlink import Streamlink
 from threading import Semaphore
@@ -23,6 +27,44 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 # Session creating for request
 ua = UserAgent()
 session = Streamlink()
+
+# Kick WebSocket configuration
+import requests
+import logging
+import time
+import asyncio
+import json
+import websockets
+from urllib.parse import urljoin, quote, unquote, urlparse
+import ssl
+import threading
+from concurrent.futures import ThreadPoolExecutor
+
+# Try to import tls_client for better browser fingerprinting
+try:
+    import tls_client
+    HAS_TLS_CLIENT = True
+    logging.debug("tls_client library available for enhanced browser fingerprinting")
+except ImportError:
+    HAS_TLS_CLIENT = False
+    logging.debug("tls_client not available, falling back to requests")
+
+# Enhanced client token for better authenticity
+CLIENT_TOKEN = "bf0eeab3-a2e4-4b84-b00e-0e6d1ceafaaa"
+WS_HEADERS = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Connection': 'keep-alive',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'User-Agent': ua.random,
+    'sec-ch-ua': '"Chromium";v="137", "Google Chrome";v="137", "Not-A.Brand";v="99"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"',
+}
 session.set_option("http-headers", {
     "Accept-Language": "en-US,en;q=0.5",
     "Connection": "keep-alive",
@@ -65,12 +107,175 @@ class ViewerBot_Stability:
         self.stream_url_last_updated = 0
         self.stream_url_lock = threading.Lock()
         self.stream_url_cache_duration = 0.5  # Cache URL for 0.2 seconds
+        self.channel_id = None  # Store channel ID for WebSocket connections
         logging.debug(f"Type of proxy: {self.type_of_proxy}")
         logging.debug(f"Timeout: {self.timeout}")
         logging.debug(f"Proxy imported: {self.proxy_imported}")
         logging.debug(f"Proxy file: {self.proxy_file}")
         logging.debug(f"Number of threads: {self.nb_of_threads}")
         logging.debug(f"Channel name: {self.channel_name}")
+
+    def get_channel_id(self):
+        """Get the channel ID from Kick API using multiple fallback methods"""
+        try:
+            # Method 1: Try v1 API first (less restricted)
+            try:
+                headers = {
+                    'User-Agent': ua.random,
+                    'Accept': 'application/json',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Referer': f'https://kick.com/{self.channel_name}',
+                }
+                response = requests.get(f'https://kick.com/api/v1/channels/{self.channel_name}', 
+                                      headers=headers, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.channel_id = data.get("id")
+                    logging.debug(f"Retrieved channel ID from v1 API: {self.channel_id}")
+                    return self.channel_id
+            except Exception as e:
+                logging.debug(f"v1 API failed: {e}")
+            
+            # Method 2: Try scraping the channel page directly
+            try:
+                headers = {
+                    'User-Agent': ua.random,
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                }
+                response = requests.get(f'https://kick.com/{self.channel_name}', 
+                                      headers=headers, timeout=15, allow_redirects=True)
+                if response.status_code == 200:
+                    import re
+                    # Look for channel data in the page
+                    patterns = [
+                        r'"id":(\d+).*?"slug":"' + re.escape(self.channel_name) + r'"',
+                        r'"channel_id":(\d+)',
+                        r'channelId["\']:\s*(\d+)',
+                        r'channel.*?id["\']:\s*(\d+)'
+                    ]
+                    
+                    for pattern in patterns:
+                        match = re.search(pattern, response.text, re.IGNORECASE)
+                        if match:
+                            self.channel_id = int(match.group(1))
+                            logging.debug(f"Retrieved channel ID from page scraping: {self.channel_id}")
+                            return self.channel_id
+                            
+                    logging.warning("Could not find channel ID in page content")
+            except Exception as e:
+                logging.debug(f"Page scraping failed: {e}")
+            
+            # Method 3: Try v2 API with different headers as last resort
+            try:
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Referer': 'https://kick.com/',
+                    'Origin': 'https://kick.com',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                }
+                response = requests.get(f'https://kick.com/api/v2/channels/{self.channel_name}', 
+                                      headers=headers, timeout=10)
+                if response.status_code == 200:
+                    data = response.json()
+                    self.channel_id = data.get("id")
+                    logging.debug(f"Retrieved channel ID from v2 API: {self.channel_id}")
+                    return self.channel_id
+            except Exception as e:
+                logging.debug(f"v2 API failed: {e}")
+            
+            logging.error(f"All methods failed to get channel ID for: {self.channel_name}")
+            return None
+            
+        except Exception as e:
+            logging.error(f"Error getting channel ID: {e}")
+            return None
+
+    def get_websocket_token(self):
+        """Get WebSocket authentication token"""
+        try:
+            # Create a session to maintain cookies
+            session = requests.Session()
+            
+            # Step 1: First visit Kick.com to get session cookies
+            initial_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1',
+                'Sec-Fetch-Dest': 'document',
+                'Sec-Fetch-Mode': 'navigate',
+                'Sec-Fetch-Site': 'none',
+                'Sec-Fetch-User': '?1',
+            }
+            
+            session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
+            logging.debug(f"Initial session request status: {session_resp.status_code}")
+            
+            # Step 2: Get WebSocket token with client token
+            token_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'application/json, text/plain, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Accept-Encoding': 'gzip, deflate, br',
+                'Referer': 'https://kick.com/',
+                'Origin': 'https://kick.com',
+                'DNT': '1',
+                'Connection': 'keep-alive',
+                'Sec-Fetch-Dest': 'empty',
+                'Sec-Fetch-Mode': 'cors',
+                'Sec-Fetch-Site': 'same-origin',
+                'X-CLIENT-TOKEN': CLIENT_TOKEN,
+                'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
+            }
+            
+            # Try multiple endpoints for WebSocket token
+            token_endpoints = [
+                'https://websockets.kick.com/viewer/v1/token',
+                'https://kick.com/api/websocket/token',
+                'https://kick.com/api/v1/websocket/token'
+            ]
+            
+            for endpoint in token_endpoints:
+                try:
+                    response = session.get(endpoint, headers=token_headers, timeout=10)
+                    logging.debug(f"Token endpoint {endpoint} status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        token = data.get("data", {}).get("token") or data.get("token")
+                        if token:
+                            logging.debug(f"Retrieved WebSocket token from {endpoint}: {token[:20]}..." if token else "No token")
+                            return token
+                except Exception as e:
+                    logging.debug(f"Token endpoint {endpoint} failed: {e}")
+                    continue
+            
+            logging.error("Failed to get WebSocket token from all endpoints")
+            return None
+            
+        except Exception as e:
+            logging.error(f"Error getting WebSocket token: {e}")
+            return None
 
     def extract_channel_name(self, input_str):
         """Extrait le nom de la chaîne d'une URL Kick ou retourne le nom directement"""

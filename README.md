@@ -23,6 +23,7 @@ A powerful, enterprise-grade web application for generating Kick views using pro
 - 🔒 Enterprise-grade SSL/HTTPS security implementation
 - 📱 Responsive and intuitive web interface optimized for all devices
 - ⚙️ Advanced configuration options for power users
+- 🔌 **WebSocket Integration** - Updated to work with Kick's new security measures (Fix for Issue #14)
 
 ## Requirements
 
