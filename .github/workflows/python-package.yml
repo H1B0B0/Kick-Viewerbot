@@ -43,11 +43,14 @@ jobs:
 
       - name: Extract tag name
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        shell: pwsh
+        run: |
+          $version = "${env:GITHUB_REF}" -replace 'refs/tags/', ''
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
 
       - name: Create .env file for frontend
         run: |
-          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ steps.get_version.outputs.VERSION }}" >> frontend/.env
+          echo NEXT_PUBLIC_REACT_APP_VERSION=${{ steps.get_version.outputs.VERSION }} >> frontend/.env
 
       - name: Build the Frontend
         shell: pwsh
