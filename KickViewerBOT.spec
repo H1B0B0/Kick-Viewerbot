@@ -35,6 +35,7 @@ a = Analysis(
         ('backend/.env', '.'),
         ('frontend/out', 'static'),
         (os.path.join(site_packages, 'fake_useragent', 'data'), 'fake_useragent/data'),
+        (os.path.join(site_packages, 'fake_useragent', 'data.json'), 'fake_useragent/data.json'),
         (os.path.join(site_packages, 'fake_useragent'), 'fake_useragent'),
         (os.path.join(site_packages, 'streamlink'), 'streamlink'),
         (os.path.join(site_packages, 'websockets'), 'websockets'),
