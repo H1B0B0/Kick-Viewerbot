@@ -22,8 +22,9 @@ except ImportError:
     tls_client_binaries = []
 
 
-# Force site_packages to user install path for Windows user install
-site_packages = os.path.join(os.path.expanduser("~"), "AppData", "Roaming", "Python", "Python312", "site-packages")
+# Use the current Python environment's site-packages (works for venv and CI)
+import site
+site_packages = site.getsitepackages()[0]
 
 a = Analysis(
     ['backend/main.py'],
