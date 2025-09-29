@@ -30,6 +30,14 @@ def get_env_path():
     else:
         return os.path.join(os.path.dirname(__file__), '.env')
 
+def get_certs_dir():
+    """Get the correct path for certs directory in both dev and PyInstaller environments"""
+    if getattr(sys, 'frozen', False):
+        bundle_dir = sys._MEIPASS
+        return os.path.join(bundle_dir, 'certs')
+    else:
+        return os.path.join(os.path.dirname(__file__), 'certs')
+
 def check_certificate_expiry(cert_path):
     """
     Check if the SSL certificate is expired
@@ -70,7 +78,7 @@ def fetch_certificate():
     """
     Directly download the SSL certificate files from the API
     """
-    cert_dir = os.path.join(os.path.dirname(__file__), 'certs')
+    cert_dir = get_certs_dir()
     cert_path = os.path.join(cert_dir, 'velbots.shop.cert')
     key_path = os.path.join(cert_dir, 'velbots.shop.key')
     
@@ -153,8 +161,9 @@ def ensure_valid_certificates():
     Ensures that valid certificates are available
     Checks expiry and retrieves new certificates if needed
     """
-    cert_path = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.cert')
-    key_path = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.key')
+    cert_dir = get_certs_dir()
+    cert_path = os.path.join(cert_dir, 'velbots.shop.cert')
+    key_path = os.path.join(cert_dir, 'velbots.shop.key')
     
     # If certificates don't exist or are expired, retrieve new ones
     if not os.path.exists(cert_path) or not os.path.exists(key_path) or not check_certificate_expiry(cert_path):
@@ -470,8 +479,9 @@ if __name__ == '__main__':
     if args.dev:
         logger.warning("Running in development mode - Authentication disabled")
     
-    CERT_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.cert')
-    KEY_PATH = os.path.join(os.path.dirname(__file__), 'certs', 'velbots.shop.key')
+    cert_dir = get_certs_dir()
+    CERT_PATH = os.path.join(cert_dir, 'velbots.shop.cert')
+    KEY_PATH = os.path.join(cert_dir, 'velbots.shop.key')
 
     cert_status = ensure_valid_certificates()
 
