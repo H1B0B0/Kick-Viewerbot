@@ -2,6 +2,12 @@
 
 A powerful, enterprise-grade web application for generating Kick views using proxy rotation technology. Built with a Flask backend and React frontend, this solution offers a seamless experience with production-ready performance.
 
+## Warning
+
+⚠️ **EDUCATIONAL PURPOSE ONLY** ⚠️
+
+This software is provided strictly for educational and research purposes. Using this tool to manipulate viewing metrics may violate Kick's Terms of Service and applicable laws. The developers assume no responsibility for misuse of this software.
+
 ## Table of Contents
 
 - [Features](#features)
@@ -104,9 +110,3 @@ A powerful, enterprise-grade web application for generating Kick views using pro
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for detailed terms and conditions.
-
-## Warning
-
-⚠️ **EDUCATIONAL PURPOSE ONLY** ⚠️
-
-This software is provided strictly for educational and research purposes. Using this tool to manipulate viewing metrics may violate Kick's Terms of Service and applicable laws. The developers assume no responsibility for misuse of this software.
