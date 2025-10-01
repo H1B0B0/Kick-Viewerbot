@@ -241,31 +241,60 @@ jobs:
           body: |
             # 🚀 KickViewerBOT Release Notes V${{ steps.get_version.outputs.VERSION }}
 
-            ## Major Fixes
+            ## ✨ What's New - Stunning Visual Overhaul!
 
-            - **WebSocket & Browser Fingerprint Fix:**  
-              The bot now uses the `tls_client` library with a Chrome 120 fingerprint for all HTTP and WebSocket requests to Kick.com. This bypasses the new anti-bot protections and resolves the 403 errors, even when using premium proxies.
+            This release brings a **complete visual transformation** to KickViewerBOT with beautiful animations and interactive effects that make monitoring your viewers more engaging than ever!
 
-            - **PyInstaller Build Improvements:**  
-              - The build process now includes all native binaries required by `tls_client` (DLL, SO, DYLIB files) for both Windows and macOS.
-              - The PyInstaller `.spec` files have been updated to use the correct user `site-packages` path, ensuring all dependencies (like `fake_useragent`, `websockets`, etc.) are bundled correctly.
-              - The GitHub Actions pipeline was updated to use these `.spec` files for reliable cross-platform builds.
+            ### 🎨 Beautiful New Animations
 
-            - **Dependency Updates:**  
-              - Added `tls_client` and `websockets>=12.0` to requirements.
-              - Ensured all required Python packages are installed and included in the build.
+            **Title Animation:**
+            - The "Kick Viewer Bot" title now writes itself on screen like a hand-drawn signature
+            - Smooth, professional entrance that sets the tone for the whole interface
 
-            ## Special Thanks
+            **Page Entrance Effects:**
+            - All cards and elements now smoothly animate into view when you open the app
+            - 3D rotation effects and bouncy animations make the interface feel alive
+            - Everything flows naturally - no more sudden appearances!
 
-            Big thanks to everyone who contributed to [Issue #14](https://github.com/H1B0B0/Kick-Viewerbot/issues/14) and helped with the fix, especially:
-            - [@JUSTRobot-hub](https://github.com/JUSTRobot-hub)
-            - [@0xfiraterdem](https://github.com/0xfiraterdem)
-            - [@SLAYER-CODE](https://github.com/SLAYER-CODE)
-            - [@kademerchant](https://github.com/kademerchant)
-            - [@pecatum](https://github.com/pecatum)
-            - [@malek10xdev](https://github.com/malek10xdev)
+            ### 🎉 Celebration Effects When Viewers Increase!
 
-            Your feedback, code, and suggestions were crucial to restoring full functionality. 🙏
+            Your app now **celebrates with you** when viewers join your stream:
+
+            - **🎊 BIG WIN (50+ viewers at once):** Confetti explosion with colorful particles flying everywhere + Triple pulse glow + Large "+50" popup
+            - **💥 Great! (20-49 viewers):** Shockwave ripple effect + "+20" number popup + Card flash
+            - **✨ Nice! (5-19 viewers):** Subtle flash + "+5" number popup
+            - **🌟 Growing (1-4 viewers):** Gentle flash effect
+
+            **The bigger the viewer increase, the bigger the celebration!** 🎆
+
+            ### 📊 Live Counter Animations
+
+            - Numbers now **count up smoothly** instead of jumping instantly
+            - Request counter shows purple shockwave when you get lots of activity
+            - All stats update in real-time with beautiful transitions
+
+            ### 🎯 Cleaner, Smoother Experience
+
+            - Removed distracting button animations for a cleaner look
+            - Everything runs faster and smoother
+            - Animations only play when they should - no more flickering or repeating
+            - Fixed all bugs where numbers weren't updating properly
+
+            ### 🐛 Bug Fixes
+
+            - ✅ Stats now update correctly in real-time
+            - ✅ Title animation works perfectly on page load
+            - ✅ Removed weird red square that appeared in corner
+            - ✅ All visual glitches and conflicts resolved
+            - ✅ Smooth performance on all devices
+
+            ---
+
+            ## 📥 Download & Enjoy!
+
+            **This is the most visually stunning version of KickViewerBOT yet!**
+
+            Experience the difference - your viewer bot monitoring has never looked this good! 🎨✨
 
           draft: false
           prerelease: false

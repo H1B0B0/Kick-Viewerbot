@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 @layer base {
@@ -84,9 +84,16 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    background-image: 
-      radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.05) 0, transparent 40%),
-      radial-gradient(circle at 0% 0%, rgba(16, 185, 129, 0.05) 0, transparent 30%);
+    background-image: radial-gradient(
+        circle at 100% 100%,
+        rgba(59, 130, 246, 0.05) 0,
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 0% 0%,
+        rgba(16, 185, 129, 0.05) 0,
+        transparent 30%
+      );
     background-attachment: fixed;
   }
 }
@@ -116,6 +123,23 @@ body {
 
   .glass-effect {
     @apply bg-background/95 backdrop-blur-xl;
+  }
+
+  /* Animation classes for elements */
+  .config-input {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .stat-card-item {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .title-char {
+    display: inline-block;
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -151,9 +175,15 @@ body {
 
 /* Add these new animations and effects */
 @keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 .animate-float {
@@ -161,8 +191,13 @@ body {
 }
 
 @keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .animate-pulse-subtle {
@@ -170,9 +205,15 @@ body {
 }
 
 @keyframes gradient-x {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .animate-gradient-x {
@@ -181,25 +222,76 @@ body {
 }
 
 @keyframes bounce-once {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .animate-bounce-once {
   animation: bounce-once 0.5s ease-in-out;
 }
 
-/* Glass card effect */
+/* Glass card effect with gradient border */
 .glass-card {
   background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  position: relative;
 }
 
 .dark .glass-card {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Gradient border effect */
+.gradient-border {
+  position: relative;
+  background: linear-gradient(
+    to bottom right,
+    rgba(16, 185, 129, 0.1),
+    rgba(132, 204, 22, 0.1)
+  );
+  border: 1px solid transparent;
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(16, 185, 129, 0.5),
+    rgba(132, 204, 22, 0.5)
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gradient-border:hover::before {
+  opacity: 1;
+}
+
+/* Neo brutalism shadow */
+.neo-shadow {
+  box-shadow: 8px 8px 0 rgba(16, 185, 129, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neo-shadow:hover {
+  box-shadow: 12px 12px 0 rgba(16, 185, 129, 0.3);
+  transform: translate(-2px, -2px);
 }
 
 /* Fancy hover effects */
@@ -209,7 +301,7 @@ body {
 }
 
 .fancy-hover:hover::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: -3px;
   background: linear-gradient(to right, #10b981, #3b82f6);
@@ -238,4 +330,34 @@ body {
 .page-exit-active {
   opacity: 0;
   transition: opacity 300ms;
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable all custom animations */
+  .animate-fade-in,
+  .animate-float,
+  .animate-pulse-subtle,
+  .animate-gradient-x,
+  .animate-bounce-once,
+  .animate-spin-slow,
+  .animate-ping {
+    animation: none !important;
+  }
+
+  /* Disable transform transitions */
+  .card-hover-effect,
+  .neo-shadow,
+  .fancy-hover {
+    transform: none !important;
+  }
 }

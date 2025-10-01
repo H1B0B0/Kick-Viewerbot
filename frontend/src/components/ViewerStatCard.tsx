@@ -4,6 +4,8 @@ import { FaArrowUp, FaArrowDown, FaMinus } from "react-icons/fa";
 import { useViewerCache } from "../hooks/useViewerCache";
 import { cn } from "../utils/cn";
 import { AnimatedCounter } from "./AnimatedCounter";
+import { useAnime } from "../hooks/useAnime";
+import { flash, confetti, numberPop, shockwave, milestonePulse } from "../utils/animations";
 
 type ViewerStatCardProps = {
   value: number;
@@ -16,12 +18,54 @@ export function ViewerStatCard({ value }: ViewerStatCardProps) {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [addedValue, setAddedValue] = useState<number>(0);
   const [isIncreasing, setIsIncreasing] = useState<boolean>(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const pulseRef = useRef<HTMLDivElement>(null);
+  const { animate, createTimeline } = useAnime();
+
+  // Radial pulse animation on increase
+  useEffect(() => {
+    if (difference > 0 && pulseRef.current) {
+      try {
+        const tl = createTimeline();
+        tl.add(pulseRef.current, {
+          scale: [1, 1.5],
+          opacity: [0.4, 0],
+          duration: 1200,
+          ease: "outQuad",
+        });
+      } catch (error) {
+        console.warn("Pulse animation failed:", error);
+      }
+    }
+  }, [value, difference, createTimeline]);
 
   useEffect(() => {
-    if (difference > 0) {
+    if (difference > 0 && cardRef.current) {
       setShowGlow(true);
       setIsIncreasing(true);
       setAddedValue(difference);
+
+      const card = cardRef.current;
+
+      // Different effects based on viewer increase
+      if (difference >= 50) {
+        // BIG increase - confetti explosion!
+        confetti(card, 25);
+        milestonePulse(card);
+        numberPop(card, difference, "#10b981");
+      } else if (difference >= 20) {
+        // Medium increase - shockwave + number
+        shockwave(card, "rgba(16,185,129,0.5)");
+        numberPop(card, difference, "#34d399");
+        flash(card, "rgba(34,197,94,0.6)");
+      } else if (difference >= 5) {
+        // Small increase - flash + number
+        flash(card, "rgba(34,197,94,0.6)");
+        numberPop(card, difference, "#6ee7b7");
+      } else {
+        // Tiny increase - just flash
+        flash(card, "rgba(34,197,94,0.4)");
+      }
 
       if (timerRef.current) {
         clearTimeout(timerRef.current);
@@ -55,6 +99,7 @@ export function ViewerStatCard({ value }: ViewerStatCardProps) {
 
   return (
     <Card
+      ref={cardRef}
       className={cn(
         "border-none glass-card transition-all duration-300 h-full w-full",
         showGlow && "ring-2 ring-green-500/50"

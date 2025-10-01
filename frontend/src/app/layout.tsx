@@ -42,7 +42,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-mesh">
+      <body className="min-h-screen bg-mesh" suppressHydrationWarning>
         <ThemeProvider>
           {/* Background Elements */}
           <div className="fixed inset-0 w-full h-full overflow-hidden">
@@ -84,8 +84,8 @@ export default function RootLayout({
             {!performanceMode && (
               <div className="absolute inset-0">
                 <Spline
-                  scene="https://prod.spline.design/yVvMIpbPAQlkge9h/scene.splinecode"
-                  className="blur-xl absolute"
+                  scene="https://prod.spline.design/fDEn2H4mhzWKkh09/scene.splinecode"
+                  className="absolute blur-sm"
                 />
               </div>
             )}

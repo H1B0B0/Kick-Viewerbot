@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "@heroui/react": "^2.6.14",
     "@splinetool/react-spline": "^4.0.0",
+    "animejs": "^4.2.0",
     "axios": "^1.7.9",
     "chart.js": "^4.4.8",
     "clsx": "^2.1.1",

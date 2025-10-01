@@ -2,6 +2,8 @@ import React, { useEffect, useState, useRef } from "react";
 import { Card, CardBody, Progress } from "@heroui/react";
 import { cn } from "../utils/cn";
 import { AnimatedCounter } from "./AnimatedCounter";
+import { useAnime } from "../hooks/useAnime";
+import { flash, shockwave } from "../utils/animations";
 
 type StatCardProps = {
   title: string;
@@ -13,16 +15,28 @@ type StatCardProps = {
 export function StatCard({ title, value, total, increment }: StatCardProps) {
   const percentage = total ? (value / total) * 100 : 0;
   const [prevValue, setPrevValue] = useState<number>(value);
+  const [prevPercentage, setPrevPercentage] = useState<number>(percentage);
   const [isIncreasing, setIsIncreasing] = useState<boolean>(false);
   const [addedValue, setAddedValue] = useState<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const { animate } = useAnime();
+
+  const isRequestCard = title.toLowerCase().includes("request");
 
   useEffect(() => {
     if (value !== prevValue) {
       const difference = value - prevValue;
-      if (difference > 0) {
+      if (difference > 0 && cardRef.current) {
         setAddedValue(difference);
         setIsIncreasing(true);
+
+        // Flash animation on value increase with shockwave for requests
+        if (isRequestCard && difference >= 10) {
+          shockwave(cardRef.current, "rgba(168,85,247,0.4)");
+        }
+        flash(cardRef.current);
 
         if (timerRef.current) {
           clearTimeout(timerRef.current);
@@ -41,9 +55,29 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
         clearTimeout(timerRef.current);
       }
     };
-  }, [value, prevValue]);
+  }, [value, prevValue, isRequestCard]);
 
-  const isRequestCard = title.toLowerCase().includes("request");
+  // Animate progress bar
+  useEffect(() => {
+    if (percentage !== prevPercentage && progressRef.current) {
+      const progressBar = progressRef.current.querySelector(
+        '[data-slot="indicator"]'
+      );
+      if (progressBar instanceof HTMLElement) {
+        try {
+          animate(progressBar, {
+            scaleX: [0.95, 1],
+            opacity: [0.7, 1],
+            duration: 600,
+            ease: "outQuad",
+          });
+        } catch (error) {
+          console.warn("Progress animation failed:", error);
+        }
+      }
+    }
+    setPrevPercentage(percentage);
+  }, [percentage, prevPercentage, animate]);
 
   // Determine appropriate icon for the stat card
   const getCardIcon = () => {
@@ -104,6 +138,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
 
   return (
     <Card
+      ref={cardRef}
       className={cn(
         "border-none glass-card transition-all duration-300 h-full w-full",
         isRequestCard && isIncreasing && "ring-2 ring-green-500/50"
@@ -176,7 +211,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
           )}
         </div>
         {total && (
-          <div className="z-10">
+          <div ref={progressRef} className="z-10">
             <Progress
               value={percentage}
               classNames={{

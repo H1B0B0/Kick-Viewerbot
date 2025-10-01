@@ -1,4 +1,6 @@
 import { Card, CardBody, Progress, Badge } from "@heroui/react";
+import { useEffect, useRef, useState } from "react";
+import { useAnime } from "../hooks/useAnime";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -41,7 +43,59 @@ interface SystemMetricsProps {
 }
 
 export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
-  const renderBasicMetric = (metric: MetricData) => (
+  const { animate } = useAnime();
+  const [prevMetrics, setPrevMetrics] = useState(metrics);
+  const cpuProgressRef = useRef<HTMLDivElement>(null);
+  const memoryProgressRef = useRef<HTMLDivElement>(null);
+
+  // Animate progress bars when values change
+  useEffect(() => {
+    if (metrics.cpu.value !== prevMetrics.cpu.value && cpuProgressRef.current) {
+      const indicator = cpuProgressRef.current.querySelector(
+        '[data-slot="indicator"]'
+      );
+      if (indicator instanceof HTMLElement) {
+        try {
+          animate(indicator, {
+            scaleX: [0.95, 1],
+            opacity: [0.6, 1],
+            duration: 800,
+            ease: "outQuad",
+          });
+        } catch (error) {
+          console.warn("CPU progress animation failed:", error);
+        }
+      }
+    }
+
+    if (
+      metrics.memory.value !== prevMetrics.memory.value &&
+      memoryProgressRef.current
+    ) {
+      const indicator = memoryProgressRef.current.querySelector(
+        '[data-slot="indicator"]'
+      );
+      if (indicator instanceof HTMLElement) {
+        try {
+          animate(indicator, {
+            scaleX: [0.95, 1],
+            opacity: [0.6, 1],
+            duration: 800,
+            ease: "outQuad",
+          });
+        } catch (error) {
+          console.warn("Memory progress animation failed:", error);
+        }
+      }
+    }
+
+    setPrevMetrics(metrics);
+  }, [metrics, prevMetrics, animate]);
+
+  const renderBasicMetric = (
+    metric: MetricData,
+    progressRef?: React.RefObject<HTMLDivElement | null>
+  ) => (
     <Card key={metric.label} className="border-none glass-card" shadow="sm">
       <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-5">
@@ -71,17 +125,19 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
             {metric.unit}
           </Badge>
         </div>
-        <Progress
-          value={(metric.value / metric.maxValue) * 100}
-          color={
-            (metric.value / metric.maxValue) * 100 < 30
-              ? "success"
-              : (metric.value / metric.maxValue) * 100 < 70
-              ? "warning"
-              : "danger"
-          }
-          className="mb-3"
-        />
+        <div ref={progressRef}>
+          <Progress
+            value={(metric.value / metric.maxValue) * 100}
+            color={
+              (metric.value / metric.maxValue) * 100 < 30
+                ? "success"
+                : (metric.value / metric.maxValue) * 100 < 70
+                ? "warning"
+                : "danger"
+            }
+            className="mb-3"
+          />
+        </div>
       </CardBody>
     </Card>
   );
@@ -200,8 +256,8 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
           System Metrics
         </h3>
         <div className="space-y-4">
-          {renderBasicMetric(metrics.cpu)}
-          {renderBasicMetric(metrics.memory)}
+          {renderBasicMetric(metrics.cpu, cpuProgressRef)}
+          {renderBasicMetric(metrics.memory, memoryProgressRef)}
           {renderNetworkMetric()}
         </div>
       </CardBody>

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardHeader,
@@ -20,6 +20,8 @@ import { ViewerStatCard } from "../components/ViewerStatCard";
 import { startBot, stopBot, getBotStats } from "./functions/BotAPI";
 import { SystemMetrics } from "../components/SystemMetrics";
 import { StatusBanner } from "../components/StatusBanner";
+import { animate, stagger, createTimeline } from "animejs";
+import { MotionCard } from "../components/MotionCard";
 
 interface MetricData {
   label: string;
@@ -46,6 +48,8 @@ export default function ViewerBotInterface() {
     config?.channelName || profile?.user?.TwitchUsername
   );
 
+  // DEBUG: Removed test animation that was causing the red square
+
   const [isLoading, setIsLoading] = useState(false);
   const [proxyFile, setProxyFile] = useState<File | null>(null);
   const [unactivated, setUnactivated] = useState(false);
@@ -68,6 +72,231 @@ export default function ViewerBotInterface() {
     proxy_loading_progress: 0,
     startup_progress: 0,
   });
+
+  const animatedContainerRef = useRef<HTMLDivElement | null>(null);
+  const actionButtonRef = useRef<HTMLButtonElement | null>(null);
+  const statsCardsRef = useRef<HTMLDivElement | null>(null);
+  const inputsRef = useRef<HTMLDivElement[]>([]);
+  const titleRef = useRef<HTMLHeadingElement | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Mark component as mounted (client-side only)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Animate title with SVG path drawing effect
+  useEffect(() => {
+    if (!isMounted || !titleRef.current) return;
+
+    const titleText = titleRef.current.textContent || "";
+    if (!titleText) return;
+
+    console.log("Title SVG animation starting with text:", titleText);
+
+    // Create SVG text with proper centering like before
+    titleRef.current.innerHTML = `
+      <svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
+        <defs>
+          <linearGradient id="titleGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#34d399;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#a3e635;stop-opacity:1" />
+          </linearGradient>
+        </defs>
+        <text
+          x="50%"
+          y="70"
+          font-size="56"
+          font-weight="900"
+          text-anchor="middle"
+          fill="none"
+          stroke="url(#titleGradient)"
+          stroke-width="2"
+          class="title-text"
+          style="font-family: system-ui, -apple-system, sans-serif; stroke-linecap: round; stroke-linejoin: round;"
+        >${titleText}</text>
+      </svg>
+    `;
+
+    const textElement = titleRef.current.querySelector(".title-text");
+
+    if (!textElement) {
+      console.warn("SVG text element not found");
+      titleRef.current.innerHTML = titleText;
+      return;
+    }
+
+    console.log("SVG text element found, setting up animation");
+
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      try {
+        // Calculate approximate stroke length based on text
+        // Each character is roughly 30-40 units in the font used
+        const textLength = titleText.length * 40;
+
+        // Set up stroke dasharray and offset for drawing animation
+        (textElement as SVGTextElement).style.strokeDasharray = `${textLength}`;
+        (
+          textElement as SVGTextElement
+        ).style.strokeDashoffset = `${textLength}`;
+
+        console.log(
+          `Starting SVG text drawing animation (length: ${textLength})...`
+        );
+
+        // Animate stroke drawing
+        animate(textElement, {
+          strokeDashoffset: [textLength, 0],
+          duration: 4000,
+          ease: "linear",
+          loop: true,
+          onComplete: () => {
+            console.log("✅ SVG drawing animation completed!");
+          },
+        });
+      } catch (e) {
+        console.error("❌ SVG animation failed:", e);
+        // Fallback: show text with stroke
+        if (titleRef.current) {
+          titleRef.current.innerHTML = `<span style="-webkit-text-stroke: 2px #10b981; -webkit-text-fill-color: transparent; font-size: 3rem; font-weight: 900;">${titleText}</span>`;
+        }
+      }
+    }, 500);
+  }, [isMounted]);
+
+  // Animate individual stat cards inside the monitoring section
+  useEffect(() => {
+    if (!isMounted || !statsCardsRef.current) return;
+
+    // Add delay to ensure cards are fully rendered after MotionCard
+    const timer = setTimeout(() => {
+      if (!statsCardsRef.current) return;
+
+      const statCards =
+        statsCardsRef.current.querySelectorAll(".stat-card-item");
+      if (statCards.length === 0) {
+        console.warn("No stat cards found for animation");
+        return;
+      }
+
+      console.log(`Animating ${statCards.length} stat cards`);
+
+      try {
+        // Animate with stagger
+        animate(statCards, {
+          translateY: [40, 0],
+          opacity: [0, 1],
+          scale: [0.9, 1],
+          duration: 600,
+          delay: stagger(100, { start: 400 }), // Start after MotionCard animation
+          ease: "outQuad",
+        });
+      } catch (e) {
+        console.warn("Stat cards animation failed:", e);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [isMounted]); // Only animate on mount
+
+  // Animate configuration inputs with creative slide and fade
+  useEffect(() => {
+    if (!isMounted || !animatedContainerRef.current) return;
+
+    // Wait a bit for DOM to be fully ready
+    const timer = setTimeout(() => {
+      if (!animatedContainerRef.current) return;
+
+      const configInputs =
+        animatedContainerRef.current.querySelectorAll(".config-input");
+
+      if (configInputs.length === 0) {
+        console.warn("No config inputs found");
+        return;
+      }
+
+      console.log(`Animating ${configInputs.length} config inputs`);
+
+      try {
+        // Set initial state with alternating directions
+        configInputs.forEach((input, index) => {
+          (input as HTMLElement).style.opacity = "0";
+          const direction = index % 2 === 0 ? -40 : 40;
+          (
+            input as HTMLElement
+          ).style.transform = `translateX(${direction}px) scale(0.9)`;
+        });
+
+        // Animate with alternating directions
+        setTimeout(() => {
+          animate(configInputs, {
+            opacity: [0, 1],
+            translateX: [(_: any, i: number) => (i % 2 === 0 ? -40 : 40), 0],
+            scale: [0.9, 1],
+            duration: 700,
+            delay: (_: any, i: number) => {
+              const delayAttr = (configInputs[i] as HTMLElement).getAttribute(
+                "data-delay"
+              );
+              return delayAttr ? parseInt(delayAttr) : i * 60;
+            },
+            ease: "outBack(1.7)",
+          });
+        }, 100);
+      } catch (e) {
+        console.warn("Config inputs animation failed:", e);
+        // Fallback
+        configInputs.forEach((input) => {
+          (input as HTMLElement).style.opacity = "1";
+          (input as HTMLElement).style.transform = "translateX(0) scale(1)";
+        });
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [isMounted]);
+
+  // Creative entrance animations for main sections
+  useEffect(() => {
+    if (!isMounted || !animatedContainerRef.current) return;
+    const cards =
+      animatedContainerRef.current.querySelectorAll(".anim-section");
+    if (cards.length === 0) return;
+
+    try {
+      // Set initial state with perspective
+      cards.forEach((card, index) => {
+        (card as HTMLElement).style.opacity = "0";
+        (card as HTMLElement).style.transformOrigin = "center bottom";
+        (card as HTMLElement).style.transform = `perspective(1000px) rotateY(${
+          index % 2 === 0 ? -15 : 15
+        }deg) translateY(50px)`;
+      });
+
+      // Animate with 3D rotation
+      setTimeout(() => {
+        animate(cards, {
+          opacity: [0, 1],
+          translateY: [50, 0],
+          rotateY: [(_: any, i: number) => (i % 2 === 0 ? -15 : 15), 0],
+          duration: 900,
+          delay: stagger(120, { start: 300 }),
+          ease: "outExpo",
+        });
+      }, 50);
+    } catch (e) {
+      console.warn("Animation initialization failed:", e);
+      // Fallback
+      cards.forEach((card) => {
+        (card as HTMLElement).style.opacity = "1";
+        (card as HTMLElement).style.transform = "translateY(0) rotateY(0)";
+      });
+    }
+  }, [isMounted]);
+
+  // Button animations removed for cleaner UX
 
   useEffect(() => {
     if (botStatus.state.toLowerCase() === "stopping") {
@@ -120,7 +349,6 @@ export default function ViewerBotInterface() {
   const fetchStats = async () => {
     try {
       const stats = await getBotStats();
-
       // Ensure system_metrics exists with default values
       const system_metrics = stats.system_metrics || {
         cpu: 0,
@@ -128,7 +356,6 @@ export default function ViewerBotInterface() {
         network_up: 0,
         network_down: 0,
       };
-
       // Update system metrics with safe values
       setSystemMetrics((prevMetrics) => {
         const updateMetric = (
@@ -142,7 +369,6 @@ export default function ViewerBotInterface() {
             typeof newValue === "number" ? newValue : 0,
           ],
         });
-
         return {
           cpu: updateMetric(prevMetrics.cpu, system_metrics.cpu),
           memory: updateMetric(prevMetrics.memory, system_metrics.memory),
@@ -156,7 +382,6 @@ export default function ViewerBotInterface() {
           ),
         };
       });
-
       // Update bot stats
       setStats((prevStats) => ({
         ...prevStats,
@@ -165,18 +390,15 @@ export default function ViewerBotInterface() {
         aliveProxies: stats.alive_proxies,
         request_count: stats.request_count,
       }));
-
       // Update bot status
       if (stats.status) {
         setBotStatus(stats.status);
-
         // Handle error states
         if (stats.status.state === "error" && isLoading) {
           setIsLoading(false);
           toast.error(stats.status.message);
         }
       }
-
       // Update isLoading based on bot state
       if (!stats.is_running && isLoading) {
         setIsLoading(false);
@@ -186,19 +408,12 @@ export default function ViewerBotInterface() {
     }
   };
 
+  // Stats/refetch interval - single source; avoid overlapping (depend only on botStatus.state)
   useEffect(() => {
-    // Fetch stats immediately and then every second
-    const intervalId = setInterval(() => {
-      fetchStats();
-    }, 1000);
-
-    // Initial fetch
-    fetchStats();
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [isLoading]);
+    fetchStats(); // initial
+    const id = setInterval(fetchStats, 1500);
+    return () => clearInterval(id);
+  }, [botStatus.state]);
 
   useEffect(() => {
     // If profile loads and channel name is empty, set it ONLY ONCE
@@ -227,7 +442,6 @@ export default function ViewerBotInterface() {
             aliveProxies: stats.alive_proxies,
             request_count: stats.request_count,
           }));
-
           if (stats.config) {
             const { threads, timeout, proxy_type } = stats.config;
             const parsedTimeout = parseInt(timeout, 10);
@@ -244,33 +458,17 @@ export default function ViewerBotInterface() {
         console.error("Failed to check bot status:", error);
       }
     };
-
     checkBotStatus();
   }, []);
 
-  useEffect(() => {
-    const checkBotStatusPeriodically = () => {
-      if (
-        botStatus.state.toLowerCase() !== "stopping" &&
-        botStatus.state.toLowerCase() !== "starting"
-      ) {
-        fetchStats();
-      }
-    };
-
-    const interval = setInterval(checkBotStatusPeriodically, 3000);
-    return () => clearInterval(interval);
-  }, [botStatus]);
-
   const handleStart = async () => {
-    // Add protection to prevent starting during transitional states
+    // Prevent starting during transitional states
     if (
       botStatus.state.toLowerCase() === "stopping" ||
       botStatus.state.toLowerCase() === "starting"
     ) {
       return;
     }
-
     if (!config.channelName) {
       toast.error("Channel name or url is required");
       return;
@@ -286,7 +484,7 @@ export default function ViewerBotInterface() {
         proxyFile: proxyFile || undefined,
         timeout: config.timeout,
         proxyType: config.proxyType,
-        stabilityMode: config.stabilityMode, // Ensure stabilityMode is included
+        stabilityMode: config.stabilityMode,
       });
       toast.success(
         "Bot started successfully!🚀 It may take a while before the viewers appear on the stream."
@@ -297,21 +495,19 @@ export default function ViewerBotInterface() {
           err instanceof Error ? err.message : "Unknown error"
         }`
       );
-      setIsLoading(false); // Reset loading on error
+      setIsLoading(false);
     }
   };
 
   const handleStop = async () => {
-    // Add protection to prevent stopping during transitional states
     if (
       botStatus.state.toLowerCase() === "stopping" ||
       botStatus.state.toLowerCase() === "starting"
     ) {
       return;
     }
-
     try {
-      setIsLoading(false); // Set loading to false immediately
+      setIsLoading(false);
       await stopBot();
       toast.success("Bot stopped successfully!");
       setStats((prevStats) => ({
@@ -321,7 +517,7 @@ export default function ViewerBotInterface() {
       }));
     } catch (err) {
       toast.error("Failed to stop bot");
-      setIsLoading(true); // Revert loading state if stop fails
+      setIsLoading(true);
       console.error("Failed to stop bot:", err);
     }
   };
@@ -350,17 +546,20 @@ export default function ViewerBotInterface() {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen p-4 md:p-6 lg:p-8" ref={animatedContainerRef}>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
-        <Card className="relative text-center p-8 rounded-2xl border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+        <MotionCard
+          index={0}
+          className="relative text-center p-8 rounded-2xl border-none bg-background/90 backdrop-blur-xl shadow-xl"
+        >
           <Button
             as="a"
             href="https://www.patreon.com/c/HIBO"
             target="_blank"
             rel="noopener noreferrer"
             variant="bordered"
-            className="absolute left-4 top-4 bg-gradient-to-r from-green-500 to-lime-400 text-white border-none"
+            className="absolute left-4 top-4 bg-gradient-to-r from-green-500 to-lime-400 text-white border-none hover:scale-105 transition-transform"
             startContent={<span className="text-lg">❤️</span>}
           >
             Support Me
@@ -369,64 +568,78 @@ export default function ViewerBotInterface() {
             <Button
               variant="bordered"
               onPress={handleLogout}
-              className="absolute right-4 top-4"
+              className="absolute right-4 top-4 hover:scale-105 transition-transform"
               color="danger"
             >
               Logout
             </Button>
           )}
-          <h1 className="text-5xl font-black mb-3 bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
-            Kick Viewer Bot <span className="text-sm text-gray-500">BETA</span>
+          <h1
+            ref={titleRef}
+            className="text-5xl font-black mb-3 bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent"
+          >
+            Kick Viewer Bot
           </h1>
           <p className="text-xl font-medium">
             {profile
               ? `Welcome back, ${profile.user.username}`
               : "Monitor and control your viewer bot"}
           </p>
-        </Card>
+        </MotionCard>
 
         {/* Monitoring Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="h-full border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+          <MotionCard
+            index={1}
+            className="h-full border-none bg-background/90 backdrop-blur-xl shadow-xl"
+          >
             <CardHeader className="pb-2">
               <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
                 Live Monitoring
               </h2>
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-                <div className="w-full transform hover:scale-[1.02] transition-all duration-300">
+              <div
+                ref={statsCardsRef}
+                className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full"
+              >
+                <div className="w-full stat-card-item">
                   <ViewerStatCard value={currentViewers} />
                 </div>
-                <div className="w-full transform hover:scale-[1.02] transition-all duration-300">
+                <div className="w-full stat-card-item">
                   <StatCard
                     title="Active Threads"
                     value={stats.activeThreads}
                     total={config.threads}
                   />
                 </div>
-                <div className="w-full transform hover:scale-[1.02] transition-all duration-300">
+                <div className="w-full stat-card-item">
                   <StatCard
                     title="Proxies"
                     value={botStatus.proxy_count || stats.totalProxies}
                     total={botStatus.proxy_count || stats.totalProxies}
                   />
                 </div>
-                <div className="w-full transform hover:scale-[1.02] transition-all duration-300">
+                <div className="w-full stat-card-item">
                   <StatCard title="Requests" value={stats.request_count} />
                 </div>
               </div>
             </CardBody>
-          </Card>
+          </MotionCard>
 
-          <SystemMetrics metrics={systemMetrics} />
+          <MotionCard index={2} disableHoverTilt={true} className="border-none">
+            <SystemMetrics metrics={systemMetrics} />
+          </MotionCard>
         </div>
 
         {/* Control Panel */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+          <MotionCard
+            index={3}
+            className="border-none bg-background/90 backdrop-blur-xl shadow-xl"
+          >
             <CardHeader className="pb-2">
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent animate-gradient-x">
                 Basic Configuration
               </h2>
             </CardHeader>
@@ -438,8 +651,13 @@ export default function ViewerBotInterface() {
                   profile?.user?.TwitchUsername || "Enter channel name or URL"
                 }
                 onChange={handleChannelNameChange}
+                className="config-input"
+                data-delay="0"
               />
-              <div className="flex items-center space-x-2">
+              <div
+                className="flex items-center space-x-2 config-input"
+                data-delay="100"
+              >
                 <Input
                   type="number"
                   label="Number of Threads"
@@ -478,7 +696,7 @@ export default function ViewerBotInterface() {
                   </div>
                 </Tooltip>
               </div>
-              <div>
+              <div className="config-input" data-delay="200">
                 <Slider
                   value={[config.timeout]}
                   defaultValue={[10000]}
@@ -494,8 +712,8 @@ export default function ViewerBotInterface() {
                   step={100}
                 />
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
+              <div className="space-y-2 config-input" data-delay="300">
+                <div className="flex items-center gap-2 mb-2">
                   <label className="text-sm font-medium block">
                     Proxy List (Optional)
                   </label>
@@ -564,11 +782,14 @@ export default function ViewerBotInterface() {
                 </p>
               </div>
             </CardBody>
-          </Card>
+          </MotionCard>
 
-          <Card className="border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+          <MotionCard
+            index={4}
+            className="border-none bg-background/90 backdrop-blur-xl shadow-xl "
+          >
             <CardHeader className="pb-2">
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
+              <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent animate-gradient-x">
                 Advanced Settings
               </h2>
             </CardHeader>
@@ -682,7 +903,7 @@ export default function ViewerBotInterface() {
                 </ButtonGroup>
               </div>
             </CardBody>
-          </Card>
+          </MotionCard>
         </div>
 
         {/* Status Banner with new styling */}
@@ -690,16 +911,20 @@ export default function ViewerBotInterface() {
           <StatusBanner status={botStatus} />
         </div>
         {/* Information Panel */}
-        <Card className="border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
+        <MotionCard
+          index={5}
+          className="border-none bg-background/90 backdrop-blur-xl shadow-xl gradient-border"
+        >
           <CardBody className="text-center">
-            <p className="text-lg font-medium">
+            <p className="text-lg font-medium bg-gradient-to-r from-blue-500 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Please note that it may take some time for the viewers to appear
               on your live stream. This is normal, so please be patient.
             </p>
           </CardBody>
-        </Card>
+        </MotionCard>
 
         <Button
+          ref={actionButtonRef}
           variant="solid"
           color={isLoading ? "danger" : "primary"}
           size="lg"
