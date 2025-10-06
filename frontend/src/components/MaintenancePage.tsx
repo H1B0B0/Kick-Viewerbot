@@ -1,4 +1,4 @@
-import { Card } from "@heroui/card";
+import { Card } from "@heroui/react";
 
 export default function MaintenancePage() {
   return (
