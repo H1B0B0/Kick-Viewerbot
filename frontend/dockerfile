@@ -33,8 +33,15 @@ RUN adduser --system --uid 1001 nextjs
 
 # Copy necessary files
 COPY --from=builder /app/public ./public
+
+# Copy the standalone output
 COPY --from=builder /app/.next/standalone ./
+
+# Copy static files
 COPY --from=builder /app/.next/static ./.next/static
+
+# Copy node_modules for CSS/styles (important for HeroUI)
+COPY --from=builder /app/node_modules ./node_modules
 
 USER nextjs
 
