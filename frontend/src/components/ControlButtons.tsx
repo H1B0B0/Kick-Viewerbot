@@ -11,8 +11,6 @@ export function ControlButtons() {
     stopBot: state.stopBot,
   }));
 
-  console.log("Statut actuel du bot:", botStatus);
-
   // Vérifier si les boutons doivent être désactivés
   const isStartDisabled =
     botStatus === "RUNNING" ||

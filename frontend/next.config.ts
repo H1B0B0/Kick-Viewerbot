@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export",
+  // Use standalone for Docker deployment
+  output: "standalone",
+
   images: {
     unoptimized: true,
   },

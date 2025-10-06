@@ -1,28 +1,33 @@
 "use client";
 import { useState, useEffect } from "react";
-import axios from "axios";
 
-const API_URL = "https://api.velbots.shop";
-
+/**
+ * Hook pour vérifier la santé de l'API distante velbots.shop
+ * Désactivé temporairement à cause de CORS - configurez votre API pour permettre CORS si nécessaire
+ */
 export function useApiHealth() {
   const [isApiUp, setIsApiUp] = useState(true);
 
   useEffect(() => {
-    const checkHealth = async () => {
-      try {
-        await axios.get(`${API_URL}/health`);
-        setIsApiUp(true);
-      } catch (error) {
-        setIsApiUp(false);
-        console.error("API is down:", error);
-      }
-    };
+    // Health check désactivé - votre API distante doit configurer CORS si vous voulez l'activer
+    // const checkHealth = async () => {
+    //   try {
+    //     const response = await fetch('https://api.velbots.shop/health', {
+    //       mode: 'cors',
+    //       credentials: 'include'
+    //     });
+    //     setIsApiUp(response.ok);
+    //   } catch (error) {
+    //     setIsApiUp(false);
+    //   }
+    // };
+    //
+    // checkHealth();
+    // const interval = setInterval(checkHealth, 30000);
+    // return () => clearInterval(interval);
 
-    checkHealth();
-
-    const interval = setInterval(checkHealth, 30000);
-
-    return () => clearInterval(interval);
+    // Pour l'instant, on assume que l'API est toujours up
+    setIsApiUp(true);
   }, []);
 
   return isApiUp;

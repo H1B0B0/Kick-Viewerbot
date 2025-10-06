@@ -1,5 +1,10 @@
-const API_BASE_URL = "https://velbots.shop/api/bot";
+/**
+ * BotAPI - WebSocket Version
+ * Ces fonctions sont deprecated - utilisez useWebSocketBot hook à la place
+ */
 
+// Ces fonctions sont maintenant des wrappers pour compatibilité
+// Elles ne font plus d'appels REST API
 export const startBot = async (config: {
   channelName: string;
   threads: number;
@@ -8,49 +13,27 @@ export const startBot = async (config: {
   proxyType?: string;
   stabilityMode?: boolean;
 }) => {
-  const formData = new FormData();
-  formData.append("channelName", config.channelName);
-  formData.append("threads", config.threads.toString());
-  if (config.proxyFile) {
-    formData.append("proxyFile", config.proxyFile);
-  }
-  if (config.timeout) {
-    formData.append("timeout", config.timeout.toString());
-  }
-  if (config.proxyType) {
-    formData.append("proxyType", config.proxyType);
-  }
-  formData.append("stabilityMode", config.stabilityMode ? "true" : "false");
-
-  const response = await fetch(`${API_BASE_URL}/start`, {
-    method: "POST",
-    body: formData,
-    credentials: "include",
-  });
-
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  return response.json();
+  console.warn('startBot via REST API est deprecated - utilisez useWebSocketBot hook');
+  // Pour la compatibilité, retourne juste un succès
+  return { success: true, message: 'Utilisez useWebSocketBot hook pour démarrer le bot' };
 };
 
 export const stopBot = async () => {
-  const response = await fetch(`${API_BASE_URL}/stop`, {
-    method: "POST",
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  return response.json();
+  console.warn('stopBot via REST API est deprecated - utilisez useWebSocketBot hook');
+  return { success: true, message: 'Utilisez useWebSocketBot hook pour arrêter le bot' };
 };
 
 export const getBotStats = async () => {
-  const response = await fetch(`${API_BASE_URL}/stats`, {
-    credentials: "include",
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  return response.json();
+  console.warn('getBotStats via REST API est deprecated - utilisez useWebSocketBot hook');
+  // Retourne des stats vides pour la compatibilité
+  return {
+    active_threads: 0,
+    total_proxies: 0,
+    alive_proxies: 0,
+    request_count: 0,
+    is_running: false,
+    config: {},
+    status: { state: 'stopped', message: 'Utilisez useWebSocketBot hook' },
+    system_metrics: { cpu: 0, memory: 0, network_up: 0, network_down: 0 }
+  };
 };

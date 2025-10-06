@@ -17,7 +17,8 @@ import { StatCard } from "../components/StatCard";
 import { useGetProfile, logout } from "./functions/UserAPI";
 import { useViewerCount } from "../hooks/useViewerCount";
 import { ViewerStatCard } from "../components/ViewerStatCard";
-import { startBot, stopBot, getBotStats } from "./functions/BotAPI";
+import { useWebSocketBot } from "@/hooks/useWebSocketBot";
+import { WebSocketStatus } from "@/components/WebSocketStatus";
 import { SystemMetrics } from "../components/SystemMetrics";
 import { StatusBanner } from "../components/StatusBanner";
 import { animate, stagger, createTimeline } from "animejs";
@@ -34,6 +35,20 @@ interface MetricData {
 
 export default function ViewerBotInterface() {
   const { data: profile } = useGetProfile();
+
+  // Hook WebSocket
+  const {
+    isConnected: wsConnected,
+    status: wsStatus,
+    error: wsError,
+    currentUrl: wsUrl,
+    stats: wsStats,
+    isRunning: wsBotRunning,
+    startBot: wsStartBot,
+    stopBot: wsStopBot,
+    reconnect: wsReconnect,
+  } = useWebSocketBot();
+
   const [config, setConfig] = useState({
     threads: 0,
     channelName: "",
@@ -92,8 +107,6 @@ export default function ViewerBotInterface() {
     const titleText = titleRef.current.textContent || "";
     if (!titleText) return;
 
-    console.log("Title SVG animation starting with text:", titleText);
-
     // Create SVG text with proper centering like before
     titleRef.current.innerHTML = `
       <svg viewBox="0 0 800 100" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%; overflow: visible;">
@@ -127,8 +140,6 @@ export default function ViewerBotInterface() {
       return;
     }
 
-    console.log("SVG text element found, setting up animation");
-
     // Small delay to ensure DOM is ready
     setTimeout(() => {
       try {
@@ -142,19 +153,12 @@ export default function ViewerBotInterface() {
           textElement as SVGTextElement
         ).style.strokeDashoffset = `${textLength}`;
 
-        console.log(
-          `Starting SVG text drawing animation (length: ${textLength})...`
-        );
-
         // Animate stroke drawing
         animate(textElement, {
           strokeDashoffset: [textLength, 0],
           duration: 4000,
           ease: "linear",
           loop: true,
-          onComplete: () => {
-            console.log("✅ SVG drawing animation completed!");
-          },
         });
       } catch (e) {
         console.error("❌ SVG animation failed:", e);
@@ -180,8 +184,6 @@ export default function ViewerBotInterface() {
         console.warn("No stat cards found for animation");
         return;
       }
-
-      console.log(`Animating ${statCards.length} stat cards`);
 
       try {
         // Animate with stagger
@@ -216,8 +218,6 @@ export default function ViewerBotInterface() {
         console.warn("No config inputs found");
         return;
       }
-
-      console.log(`Animating ${configInputs.length} config inputs`);
 
       try {
         // Set initial state with alternating directions
@@ -346,74 +346,61 @@ export default function ViewerBotInterface() {
     },
   });
 
-  const fetchStats = async () => {
-    try {
-      const stats = await getBotStats();
-      // Ensure system_metrics exists with default values
-      const system_metrics = stats.system_metrics || {
-        cpu: 0,
-        memory: 0,
-        network_up: 0,
-        network_down: 0,
-      };
-      // Update system metrics with safe values
-      setSystemMetrics((prevMetrics) => {
-        const updateMetric = (
-          metric: MetricData,
-          newValue: number | undefined
-        ): MetricData => ({
-          ...metric,
-          value: typeof newValue === "number" ? newValue : 0,
-          history: [
-            ...metric.history.slice(-29),
-            typeof newValue === "number" ? newValue : 0,
-          ],
-        });
-        return {
-          cpu: updateMetric(prevMetrics.cpu, system_metrics.cpu),
-          memory: updateMetric(prevMetrics.memory, system_metrics.memory),
-          network_up: updateMetric(
-            prevMetrics.network_up,
-            Number(Number(system_metrics.network_up).toFixed(2))
-          ),
-          network_down: updateMetric(
-            prevMetrics.network_down,
-            Number(Number(system_metrics.network_down).toFixed(2))
-          ),
-        };
-      });
-      // Update bot stats
-      setStats((prevStats) => ({
-        ...prevStats,
-        activeThreads: stats.active_threads,
-        totalProxies: stats.total_proxies,
-        aliveProxies: stats.alive_proxies,
-        request_count: stats.request_count,
-      }));
-      // Update bot status
-      if (stats.status) {
-        setBotStatus(stats.status);
-        // Handle error states
-        if (stats.status.state === "error" && isLoading) {
-          setIsLoading(false);
-          toast.error(stats.status.message);
-        }
-      }
-      // Update isLoading based on bot state
-      if (!stats.is_running && isLoading) {
-        setIsLoading(false);
-      }
-    } catch (error) {
-      console.error("Failed to fetch stats:", error);
-    }
-  };
-
-  // Stats/refetch interval - single source; avoid overlapping (depend only on botStatus.state)
+  // Sync WebSocket stats avec les stats locales
   useEffect(() => {
-    fetchStats(); // initial
-    const id = setInterval(fetchStats, 1500);
-    return () => clearInterval(id);
-  }, [botStatus.state]);
+    if (!wsStats) return;
+
+    const system_metrics = wsStats.system_metrics || {
+      cpu: 0,
+      memory: 0,
+      network_up: 0,
+      network_down: 0,
+    };
+
+    // Update system metrics
+    setSystemMetrics((prevMetrics) => {
+      const updateMetric = (
+        metric: MetricData,
+        newValue: number | undefined
+      ): MetricData => ({
+        ...metric,
+        value: typeof newValue === "number" ? newValue : 0,
+        history: [
+          ...metric.history.slice(-29),
+          typeof newValue === "number" ? newValue : 0,
+        ],
+      });
+      return {
+        cpu: updateMetric(prevMetrics.cpu, system_metrics.cpu),
+        memory: updateMetric(prevMetrics.memory, system_metrics.memory),
+        network_up: updateMetric(
+          prevMetrics.network_up,
+          Number(Number(system_metrics.network_up).toFixed(2))
+        ),
+        network_down: updateMetric(
+          prevMetrics.network_down,
+          Number(Number(system_metrics.network_down).toFixed(2))
+        ),
+      };
+    });
+
+    // Update bot stats
+    setStats((prevStats) => ({
+      ...prevStats,
+      activeThreads: wsStats.active_threads || 0,
+      totalProxies: wsStats.total_proxies || 0,
+      aliveProxies: wsStats.alive_proxies || 0,
+      request_count: wsStats.request_count || 0,
+    }));
+
+    // Update bot status
+    if (wsStats.status) {
+      setBotStatus(wsStats.status);
+    }
+
+    // Update isLoading based on bot state
+    setIsLoading(wsStats.is_running || false);
+  }, [wsStats]);
 
   useEffect(() => {
     // If profile loads and channel name is empty, set it ONLY ONCE
@@ -429,39 +416,28 @@ export default function ViewerBotInterface() {
     }
   }, [profile, channelNameModified, config.channelName]);
 
+  // Sync config from WebSocket stats ONLY on first load
   useEffect(() => {
-    const checkBotStatus = async () => {
-      try {
-        const stats = await getBotStats();
-        if (stats.active_threads > 0 || stats.is_running) {
-          setIsLoading(true);
-          setStats((prevStats) => ({
-            ...prevStats,
-            activeThreads: stats.active_threads,
-            totalProxies: stats.total_proxies,
-            aliveProxies: stats.alive_proxies,
-            request_count: stats.request_count,
-          }));
-          if (stats.config) {
-            const { threads, timeout, proxy_type } = stats.config;
-            const parsedTimeout = parseInt(timeout, 10);
-            setConfig((prevConfig) => ({
-              ...prevConfig,
-              threads: threads ?? prevConfig.threads,
-              timeout: Number.isNaN(parsedTimeout) ? 10000 : parsedTimeout,
-              proxyType: proxy_type ?? prevConfig.proxyType,
-              channelName: stats.channel_name || prevConfig.channelName,
-            }));
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check bot status:", error);
-      }
-    };
-    checkBotStatus();
-  }, []);
+    if (wsStats && wsStats.config && wsStats.is_running) {
+      const { threads, timeout, proxy_type } = wsStats.config;
+      const parsedTimeout = parseInt(timeout, 10);
+      setConfig((prevConfig) => ({
+        ...prevConfig,
+        threads: threads ?? prevConfig.threads,
+        timeout: Number.isNaN(parsedTimeout) ? 10000 : parsedTimeout,
+        proxyType: proxy_type ?? prevConfig.proxyType,
+        channelName: wsStats.channel_name || prevConfig.channelName,
+      }));
+    }
+  }, [wsStats?.is_running]); // Ne sync que quand le bot change d'état
 
   const handleStart = async () => {
+    // Check WebSocket connection
+    if (!wsConnected) {
+      toast.error("Service local non connecté");
+      return;
+    }
+
     // Prevent starting during transitional states
     if (
       botStatus.state.toLowerCase() === "stopping" ||
@@ -478,7 +454,7 @@ export default function ViewerBotInterface() {
     }
     try {
       setIsLoading(true);
-      await startBot({
+      await wsStartBot({
         channelName: config.channelName,
         threads: config.threads,
         proxyFile: proxyFile || undefined,
@@ -500,6 +476,11 @@ export default function ViewerBotInterface() {
   };
 
   const handleStop = async () => {
+    if (!wsConnected) {
+      toast.error("Service local non connecté");
+      return;
+    }
+
     if (
       botStatus.state.toLowerCase() === "stopping" ||
       botStatus.state.toLowerCase() === "starting"
@@ -507,9 +488,9 @@ export default function ViewerBotInterface() {
       return;
     }
     try {
-      setIsLoading(false);
-      await stopBot();
+      wsStopBot();
       toast.success("Bot stopped successfully!");
+      setIsLoading(false);
       setStats((prevStats) => ({
         ...prevStats,
         activeThreads: 0,
@@ -517,15 +498,14 @@ export default function ViewerBotInterface() {
       }));
     } catch (err) {
       toast.error("Failed to stop bot");
-      setIsLoading(true);
       console.error("Failed to stop bot:", err);
     }
   };
 
   const handleLogout = async () => {
     try {
-      if (isLoading) {
-        await stopBot();
+      if (isLoading && wsConnected) {
+        wsStopBot();
         setIsLoading(false);
       }
       await logout();
@@ -585,6 +565,13 @@ export default function ViewerBotInterface() {
               ? `Welcome back, ${profile.user.username}`
               : "Monitor and control your viewer bot"}
           </p>
+          <div className="mt-4">
+            <WebSocketStatus
+              status={wsStatus}
+              currentUrl={wsUrl}
+              onRetry={wsReconnect}
+            />
+          </div>
         </MotionCard>
 
         {/* Monitoring Section */}

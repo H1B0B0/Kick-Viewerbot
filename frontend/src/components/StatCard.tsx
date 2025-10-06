@@ -213,6 +213,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
         {total && (
           <div ref={progressRef} className="z-10">
             <Progress
+              aria-label={`${title} progress`}
               value={percentage}
               classNames={{
                 base: "h-2",

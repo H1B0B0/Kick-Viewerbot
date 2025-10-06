@@ -67,13 +67,6 @@ export const useStore = create<AppState>()((set, get) => ({
       const backendState = response.data.status?.state || response.data.status;
       const mappedStatus = mapBackendStatus(backendState);
 
-      console.log(
-        "Statut du backend:",
-        backendState,
-        "-> Frontend:",
-        mappedStatus
-      );
-
       // Ne pas mettre à jour si on est déjà en état transitoire
       if (get().botStatus !== "STOPPING" && get().botStatus !== "STARTING") {
         set({ botStatus: mappedStatus });

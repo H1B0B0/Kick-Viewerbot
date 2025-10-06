@@ -127,6 +127,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
         </div>
         <div ref={progressRef}>
           <Progress
+            aria-label={`${metric.label} usage`}
             value={(metric.value / metric.maxValue) * 100}
             color={
               (metric.value / metric.maxValue) * 100 < 30
