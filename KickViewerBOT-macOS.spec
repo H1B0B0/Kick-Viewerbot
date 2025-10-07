@@ -39,7 +39,6 @@ a = Analysis(
     binaries=tls_client_binaries,
     datas=[
         ('backend', '.'),
-        ('backend/.env', '.'),
         ('frontend/out', 'static'),
         (os.path.join(site_packages, 'fake_useragent', 'data'), 'fake_useragent/data'),
         (os.path.join(site_packages, 'fake_useragent'), 'fake_useragent'),

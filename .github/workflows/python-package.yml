@@ -43,8 +43,6 @@ jobs:
           pyinstaller --noconfirm --onefile --uac-admin --icon "frontend/public/favicon.ico" `
             --paths "venv/Lib/site-packages" `
             --add-data "backend;." `
-            --add-data "backend/.env;." `
-            --add-data "frontend/out;static" `
             --add-data "venv/Lib/site-packages/fake_useragent/data;fake_useragent/data" `
             --add-data "venv/Lib/site-packages/fake_useragent;fake_useragent" `
             --add-data "venv/Lib/site-packages/streamlink;streamlink" `

@@ -3,7 +3,7 @@ import { RegisterData, LoginData } from "../types/User";
 import useSWR from "swr";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.velbots.shop";
 
 export interface SubscriptionStatus {
   isSubscribed: boolean;

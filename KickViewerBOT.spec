@@ -29,8 +29,6 @@ site_packages = site.getsitepackages()[0]
 # Build data list with existence checks
 datas = [
     ('backend', '.'),
-    ('backend/.env', '.'),
-    ('frontend/out', 'static'),
 ]
 
 # Add site-packages dependencies with existence checks
