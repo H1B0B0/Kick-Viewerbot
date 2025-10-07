@@ -2,19 +2,43 @@ import axios from "axios";
 import { RegisterData, LoginData } from "../types/User";
 import useSWR from "swr";
 
-const URL = "https://api.velbots.shop";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3000";
 
-const fetcher = async (url: string) => {
-  const response = await axios.get(url, { withCredentials: true });
+export interface SubscriptionStatus {
+  isSubscribed: boolean;
+  subscriptionEndsAt?: string | null;
+  monthsRemaining?: number;
+  plan?: string;
+}
+
+interface ProfileUser {
+  id: string;
+  username: string;
+  TwitchUsername?: string;
+  subscription?: string;
+  [key: string]: unknown;
+}
+
+export interface ProfileResponse {
+  user: ProfileUser;
+}
+
+const fetcher = async <T>(url: string): Promise<T> => {
+  const response = await axios.get<T>(url, { withCredentials: true });
   return response.data;
 };
 
 // Auth APIs
 export async function register(userData: RegisterData) {
   try {
-    const response = await axios.post(`${URL}/auth/register`, userData, {
-      withCredentials: true,
-    });
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/register`,
+      userData,
+      {
+        withCredentials: true,
+      }
+    );
     return response.data;
   } catch (error) {
     console.error("Register error:", error);
@@ -24,7 +48,7 @@ export async function register(userData: RegisterData) {
 
 export async function login(loginData: LoginData) {
   try {
-    const response = await axios.post(`${URL}/auth/login`, loginData, {
+    const response = await axios.post(`${API_BASE_URL}/auth/login`, loginData, {
       withCredentials: true,
       headers: {
         "Content-Type": "application/json",
@@ -44,7 +68,7 @@ export async function login(loginData: LoginData) {
 export async function logout() {
   try {
     const response = await axios.post(
-      `${URL}/auth/logout`,
+      `${API_BASE_URL}/auth/logout`,
       {},
       {
         withCredentials: true,
@@ -59,25 +83,29 @@ export async function logout() {
 
 // User APIs
 export function useGetProfile() {
-  return useSWR(`${URL}/users/profile`, fetcher);
+  return useSWR<ProfileResponse, Error>(
+    `${API_BASE_URL}/users/profile`,
+    (url: string) => fetcher<ProfileResponse>(url),
+    {
+      revalidateOnFocus: false,
+    }
+  );
 }
 
-export async function useGetSubscription() {
-  try {
-    const response = await axios.get(`${URL}/users/subscription`, {
-      withCredentials: true,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Get subscription error:", error);
-    throw error;
-  }
+export function useGetSubscription() {
+  return useSWR<SubscriptionStatus>(
+    `${API_BASE_URL}/users/subscription`,
+    (url) => fetcher<SubscriptionStatus>(url),
+    {
+      revalidateOnFocus: false,
+    }
+  );
 }
 
 export async function registerHWID(hwid: string) {
   try {
     const response = await axios.post(
-      `${URL}/users/hwid`,
+      `${API_BASE_URL}/users/hwid`,
       { hwid },
       { withCredentials: true }
     );
@@ -91,7 +119,7 @@ export async function registerHWID(hwid: string) {
 export async function banUser(userId: string) {
   try {
     const response = await axios.put(
-      `${URL}/users/ban`,
+      `${API_BASE_URL}/users/ban`,
       { userId },
       { withCredentials: true }
     );
@@ -106,7 +134,7 @@ export async function banUser(userId: string) {
 export async function createCheckoutSession(duration: number) {
   try {
     const response = await axios.post(
-      `${URL}/payments/create-checkout`,
+      `${API_BASE_URL}/payments/create-checkout`,
       { duration },
       { withCredentials: true }
     );

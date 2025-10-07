@@ -15,7 +15,7 @@ from werkzeug.utils import secure_filename
 from pathlib import Path
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 # Import bot classes
@@ -29,6 +29,8 @@ except ImportError:
     BOT_AVAILABLE = False
     ViewerBot = None
     ViewerBot_Stability = None
+
+ALLOWED_STABILITY_SUBSCRIPTIONS = {'active', 'premium', 'lifetime'}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'kick-viewer-bot-secret'
@@ -60,10 +62,20 @@ class BotManager:
             'threads': 0,
             'timeout': 10000,
             'proxy_type': 'http',
-            'stability_mode': False
+            'stability_mode': False,
+            'subscription_status': 'unknown'
         }
 
-    def start_bot(self, channel_name, threads, proxy_file=None, timeout=10000, proxy_type="http", stability_mode=False):
+    def start_bot(
+        self,
+        channel_name,
+        threads,
+        proxy_file=None,
+        timeout=10000,
+        proxy_type="http",
+        stability_mode=False,
+        subscription_status='unknown'
+    ):
         if self.is_running:
             return {'success': False, 'error': 'Bot is already running'}
 
@@ -72,10 +84,19 @@ class BotManager:
             'threads': threads,
             'timeout': timeout,
             'proxy_type': proxy_type,
-            'stability_mode': stability_mode
+            'stability_mode': stability_mode,
+            'subscription_status': subscription_status
         }
 
         logger.info(f"Starting bot: {channel_name}, threads: {threads}, stability: {stability_mode}")
+
+        normalized_status = (subscription_status or '').lower()
+        if stability_mode and normalized_status not in ALLOWED_STABILITY_SUBSCRIPTIONS:
+            logger.warning("Stability mode requested without valid subscription")
+            return {
+                'success': False,
+                'error': 'Stability mode requires an active subscription.'
+            }
 
         if BOT_AVAILABLE:
             bot_class = ViewerBot_Stability if stability_mode else ViewerBot
@@ -201,7 +222,6 @@ def handle_disconnect():
 def handle_start_bot(data):
     """Start the bot via WebSocket"""
     print(f"\n🚀 [START_BOT] Demande reçue du client {request.sid}")
-    print(f"📦 [START_BOT] Données reçues: {data}")
 
     try:
         channel_name = data.get('channelName')
@@ -209,6 +229,7 @@ def handle_start_bot(data):
         timeout = int(data.get('timeout', 10000))
         proxy_type = data.get('proxyType', 'http')
         stability_mode = data.get('stabilityMode', False)
+        subscription_status = (data.get('subscriptionStatus') or 'unknown')
 
         print(f"⚙️  [START_BOT] Config: channel={channel_name}, threads={threads}, stability={stability_mode}")
 
@@ -225,11 +246,15 @@ def handle_start_bot(data):
                 f.write(file_data)
 
             proxy_file_path = str(filepath)
-            print(f"📁 [START_BOT] Fichier proxy sauvegardé: {proxy_file_path}")
 
         if not channel_name:
             print(f"❌ [START_BOT] Erreur: channel_name manquant")
             emit('bot_error', {'error': 'Channel name is required'})
+            return
+
+        if stability_mode and subscription_status.lower() not in ALLOWED_STABILITY_SUBSCRIPTIONS:
+            print("❌ [START_BOT] Erreur: subscription inactive pour le stability mode")
+            emit('bot_error', {'error': 'Stability mode requires an active subscription.'})
             return
 
         print(f"▶️  [START_BOT] Lancement du bot...")
@@ -239,7 +264,8 @@ def handle_start_bot(data):
             proxy_file=proxy_file_path,
             timeout=timeout,
             proxy_type=proxy_type,
-            stability_mode=stability_mode
+            stability_mode=stability_mode,
+            subscription_status=subscription_status
         )
 
         if result['success']:
@@ -252,7 +278,6 @@ def handle_start_bot(data):
             })
             # Broadcast to all clients
             socketio.emit('bot_status_changed', {'is_running': True, 'channel': channel_name})
-            print(f"📢 [START_BOT] Broadcast 'bot_status_changed' envoyé\n")
         else:
             print(f"❌ [START_BOT] Erreur: {result['error']}")
             emit('bot_error', {'error': result['error']})
@@ -270,11 +295,9 @@ def handle_stop_bot():
         result = bot_manager.stop_bot()
 
         if result['success']:
-            print(f"✅ [STOP_BOT] Bot arrêté avec succès!")
             emit('bot_stopped', {'message': result['message']})
             # Broadcast to all clients
             socketio.emit('bot_status_changed', {'is_running': False})
-            print(f"📢 [STOP_BOT] Broadcast 'bot_status_changed' envoyé\n")
         else:
             print(f"❌ [STOP_BOT] Erreur: {result['error']}")
             emit('bot_error', {'error': result['error']})
@@ -287,11 +310,9 @@ def handle_stop_bot():
 @socketio.on('get_stats')
 def handle_get_stats():
     """Get bot stats via WebSocket"""
-    print(f"📊 [GET_STATS] Demande de stats du client {request.sid}")
     try:
         stats = bot_manager.get_stats()
         emit('stats_update', stats)
-        print(f"✅ [GET_STATS] Stats envoyées (is_running={stats.get('is_running')})")
     except Exception as e:
         print(f"💥 [GET_STATS] Exception: {e}")
         logger.error(f"Error getting stats: {e}")
@@ -300,7 +321,6 @@ def handle_get_stats():
 @socketio.on('ping')
 def handle_ping():
     """Health check via WebSocket"""
-    print(f"🏓 [PING] Client {request.sid}")
     emit('pong', {
         'timestamp': time.time(),
         'status': 'ok'

@@ -3,13 +3,13 @@ import { useState, useEffect, useRef } from "react";
 import { CardHeader, CardBody } from "@heroui/card";
 import { Checkbox } from "@heroui/checkbox";
 import { Input } from "@heroui/input";
-import { Button, ButtonGroup } from "@heroui/button";
+import { ButtonGroup, Button } from "@heroui/button";
 import { Slider } from "@heroui/slider";
 import { Tooltip } from "@heroui/tooltip";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { StatCard } from "../components/StatCard";
-import { useGetProfile, logout } from "./functions/UserAPI";
+import { useGetProfile, logout, useGetSubscription } from "./functions/UserAPI";
 import { useViewerCount } from "../hooks/useViewerCount";
 import { ViewerStatCard } from "../components/ViewerStatCard";
 import { useWebSocketBot } from "@/hooks/useWebSocketBot";
@@ -28,8 +28,20 @@ interface MetricData {
   maxValue: number;
 }
 
+const ALLOWED_STABILITY_SUBSCRIPTIONS = new Set([
+  "active",
+  "premium",
+  "lifetime",
+]);
+
 export default function ViewerBotInterface() {
   const { data: profile } = useGetProfile();
+  const { data: subscription, isLoading: isSubscriptionLoading } =
+    useGetSubscription();
+
+  useEffect(() => {
+    console.log("User profile:", profile);
+  }, [profile]);
 
   // Hook WebSocket
   const {
@@ -57,6 +69,45 @@ export default function ViewerBotInterface() {
   const { viewerCount: currentViewers } = useViewerCount(
     config?.channelName || profile?.user?.TwitchUsername
   );
+
+  const backendSubscriptionStatus =
+    typeof wsStats?.config?.subscription_status === "string"
+      ? wsStats.config.subscription_status.toLowerCase()
+      : null;
+
+  const profileSubscriptionStatus =
+    typeof profile?.user?.subscription === "string"
+      ? profile.user.subscription.toLowerCase()
+      : null;
+
+  const subscriptionPlan =
+    typeof subscription?.plan === "string"
+      ? subscription.plan.toLowerCase()
+      : null;
+
+  const hasActiveSubscription =
+    (backendSubscriptionStatus &&
+      ALLOWED_STABILITY_SUBSCRIPTIONS.has(backendSubscriptionStatus)) ||
+    (profileSubscriptionStatus &&
+      ALLOWED_STABILITY_SUBSCRIPTIONS.has(profileSubscriptionStatus)) ||
+    (subscriptionPlan &&
+      ALLOWED_STABILITY_SUBSCRIPTIONS.has(subscriptionPlan)) ||
+    Boolean(subscription?.isSubscribed);
+
+  const normalizedSubscriptionStatus = hasActiveSubscription
+    ? backendSubscriptionStatus &&
+      ALLOWED_STABILITY_SUBSCRIPTIONS.has(backendSubscriptionStatus)
+      ? backendSubscriptionStatus
+      : profileSubscriptionStatus &&
+          ALLOWED_STABILITY_SUBSCRIPTIONS.has(profileSubscriptionStatus)
+        ? profileSubscriptionStatus
+        : subscriptionPlan &&
+            ALLOWED_STABILITY_SUBSCRIPTIONS.has(subscriptionPlan)
+          ? subscriptionPlan
+          : "active"
+    : "none";
+
+  const isStabilityLocked = !hasActiveSubscription || isSubscriptionLoading;
 
   // DEBUG: Removed test animation that was causing the red square
 
@@ -442,7 +493,7 @@ export default function ViewerBotInterface() {
     ) {
       setConfig((prev) => ({
         ...prev,
-        channelName: profile.user.TwitchUsername,
+        channelName: profile.user.TwitchUsername as string,
       }));
     }
   }, [profile, channelNameModified, config.channelName]);
@@ -450,22 +501,37 @@ export default function ViewerBotInterface() {
   // Sync config from WebSocket stats ONLY on first load
   useEffect(() => {
     if (wsStats && wsStats.config && wsStats.is_running) {
-      const { threads, timeout, proxy_type } = wsStats.config;
-      const parsedTimeout = parseInt(timeout, 10);
+      const { threads, timeout, proxy_type, stability_mode } = wsStats.config;
+      const parsedTimeout = Number.parseInt(`${timeout}`, 10);
       setConfig((prevConfig) => ({
         ...prevConfig,
         threads: threads ?? prevConfig.threads,
         timeout: Number.isNaN(parsedTimeout) ? 10000 : parsedTimeout,
         proxyType: proxy_type ?? prevConfig.proxyType,
         channelName: wsStats.channel_name || prevConfig.channelName,
+        stabilityMode:
+          typeof stability_mode === "boolean"
+            ? stability_mode
+            : prevConfig.stabilityMode,
       }));
     }
   }, [wsStats?.is_running]); // Ne sync que quand le bot change d'état
 
+  useEffect(() => {
+    if (isStabilityLocked && config.stabilityMode) {
+      setConfig((prevConfig) => ({
+        ...prevConfig,
+        stabilityMode: false,
+      }));
+    }
+  }, [isStabilityLocked, config.stabilityMode]);
+
   const handleStart = async () => {
     // Check WebSocket connection
     if (!wsConnected) {
-      toast.error("Service local non connecté");
+      toast.error(
+        "Local service not connected. Please launch the helper or download it."
+      );
       return;
     }
 
@@ -483,6 +549,10 @@ export default function ViewerBotInterface() {
       toast.error("Threads count must be greater than 0");
       return;
     }
+    if (config.stabilityMode && !hasActiveSubscription) {
+      toast.error("Stability mode requires an active subscription.");
+      return;
+    }
     try {
       setIsLoading(true);
       await wsStartBot({
@@ -492,6 +562,7 @@ export default function ViewerBotInterface() {
         timeout: config.timeout,
         proxyType: config.proxyType,
         stabilityMode: config.stabilityMode,
+        subscriptionStatus: normalizedSubscriptionStatus,
       });
       toast.success(
         "Bot started successfully!🚀 It may take a while before the viewers appear on the stream."
@@ -508,7 +579,7 @@ export default function ViewerBotInterface() {
 
   const handleStop = async () => {
     if (!wsConnected) {
-      toast.error("Service local non connecté");
+      toast.error("Local service not connected.");
       return;
     }
 
@@ -875,19 +946,28 @@ export default function ViewerBotInterface() {
                     </div>
                   </Tooltip>
                 </div>
-                <ButtonGroup>
-                  <Button
-                    variant={config.stabilityMode ? "solid" : "bordered"}
-                    onPress={() =>
-                      setConfig((prev) => ({
-                        ...prev,
-                        stabilityMode: true,
-                      }))
-                    }
-                    disabled={unactivated}
+                <ButtonGroup
+                  radius="md"
+                  className="overflow-hidden rounded-lg border border-default-200/40"
+                >
+                  <Tooltip
+                    content="Subscribe to unlock stability mode."
+                    placement="top"
+                    isDisabled={!isStabilityLocked || config.stabilityMode}
                   >
-                    On
-                  </Button>
+                    <Button
+                      variant={config.stabilityMode ? "solid" : "bordered"}
+                      onPress={() =>
+                        setConfig((prev) => ({
+                          ...prev,
+                          stabilityMode: true,
+                        }))
+                      }
+                      isDisabled={unactivated || isStabilityLocked}
+                    >
+                      On
+                    </Button>
+                  </Tooltip>
                   <Button
                     variant={!config.stabilityMode ? "solid" : "bordered"}
                     onPress={() =>
@@ -896,18 +976,26 @@ export default function ViewerBotInterface() {
                         stabilityMode: false,
                       }))
                     }
-                    disabled={unactivated}
+                    isDisabled={unactivated}
                   >
                     Off
                   </Button>
                 </ButtonGroup>
+                {isStabilityLocked && !isSubscriptionLoading && (
+                  <p className="mt-2 text-xs text-yellow-500">
+                    An active subscription is required to enable stability mode.
+                  </p>
+                )}
               </div>
 
               <div>
                 <label className="text-sm font-medium mb-2 block">
                   Proxy Type
                 </label>
-                <ButtonGroup>
+                <ButtonGroup
+                  radius="md"
+                  className="overflow-hidden rounded-lg border border-default-200/40 backdrop-blur-sm"
+                >
                   {["http", "socks4", "socks5", "all"].map((type) => (
                     <Button
                       key={type}

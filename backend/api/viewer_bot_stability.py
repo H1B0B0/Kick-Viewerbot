@@ -11,10 +11,18 @@ import json
 import traceback
 from threading import Thread
 from streamlink import Streamlink
-from threading import Semaphore
+from queue import Queue, Empty
 from rich.console import Console
 from fake_useragent import UserAgent
 from urllib.parse import urlparse
+
+# Try to import tls_client for better fingerprinting
+try:
+    import tls_client
+    HAS_TLS_CLIENT = True
+except ImportError:
+    HAS_TLS_CLIENT = False
+    logging.warning("tls_client not available, using requests (may be detected by Kick)")
 
 # Add this near the top of the file, after imports
 logging.getLogger("urllib3").setLevel(logging.ERROR)
@@ -29,28 +37,7 @@ ua = UserAgent()
 session = Streamlink()
 
 # Kick WebSocket configuration
-import requests
-import logging
-import time
-import asyncio
-import json
-import websockets
-from urllib.parse import urljoin, quote, unquote, urlparse
-import ssl
-import threading
-from concurrent.futures import ThreadPoolExecutor
-
-# Try to import tls_client for better browser fingerprinting
-try:
-    import tls_client
-    HAS_TLS_CLIENT = True
-    logging.debug("tls_client library available for enhanced browser fingerprinting")
-except ImportError:
-    HAS_TLS_CLIENT = False
-    logging.debug("tls_client not available, falling back to requests")
-
-# Enhanced client token for better authenticity
-CLIENT_TOKEN = "bf0eeab3-a2e4-4b84-b00e-0e6d1ceafaaa"
+CLIENT_TOKEN = "e1393935a959b4020a4491574f6490129f678acdaa92760471263db43487f823"
 WS_HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'en-US,en;q=0.9',
@@ -75,7 +62,7 @@ session.set_option("http-headers", {
     "Referer": "https://www.google.com/"
 })
 
-class ViewerBot_Stability:
+class ViewerBot:
     def __init__(self, nb_of_threads, channel_name, proxy_file=None, proxy_imported=False, timeout=10000, type_of_proxy="http"):
         self.proxy_imported = proxy_imported
         self.proxy_file = proxy_file
@@ -86,7 +73,6 @@ class ViewerBot_Stability:
         self.processes = []
         self.proxyrefreshed = False
         self.channel_url = "https://kick.com/" + self.channel_name
-        self.thread_semaphore = Semaphore(int(nb_of_threads))  # Semaphore to control thread count
         self.active_threads = 0
         self.should_stop = False
         self.timeout = timeout
@@ -95,6 +81,16 @@ class ViewerBot_Stability:
         self.request_per_second = 0  # Add counter for requests per second
         self.requests_in_current_second = 0
         self.last_request_time = time.time()
+        self.proxy_queue = Queue()
+        self.in_use_proxies = set()
+        self.proxy_failures = {}
+        self.proxy_lock = threading.Lock()
+        self.max_proxy_failures = 3
+        self.connection_retry_delay = 5
+        self.active_threads_lock = threading.Lock()
+        self.connection_refresh_interval = 5 * 60  # Keep connections alive for up to 5 minutes
+        self.ping_interval_range = (12, 17)
+        self.worker_retry_backoff = (3, 8)
         self.status = {
             'state': 'initialized',  # Current state of the bot
             'message': 'Bot initialized',  # Status message
@@ -102,11 +98,10 @@ class ViewerBot_Stability:
             'proxy_loading_progress': 0,  # Progress when loading proxies (0-100)
             'startup_progress': 0  # Overall startup progress (0-100)
         }
-        self.round_robin_index = 0  # Ajout pour répartir l'utilisation des proxies de manière équitable
         self.stream_url_cache = None
         self.stream_url_last_updated = 0
         self.stream_url_lock = threading.Lock()
-        self.stream_url_cache_duration = 0.5  # Cache URL for 0.2 seconds
+        self.stream_url_cache_duration = 0.5  # Cache stream URL for 0.2 seconds
         self.channel_id = None  # Store channel ID for WebSocket connections
         logging.debug(f"Type of proxy: {self.type_of_proxy}")
         logging.debug(f"Timeout: {self.timeout}")
@@ -118,7 +113,38 @@ class ViewerBot_Stability:
     def get_channel_id(self):
         """Get the channel ID from Kick API using multiple fallback methods"""
         try:
-            # Method 1: Try v1 API first (less restricted)
+            # Method 1: Try v2 API with tls_client (like working example)
+            if HAS_TLS_CLIENT:
+                try:
+                    s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
+                    s.headers.update({
+                        'Accept': 'application/json, text/plain, */*',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Referer': 'https://kick.com/',
+                        'Origin': 'https://kick.com',
+                        'DNT': '1',
+                        'Connection': 'keep-alive',
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                        'sec-ch-ua-mobile': '?0',
+                        'sec-ch-ua-platform': '"Windows"',
+                    })
+                    response = s.get(f'https://kick.com/api/v2/channels/{self.channel_name}')
+                    if response.status_code == 200:
+                        data = response.json()
+                        self.channel_id = data.get("id")
+                        logging.debug(f"Retrieved channel ID from v2 API with tls_client: {self.channel_id}")
+                        return self.channel_id
+                    else:
+                        logging.debug(f"v2 API with tls_client failed: {response.status_code}")
+                except Exception as e:
+                    logging.debug(f"tls_client v2 API failed: {e}")
+            
+            # Method 2: Try v1 API with requests (fallback)
             try:
                 headers = {
                     'User-Agent': ua.random,
@@ -136,7 +162,7 @@ class ViewerBot_Stability:
             except Exception as e:
                 logging.debug(f"v1 API failed: {e}")
             
-            # Method 2: Try scraping the channel page directly
+            # Method 3: Try scraping the channel page directly
             try:
                 headers = {
                     'User-Agent': ua.random,
@@ -170,34 +196,6 @@ class ViewerBot_Stability:
             except Exception as e:
                 logging.debug(f"Page scraping failed: {e}")
             
-            # Method 3: Try v2 API with different headers as last resort
-            try:
-                headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'Accept': 'application/json, text/plain, */*',
-                    'Accept-Language': 'en-US,en;q=0.9',
-                    'Accept-Encoding': 'gzip, deflate, br',
-                    'Referer': 'https://kick.com/',
-                    'Origin': 'https://kick.com',
-                    'DNT': '1',
-                    'Connection': 'keep-alive',
-                    'Sec-Fetch-Dest': 'empty',
-                    'Sec-Fetch-Mode': 'cors',
-                    'Sec-Fetch-Site': 'same-origin',
-                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                    'sec-ch-ua-mobile': '?0',
-                    'sec-ch-ua-platform': '"Windows"',
-                }
-                response = requests.get(f'https://kick.com/api/v2/channels/{self.channel_name}', 
-                                      headers=headers, timeout=10)
-                if response.status_code == 200:
-                    data = response.json()
-                    self.channel_id = data.get("id")
-                    logging.debug(f"Retrieved channel ID from v2 API: {self.channel_id}")
-                    return self.channel_id
-            except Exception as e:
-                logging.debug(f"v2 API failed: {e}")
-            
             logging.error(f"All methods failed to get channel ID for: {self.channel_name}")
             return None
             
@@ -206,9 +204,50 @@ class ViewerBot_Stability:
             return None
 
     def get_websocket_token(self):
-        """Get WebSocket authentication token"""
+        """Get WebSocket authentication token using tls_client if available"""
         try:
-            # Create a session to maintain cookies
+            # Method 1: Use tls_client (like working example)
+            if HAS_TLS_CLIENT:
+                try:
+                    s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
+                    s.headers.update({
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Connection': 'keep-alive',
+                        'Sec-Fetch-Dest': 'document',
+                        'Sec-Fetch-Mode': 'navigate',
+                        'Sec-Fetch-Site': 'none',
+                        'Sec-Fetch-User': '?1',
+                        'Upgrade-Insecure-Requests': '1',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                        'sec-ch-ua-mobile': '?0',
+                        'sec-ch-ua-platform': '"Windows"',
+                    })
+                    
+                    # Visit main page first to get session
+                    session_resp = s.get("https://kick.com")
+                    logging.debug(f"TLS client session request status: {session_resp.status_code}")
+                    
+                    # Add client token and get WebSocket token
+                    s.headers["X-CLIENT-TOKEN"] = CLIENT_TOKEN
+                    response = s.get('https://websockets.kick.com/viewer/v1/token')
+                    
+                    logging.debug(f"TLS client token endpoint status: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        token = data.get("data", {}).get("token")
+                        if token:
+                            logging.debug(f"Retrieved WebSocket token with tls_client: {token[:20]}...")
+                            return token
+                    else:
+                        logging.debug(f"TLS client token request failed: {response.status_code}")
+                        
+                except Exception as e:
+                    logging.debug(f"tls_client token retrieval failed: {e}")
+            
+            # Method 2: Fallback to requests method
             session = requests.Session()
             
             # Step 1: First visit Kick.com to get session cookies
@@ -296,6 +335,75 @@ class ViewerBot_Stability:
         })
         logging.info(f"Status updated: {self.status}")
 
+    # --- Proxy pool helpers -------------------------------------------------
+
+    def _reset_proxy_pool(self, proxies):
+        """Initialise the proxy queue and bookkeeping for stability mode."""
+        self.all_proxies = list(proxies)
+        self.proxy_queue = Queue()
+        self.proxy_failures = {}
+        with self.proxy_lock:
+            self.in_use_proxies = set()
+
+        for proxy in proxies:
+            self.proxy_queue.put(proxy)
+            self.proxy_failures[proxy] = 0
+
+        # Keep proxy count in status for UI stats
+        self.status['proxy_count'] = len(proxies)
+
+    def _available_proxy_count(self):
+        with self.proxy_lock:
+            return self.proxy_queue.qsize() + len(self.in_use_proxies)
+
+    def _acquire_proxy(self):
+        """Take the next available proxy if any."""
+        while not self.should_stop:
+            try:
+                proxy = self.proxy_queue.get(timeout=2)
+            except Empty:
+                if self.should_stop:
+                    return None
+                continue
+
+            with self.proxy_lock:
+                if proxy in self.in_use_proxies:
+                    # Very unlikely, but skip to avoid double usage
+                    continue
+                self.in_use_proxies.add(proxy)
+                self.status['proxy_count'] = self._available_proxy_count()
+                return proxy
+
+        return None
+
+    def _release_proxy(self, proxy, success):
+        """Return proxy to the pool, optionally penalising repeated failures."""
+        if proxy is None:
+            return
+
+        with self.proxy_lock:
+            self.in_use_proxies.discard(proxy)
+
+        if success or self.should_stop:
+            # Reset failure count and reuse
+            self.proxy_failures[proxy] = 0
+            self.proxy_queue.put(proxy)
+        else:
+            failures = self.proxy_failures.get(proxy, 0) + 1
+            self.proxy_failures[proxy] = failures
+            if failures < self.max_proxy_failures:
+                self.proxy_queue.put(proxy)
+            else:
+                logging.warning(f"Discarding proxy after {failures} failures: {proxy}")
+                try:
+                    self.all_proxies.remove(proxy)
+                except ValueError:
+                    pass
+
+        self.status['proxy_count'] = self._available_proxy_count()
+
+    # --- End proxy helpers --------------------------------------------------
+
     def get_proxies(self):
         self.update_status('loading_proxies', 'Starting proxy collection...')
         
@@ -307,6 +415,7 @@ class ViewerBot_Stability:
                         lines = [self.extract_ip_port(line.strip()) for line in f.readlines() if line.strip()]
                         self.proxyrefreshed = True
                         self.update_status('proxies_loaded', f'Loaded {len(lines)} proxies from file', proxy_count=len(lines))
+                        self._reset_proxy_pool(lines)
                         return lines
                 except FileNotFoundError:
                     self.update_status('error', 'Proxy file not found')
@@ -387,6 +496,7 @@ class ViewerBot_Stability:
                             )
                             # Debug: Log first few proxies
                             logging.debug(f"First 5 proxies: {proxies[:5]}")
+                            self._reset_proxy_pool(proxies)
                             return proxies
                         
                         logging.error("No valid proxies found in response")
@@ -411,6 +521,7 @@ class ViewerBot_Stability:
                                 proxy_count=len(proxies),
                                 proxy_loading_progress=100
                             )
+                            self._reset_proxy_pool(proxies)
                             return proxies
                     
                     self.update_status('error', 'Failed to fetch proxies from both sources')
@@ -428,12 +539,12 @@ class ViewerBot_Stability:
             credentials = ""
             
             if '://' in proxy:
-                # Format http://user:pass@host:port ou socks5://user:pass@host:port
+                # Format http://user:pass@host:port or socks5://user:pass@host:port
                 parts = proxy.split('://')
                 protocol = parts[0].lower()
                 proxy_part = parts[1]
             else:
-                # Format IP:PORT ou user:pass@host:port sans protocole
+                # Format IP:PORT or user:pass@host:port without protocol
                 proxy_part = proxy
             
             if '@' in proxy_part:
@@ -454,7 +565,7 @@ class ViewerBot_Stability:
             else:
                 proxy_address = f"{host}:{port}"
                 
-            logging.debug(f"Parsed proxy: protocol={protocol}, proxy_address={proxy_address}")
+            # logging.debug(f"Parsed proxy: protocol={protocol}, proxy_address={proxy_address}")
             return (protocol, proxy_address)
         except Exception as e:
             logging.error(f"Error parsing proxy {proxy}: {e}")
@@ -514,37 +625,139 @@ class ViewerBot_Stability:
         self.processes.clear()
         self.active_threads = 0
         self.all_proxies = []
+        with self.proxy_lock:
+            self.in_use_proxies.clear()
+        self.proxy_queue = Queue()
         self.update_status('stopped', 'Bot has been stopped')
         logging.debug("Bot stopped and all threads cleaned up")
 
-    def open_url(self, proxy_data):
-        self.active_threads += 1
-        try:
-            headers = {'User-Agent': ua.random}
-            current_index = self.all_proxies.index(proxy_data)
+    def _stability_worker(self, worker_id):
+        logging.debug(f"Stability worker {worker_id} starting")
 
-            if proxy_data['url'] == "":
-                proxy_data['url'] = self.get_url()
-            current_url = proxy_data['url']
+        while not self.should_stop:
+            proxy_tuple = self._acquire_proxy()
+            if proxy_tuple is None:
+                if self.should_stop:
+                    break
+                time.sleep(1)
+                continue
+
+            success = False
             try:
-                if time.time() - proxy_data['time'] >= random.randint(1, 5):
-                    proxy_type, proxy_address = proxy_data['proxy']
-                    proxies = self.configure_proxies(proxy_type, proxy_address)
-                    with requests.Session() as s:
-                        s.head(current_url, proxies=proxies, headers=headers, timeout=10)
-                        self.request_count += 1
-                        logging.debug(f"Request sent using proxy {proxies}")
-                    proxy_data['time'] = time.time()
-                    self.all_proxies[current_index] = proxy_data
-            except Exception as e:
-                logging.error(f"Error sending request: {e}")
+                success = self.send_websocket_view(proxy_tuple)
+            except Exception as exc:  # noqa: BLE001
+                logging.error(f"Worker {worker_id} encountered error: {exc}")
             finally:
-                self.active_threads -= 1
-                self.thread_semaphore.release()  # Release the semaphore
+                self._release_proxy(proxy_tuple, success)
 
-        except (KeyboardInterrupt, SystemExit):
-            self.should_stop = True
-            logging.debug("Bot interrupted by user")
+            if not success and not self.should_stop:
+                backoff = random.uniform(*self.worker_retry_backoff)
+                logging.debug(f"Worker {worker_id} backing off for {backoff:.2f}s after failure")
+                time.sleep(backoff)
+
+        logging.debug(f"Stability worker {worker_id} exiting")
+
+    def send_websocket_view(self, proxy_tuple):
+        """Run a WebSocket session using the provided proxy."""
+        with self.active_threads_lock:
+            self.active_threads += 1
+
+        try:
+            token = self.get_websocket_token()
+            if not token:
+                logging.error("Failed to get WebSocket token")
+                return False
+
+            if not self.channel_id:
+                self.channel_id = self.get_channel_id()
+                if not self.channel_id:
+                    logging.error("Failed to get channel ID")
+                    return False
+
+            loop = asyncio.new_event_loop()
+            try:
+                asyncio.set_event_loop(loop)
+                return loop.run_until_complete(self._websocket_worker(token, proxy_tuple))
+            finally:
+                try:
+                    loop.run_until_complete(loop.shutdown_asyncgens())
+                except Exception:  # noqa: BLE001
+                    pass
+                finally:
+                    asyncio.set_event_loop(None)
+                    loop.close()
+
+        except Exception as exc:  # noqa: BLE001
+            logging.error(f"Error in send_websocket_view: {exc}")
+            return False
+        finally:
+            with self.active_threads_lock:
+                self.active_threads -= 1
+
+    async def _websocket_worker(self, token, proxy_tuple):
+        """Async WebSocket worker that maintains a long-lived connection."""
+        proxy_type, proxy_address = proxy_tuple
+        self.configure_proxies(proxy_type, proxy_address)
+
+        ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
+        connection_started = time.time()
+
+        try:
+            async with websockets.connect(
+                ws_url,
+                extra_headers=WS_HEADERS,
+                ping_interval=None,
+                close_timeout=10
+            ) as websocket:
+                logging.debug(f"WebSocket connected for channel {self.channel_id} using proxy {proxy_address}")
+
+                handshake_msg = {
+                    "type": "channel_handshake",
+                    "data": {"message": {"channelId": self.channel_id}}
+                }
+                await websocket.send(json.dumps(handshake_msg))
+                logging.debug(f"Sent handshake for channel {self.channel_id}")
+
+                while not self.should_stop:
+                    elapsed = time.time() - connection_started
+                    if elapsed >= self.connection_refresh_interval:
+                        logging.debug(
+                            f"Reached max connection age ({elapsed:.0f}s). Recycling proxy {proxy_address}."
+                        )
+                        return True
+
+                    try:
+                        await websocket.send(json.dumps({"type": "ping"}))
+                        self.request_count += 1
+                    except websockets.exceptions.ConnectionClosedOK:
+                        logging.debug("Connection closed gracefully while sending ping")
+                        return True
+                    except Exception as exc:  # noqa: BLE001
+                        logging.error(f"Ping failed for proxy {proxy_address}: {exc}")
+                        return False
+
+                    wait_time = random.uniform(*self.ping_interval_range)
+                    try:
+                        await asyncio.wait_for(websocket.recv(), timeout=wait_time)
+                    except asyncio.TimeoutError:
+                        # Normal case: no message received, continue
+                        continue
+                    except websockets.exceptions.ConnectionClosedOK:
+                        logging.debug("Connection closed gracefully during receive")
+                        return True
+                    except websockets.exceptions.ConnectionClosed as exc:
+                        logging.warning(f"Connection closed for proxy {proxy_address}: {exc}")
+                        return False
+                    except Exception as exc:  # noqa: BLE001
+                        logging.error(f"Unexpected receive error for proxy {proxy_address}: {exc}")
+                        return False
+
+        except Exception as exc:  # noqa: BLE001
+            logging.error(f"WebSocket error for proxy {proxy_address}: {exc}")
+            traceback.print_exc()
+            return False
+
+        return True
 
     def configure_proxies(self, proxy_type, proxy_address):
         try:
@@ -578,75 +791,68 @@ class ViewerBot_Stability:
             return {}
 
     def main(self):
+        self.should_stop = False
         self.update_status('starting', 'Starting bot...', startup_progress=0)
-        start = datetime.datetime.now()
+
+        self.update_status('starting', 'Getting channel information...', startup_progress=10)
+        self.channel_id = self.get_channel_id()
+        if not self.channel_id:
+            logging.warning(
+                f"Could not get channel ID for {self.channel_name}, falling back to default IDs"
+            )
+            self.update_status('starting', 'Channel ID unavailable, using fallback mode...', startup_progress=15)
+            fallback_ids = {
+                'grndpagaming': '123456',
+                'trainwreckstv': '234567',
+                'xqc': '345678',
+                'adinross': '456789',
+                'pokimane': '567890'
+            }
+            self.channel_id = fallback_ids.get(self.channel_name.lower(), '999999')
+            logging.info(f"Using fallback channel ID: {self.channel_id} for {self.channel_name}")
+
         proxies = self.get_proxies()
-        logging.debug(f"Proxies: {proxies}")
-        
         if not proxies:
             self.update_status('error', 'No proxies available. Stopping bot.')
             self.should_stop = True
             return
 
-        # Preload stream URL to avoid rate limiting
         self.update_status('starting', 'Getting stream URL...', startup_progress=50)
-        stream_url = self.get_url()
-        if not stream_url:
-            self.update_status('warning', 'Could not get initial stream URL, will try again later')
-        
-        # Initialize all_proxies with the preloaded URL
-        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies]
-        
+        stream_url = self.get_url() or ""
+        if stream_url:
+            logging.debug("Fetched initial stream URL for potential fallback usage")
+
+        worker_count = max(1, min(int(self.nb_of_threads), len(proxies)))
         self.processes = []
-        
-        self.update_status('running', 'Bot is now running', 
-                          proxy_count=len(self.all_proxies), 
-                          startup_progress=100)
-        
-        # Shuffle la liste une seule fois pour mixer l'ordre initial
-        random.shuffle(self.all_proxies)
-        while True:
-            if len(self.all_proxies) == 0:
-                console.print("[bold red]No proxies available. Stopping bot.[/bold red]")
-                break
 
-            elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
+        self.update_status(
+            'running',
+            f'Stability mode running with {worker_count} persistent connections',
+            proxy_count=len(self.all_proxies),
+            startup_progress=100
+        )
 
-            for i in range(0, int(self.nb_of_threads)):
-                if self.should_stop:
-                    break
-                acquired = self.thread_semaphore.acquire()
-                if acquired and len(self.all_proxies) > 0:
-                    proxy_to_use = self.all_proxies[self.round_robin_index % len(self.all_proxies)]
-                    self.round_robin_index += 1
+        for worker_id in range(worker_count):
+            worker = Thread(target=self._stability_worker, args=(worker_id,), daemon=True)
+            self.processes.append(worker)
+            worker.start()
 
-                    threaded = Thread(target=self.open_url, args=(proxy_to_use,))
-                    self.processes.append(threaded)
-                    threaded.daemon = True
-                    threaded.start()
-                elif acquired:
-                    self.thread_semaphore.release()
-
-            if elapsed_seconds >= 300 and self.proxy_imported == False:
-                # Refresh the proxies after 300 seconds (5 minutes)
-                start = datetime.datetime.now()
-                self.proxyrefreshed = False
-                proxies = self.get_proxies()
-                # Update all_proxies with new proxies
-                self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
-                logging.debug(f"Proxies refreshed: {self.all_proxies}")
-                elapsed_seconds = 0
-
-            if self.should_stop:
-                logging.debug("Stopping main loop")
-                # Relâcher tous les sémaphores restants
-                for _ in range(self.nb_of_threads):
-                    try:
-                        self.thread_semaphore.release()
-                    except ValueError:
-                        pass  # Ignore si déjà relâché
-                break
-
-        for t in self.processes:
-            t.join()
-        console.print("[bold red]Bot main loop ended[/bold red]")
+        try:
+            while not self.should_stop:
+                time.sleep(5)
+                if self.proxy_queue.empty() and not self.in_use_proxies:
+                    logging.error("All proxies exhausted. Stopping stability mode.")
+                    self.update_status(
+                        'failed',
+                        'All proxies have failed. Please refresh your proxy list to continue.'
+                    )
+                    self.should_stop = True
+        except KeyboardInterrupt:
+            logging.info("Received interrupt, stopping stability bot")
+            self.should_stop = True
+        finally:
+            for worker in self.processes:
+                worker.join()
+            if self.status.get('state') not in {'failed', 'error'}:
+                self.update_status('stopped', 'Bot has been stopped')
+            console.print("[bold red]Bot main loop ended[/bold red]")

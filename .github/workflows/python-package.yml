@@ -37,57 +37,6 @@ jobs:
           python -m pip install wheel pyinstaller
           pip install -r requirements.txt
 
-      - name: Create .env file for backend
-        run: |
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
-
-      - name: Extract tag name
-        id: get_version
-        shell: pwsh
-        run: |
-          $version = "${env:GITHUB_REF}" -replace 'refs/tags/', ''
-          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-
-      - name: Create .env file for frontend
-        run: |
-          echo NEXT_PUBLIC_REACT_APP_VERSION=${{ steps.get_version.outputs.VERSION }} >> frontend/.env
-
-      - name: Build the Frontend
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          Write-Host "=== Starting build process ==="
-
-          # Build Next.js app
-          Write-Host "Building Next.js app..."
-          cd frontend
-          npm install
-          npm run build
-
-          Write-Host "=== Preparing static files ==="
-          # Clean and create static directory
-          if (Test-Path -Path "../backend/static") {
-              Remove-Item -Recurse -Force ../backend/static
-          }
-          New-Item -ItemType Directory -Force -Path ../backend/static
-
-          # Copy the exported Next.js app to Flask static directory
-          Write-Host "Copying files to static directory..."
-          Copy-Item -Recurse -Force out/* ../backend/static/
-
-          # Verify the copy
-          Write-Host "=== Verifying static files ==="
-          if (-not (Test-Path -Path "../backend/static/index.html")) {
-              Write-Host "ERROR: index.html not found in static directory!"
-              exit 1
-          }
-
-          Write-Host "Contents of static directory:"
-          Get-ChildItem -Path ../backend/static
-
-          Write-Host "=== Build complete ==="
-
       - name: Build Windows Executable
         run: |
           .\venv\Scripts\activate
@@ -144,57 +93,6 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pyinstaller
           pip install -r requirements.txt
-
-      - name: Create .env file for backend
-        run: |
-          echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> backend/.env
-
-      - name: Extract tag name
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-
-      - name: Create .env file for frontend
-        run: |
-          echo "NEXT_PUBLIC_REACT_APP_VERSION=${{ steps.get_version.outputs.VERSION }}" >> frontend/.env
-
-      - name: Build the Frontend
-        run: |
-          set -e
-
-          echo "=== Starting build process ==="
-
-          # Build Next.js app
-          echo "Building Next.js app..."
-          cd frontend
-          npm install
-          npm run build
-
-          echo "=== Preparing static files ==="
-          # Clean and create static directory
-          rm -rf ../backend/static
-          mkdir -p ../backend/static
-
-          # Copy the exported Next.js app to Flask static directory
-          echo "Copying files to static directory..."
-          cp -rv out/* ../backend/static/
-
-          # Ensure proper permissions
-          echo "Setting permissions..."
-          chmod -R 755 ../backend/static
-          find ../backend/static -type f -exec chmod 644 {} \;
-          find ../backend/static -type d -exec chmod 755 {} \;
-
-          # Verify the copy
-          echo "=== Verifying static files ==="
-          if [ ! -f "../backend/static/index.html" ]; then
-              echo "ERROR: index.html not found in static directory!"
-              exit 1
-          fi
-
-          echo "Contents of static directory:"
-          ls -la ../backend/static
-
-          echo "=== Build complete ==="
 
       - name: Build MacOS App
         run: |

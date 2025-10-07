@@ -1,9 +1,13 @@
 /**
  * WebSocket Service - Communication complète via WebSocket
  */
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
-export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type ConnectionStatus =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error";
 
 export interface BotConfig {
   channelName: string;
@@ -12,6 +16,7 @@ export interface BotConfig {
   proxyType?: string;
   stabilityMode?: boolean;
   proxyFile?: File;
+  subscriptionStatus?: boolean;
 }
 
 export interface BotStats {
@@ -43,18 +48,18 @@ interface Callbacks {
 
 class WebSocketService {
   private socket: Socket | null = null;
-  private status: ConnectionStatus = 'disconnected';
+  private status: ConnectionStatus = "disconnected";
   private callbacks: Callbacks = {};
 
   // URLs possibles pour le service local
   private urls = [
-    'http://localhost:8080',
-    'http://localhost:3001',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:3001',
+    "http://localhost:8080",
+    "http://localhost:3001",
+    "http://127.0.0.1:8080",
+    "http://127.0.0.1:3001",
   ];
 
-  private currentUrl = '';
+  private currentUrl = "";
 
   constructor(callbacks: Callbacks = {}) {
     this.callbacks = callbacks;
@@ -64,7 +69,7 @@ class WebSocketService {
    * Se connecter au service WebSocket
    */
   async connect(): Promise<boolean> {
-    this.updateStatus('connecting');
+    this.updateStatus("connecting");
 
     for (const url of this.urls) {
       console.log(`Tentative de connexion à ${url}...`);
@@ -77,8 +82,8 @@ class WebSocketService {
       }
     }
 
-    this.updateStatus('error');
-    this.callbacks.onBotError?.('Impossible de se connecter au service local');
+    this.updateStatus("error");
+    this.callbacks.onBotError?.("Impossible de se connecter au service local");
     return false;
   }
 
@@ -88,7 +93,7 @@ class WebSocketService {
   private tryConnect(url: string): Promise<boolean> {
     return new Promise((resolve) => {
       const socket = io(url, {
-        transports: ['websocket', 'polling'],
+        transports: ["websocket", "polling"],
         reconnection: false,
         timeout: 3000,
       });
@@ -98,16 +103,16 @@ class WebSocketService {
         resolve(false);
       }, 3000);
 
-      socket.on('connect', () => {
+      socket.on("connect", () => {
         clearTimeout(timeout);
         this.socket = socket;
         this.setupEventHandlers();
-        this.updateStatus('connected');
+        this.updateStatus("connected");
         this.callbacks.onConnect?.();
         resolve(true);
       });
 
-      socket.on('connect_error', () => {
+      socket.on("connect_error", () => {
         clearTimeout(timeout);
         socket.close();
         resolve(false);
@@ -121,40 +126,40 @@ class WebSocketService {
   private setupEventHandlers() {
     if (!this.socket) return;
 
-    this.socket.on('connected', (data) => {
-      console.log('Serveur connecté:', data);
+    this.socket.on("connected", (data) => {
+      console.log("Serveur connecté:", data);
     });
 
-    this.socket.on('stats_update', (stats: BotStats) => {
+    this.socket.on("stats_update", (stats: BotStats) => {
       this.callbacks.onStatsUpdate?.(stats);
     });
 
-    this.socket.on('bot_started', (data) => {
-      console.log('Bot démarré:', data);
+    this.socket.on("bot_started", (data) => {
+      console.log("Bot démarré:", data);
       this.callbacks.onBotStarted?.(data);
     });
 
-    this.socket.on('bot_stopped', (data) => {
-      console.log('Bot arrêté:', data);
+    this.socket.on("bot_stopped", (data) => {
+      console.log("Bot arrêté:", data);
       this.callbacks.onBotStopped?.(data);
     });
 
-    this.socket.on('bot_status_changed', (data) => {
-      console.log('Statut bot changé:', data);
+    this.socket.on("bot_status_changed", (data) => {
+      console.log("Statut bot changé:", data);
     });
 
-    this.socket.on('bot_error', (error) => {
-      console.error('Erreur bot:', error);
-      this.callbacks.onBotError?.(error.error || 'Erreur inconnue');
+    this.socket.on("bot_error", (error) => {
+      console.error("Erreur bot:", error);
+      this.callbacks.onBotError?.(error.error || "Erreur inconnue");
     });
 
-    this.socket.on('disconnect', () => {
-      this.updateStatus('disconnected');
+    this.socket.on("disconnect", () => {
+      this.updateStatus("disconnected");
       this.callbacks.onDisconnect?.();
     });
 
-    this.socket.on('pong', (data) => {
-      console.log('Pong reçu:', data);
+    this.socket.on("pong", (data) => {
+      console.log("Pong reçu:", data);
     });
   }
 
@@ -162,16 +167,17 @@ class WebSocketService {
    * Démarrer le bot
    */
   async startBot(config: BotConfig): Promise<void> {
-    if (!this.socket || this.status !== 'connected') {
-      throw new Error('Service non connecté');
+    if (!this.socket || this.status !== "connected") {
+      throw new Error("Service non connecté");
     }
 
-    const data: any = {
+    const data: Record<string, unknown> = {
       channelName: config.channelName,
       threads: config.threads,
       timeout: config.timeout || 10000,
-      proxyType: config.proxyType || 'http',
+      proxyType: config.proxyType || "http",
       stabilityMode: config.stabilityMode || false,
+      subscriptionStatus: config.subscriptionStatus || "unknown",
     };
 
     // Si un fichier proxy est fourni, le convertir en base64
@@ -181,40 +187,40 @@ class WebSocketService {
       data.proxyFileName = config.proxyFile.name;
     }
 
-    this.socket.emit('start_bot', data);
+    this.socket.emit("start_bot", data);
   }
 
   /**
    * Arrêter le bot
    */
   stopBot(): void {
-    if (!this.socket || this.status !== 'connected') {
-      throw new Error('Service non connecté');
+    if (!this.socket || this.status !== "connected") {
+      throw new Error("Service non connecté");
     }
 
-    this.socket.emit('stop_bot');
+    this.socket.emit("stop_bot");
   }
 
   /**
    * Demander les statistiques
    */
   getStats(): void {
-    if (!this.socket || this.status !== 'connected') {
+    if (!this.socket || this.status !== "connected") {
       return;
     }
 
-    this.socket.emit('get_stats');
+    this.socket.emit("get_stats");
   }
 
   /**
    * Ping le serveur
    */
   ping(): void {
-    if (!this.socket || this.status !== 'connected') {
+    if (!this.socket || this.status !== "connected") {
       return;
     }
 
-    this.socket.emit('ping');
+    this.socket.emit("ping");
   }
 
   /**
@@ -225,7 +231,7 @@ class WebSocketService {
       this.socket.disconnect();
       this.socket = null;
     }
-    this.updateStatus('disconnected');
+    this.updateStatus("disconnected");
   }
 
   /**
@@ -246,7 +252,7 @@ class WebSocketService {
    * Vérifier si connecté
    */
   isConnected(): boolean {
-    return this.status === 'connected';
+    return this.status === "connected";
   }
 
   /**
@@ -264,7 +270,7 @@ class WebSocketService {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
+        const base64 = (reader.result as string).split(",")[1];
         resolve(base64);
       };
       reader.onerror = reject;
