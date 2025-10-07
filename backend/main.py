@@ -16,7 +16,7 @@ from pathlib import Path
 
 # Configure logging for the entire service, defaulting to INFO but allowing overrides
 LOG_LEVEL_NAME = os.getenv("KICK_BOT_LOG_LEVEL", "INFO").upper()
-LOG_LEVEL = getattr(logging, LOG_LEVEL_NAME, logging.INFO)
+LOG_LEVEL = getattr(logging, LOG_LEVEL_NAME, logging.ERROR)
 logging.basicConfig(
     level=LOG_LEVEL,
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",

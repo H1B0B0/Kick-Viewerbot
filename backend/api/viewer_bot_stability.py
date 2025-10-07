@@ -30,7 +30,7 @@ logging.getLogger("urllib3").setLevel(logging.ERROR)
 console = Console()
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
+logging.basicConfig(level=logging.ERROR, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
 
 # Session creating for request
 ua = UserAgent()
@@ -89,7 +89,7 @@ class ViewerBot_Stability:
         self.connection_retry_delay = 5
         self.active_threads_lock = threading.Lock()
         self.connection_refresh_interval = 5 * 60  # Keep connections alive for up to 5 minutes
-        self.ping_interval_range = (12, 17)
+        self.ping_interval_range = (25, 35)  # Intervalle entre les pings en secondes
         self.worker_retry_backoff = (3, 8)
         self.alive_proxies = 0
         self.active_connections = 0

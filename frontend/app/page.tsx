@@ -712,7 +712,9 @@ export default function ViewerBotInterface() {
                 <div className="w-full stat-card-item">
                   <StatCard
                     title={
-                      isStabilityLocked ? "Active Connections" : "Requests"
+                      wsStats?.config?.stability_mode
+                        ? "Active Connections"
+                        : "Requests"
                     }
                     value={stats.request_count}
                   />
