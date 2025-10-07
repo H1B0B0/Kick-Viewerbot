@@ -710,7 +710,12 @@ export default function ViewerBotInterface() {
                   />
                 </div>
                 <div className="w-full stat-card-item">
-                  <StatCard title="Requests" value={stats.request_count} />
+                  <StatCard
+                    title={
+                      isStabilityLocked ? "Active Connections" : "Requests"
+                    }
+                    value={stats.request_count}
+                  />
                 </div>
               </div>
             </CardBody>

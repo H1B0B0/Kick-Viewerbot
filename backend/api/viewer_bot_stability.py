@@ -30,7 +30,7 @@ logging.getLogger("urllib3").setLevel(logging.ERROR)
 console = Console()
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
 
 # Session creating for request
 ua = UserAgent()
@@ -62,7 +62,7 @@ session.set_option("http-headers", {
     "Referer": "https://www.google.com/"
 })
 
-class ViewerBot:
+class ViewerBot_Stability:
     def __init__(self, nb_of_threads, channel_name, proxy_file=None, proxy_imported=False, timeout=10000, type_of_proxy="http"):
         self.proxy_imported = proxy_imported
         self.proxy_file = proxy_file
@@ -91,6 +91,8 @@ class ViewerBot:
         self.connection_refresh_interval = 5 * 60  # Keep connections alive for up to 5 minutes
         self.ping_interval_range = (12, 17)
         self.worker_retry_backoff = (3, 8)
+        self.alive_proxies = 0
+        self.active_connections = 0
         self.status = {
             'state': 'initialized',  # Current state of the bot
             'message': 'Bot initialized',  # Status message
@@ -333,12 +335,23 @@ class ViewerBot:
             **(({'proxy_loading_progress': proxy_loading_progress} if proxy_loading_progress is not None else {})),
             **(({'startup_progress': startup_progress} if startup_progress is not None else {}))
         })
+        self.status['active_threads'] = self.active_threads
+        self.status['request_count'] = self.request_count
+        self.status['active_connections'] = getattr(self, 'active_connections', 0)
+        self.status['alive_proxies'] = getattr(self, 'alive_proxies', 0)
         logging.info(f"Status updated: {self.status}")
+
+    def _update_activity_message(self):
+        self.status['message'] = (
+            f"Stability mode active: {self.active_connections} connections / "
+            f"{self.status.get('proxy_count', 0)} proxies available"
+        )
 
     # --- Proxy pool helpers -------------------------------------------------
 
     def _reset_proxy_pool(self, proxies):
         """Initialise the proxy queue and bookkeeping for stability mode."""
+        logging.info(f"Resetting proxy pool with {len(proxies)} proxies")
         self.all_proxies = list(proxies)
         self.proxy_queue = Queue()
         self.proxy_failures = {}
@@ -351,6 +364,11 @@ class ViewerBot:
 
         # Keep proxy count in status for UI stats
         self.status['proxy_count'] = len(proxies)
+        self.alive_proxies = len(proxies)
+        self.active_connections = 0
+        self.status['active_connections'] = 0
+        self._update_activity_message()
+        logging.info(f"Proxy pool reset complete, queue size: {self.proxy_queue.qsize()}")
 
     def _available_proxy_count(self):
         with self.proxy_lock:
@@ -358,20 +376,32 @@ class ViewerBot:
 
     def _acquire_proxy(self):
         """Take the next available proxy if any."""
+        logging.info(f"_acquire_proxy called, queue size: {self.proxy_queue.qsize()}")
         while not self.should_stop:
             try:
                 proxy = self.proxy_queue.get(timeout=2)
+                logging.info(f"Got proxy from queue: {proxy}")
             except Empty:
+                logging.warning(f"Proxy queue empty, waiting...")
                 if self.should_stop:
                     return None
                 continue
 
+            logging.info(f"Trying to acquire lock for proxy: {proxy}")
             with self.proxy_lock:
+                logging.info(f"Lock acquired for proxy: {proxy}")
                 if proxy in self.in_use_proxies:
                     # Very unlikely, but skip to avoid double usage
+                    logging.warning(f"Proxy {proxy} already in use, skipping")
                     continue
                 self.in_use_proxies.add(proxy)
-                self.status['proxy_count'] = self._available_proxy_count()
+                # Calculate proxy count without calling _available_proxy_count (which would deadlock)
+                proxy_count = self.proxy_queue.qsize() + len(self.in_use_proxies)
+                self.status['proxy_count'] = proxy_count
+                self.active_connections = len(self.in_use_proxies)
+                self.status['active_connections'] = self.active_connections
+                self._update_activity_message()
+                logging.info(f"✓ Acquired proxy successfully: {proxy}")
                 return proxy
 
         return None
@@ -383,6 +413,8 @@ class ViewerBot:
 
         with self.proxy_lock:
             self.in_use_proxies.discard(proxy)
+            self.active_connections = len(self.in_use_proxies)
+            self.status['active_connections'] = self.active_connections
 
         if success or self.should_stop:
             # Reset failure count and reuse
@@ -400,7 +432,12 @@ class ViewerBot:
                 except ValueError:
                     pass
 
-        self.status['proxy_count'] = self._available_proxy_count()
+        # Calculate proxy count without deadlock
+        with self.proxy_lock:
+            current_available = self.proxy_queue.qsize() + len(self.in_use_proxies)
+        self.status['proxy_count'] = current_available
+        self.alive_proxies = current_available
+        self._update_activity_message()
 
     # --- End proxy helpers --------------------------------------------------
 
@@ -632,35 +669,51 @@ class ViewerBot:
         logging.debug("Bot stopped and all threads cleaned up")
 
     def _stability_worker(self, worker_id):
-        logging.debug(f"Stability worker {worker_id} starting")
+        logging.info(f"Stability worker {worker_id} starting")
 
-        while not self.should_stop:
-            proxy_tuple = self._acquire_proxy()
-            if proxy_tuple is None:
-                if self.should_stop:
-                    break
-                time.sleep(1)
-                continue
+        with self.active_threads_lock:
+            self.active_threads += 1
+            self.status['active_threads'] = self.active_threads
+            self._update_activity_message()
 
-            success = False
-            try:
-                success = self.send_websocket_view(proxy_tuple)
-            except Exception as exc:  # noqa: BLE001
-                logging.error(f"Worker {worker_id} encountered error: {exc}")
-            finally:
-                self._release_proxy(proxy_tuple, success)
+        try:
+            while not self.should_stop:
+                logging.info(f"Worker {worker_id} acquiring proxy...")
+                proxy_tuple = self._acquire_proxy()
+                if proxy_tuple is None:
+                    if self.should_stop:
+                        break
+                    logging.warning(f"Worker {worker_id} could not acquire proxy, waiting...")
+                    time.sleep(1)
+                    continue
 
-            if not success and not self.should_stop:
-                backoff = random.uniform(*self.worker_retry_backoff)
-                logging.debug(f"Worker {worker_id} backing off for {backoff:.2f}s after failure")
-                time.sleep(backoff)
+                logging.info(f"Worker {worker_id} acquired proxy: {proxy_tuple[1]}")
+                success = False
+                try:
+                    success = self.send_websocket_view(proxy_tuple)
+                    logging.info(f"Worker {worker_id} websocket view result: {success}")
+                except Exception as exc:  # noqa: BLE001
+                    logging.error(f"Worker {worker_id} encountered error: {exc}")
+                    traceback.print_exc()
+                finally:
+                    self._release_proxy(proxy_tuple, success)
 
-        logging.debug(f"Stability worker {worker_id} exiting")
+                if not success and not self.should_stop:
+                    backoff = random.uniform(*self.worker_retry_backoff)
+                    logging.info(f"Worker {worker_id} backing off for {backoff:.2f}s after failure")
+                    time.sleep(backoff)
+        finally:
+            with self.active_threads_lock:
+                self.active_threads = max(self.active_threads - 1, 0)
+                self.status['active_threads'] = self.active_threads
+                self._update_activity_message()
+
+        logging.info(f"Stability worker {worker_id} exiting")
 
     def send_websocket_view(self, proxy_tuple):
         """Run a WebSocket session using the provided proxy."""
-        with self.active_threads_lock:
-            self.active_threads += 1
+        proxy_type, proxy_address = proxy_tuple
+        logging.info(f"send_websocket_view called with proxy {proxy_address}")
 
         try:
             token = self.get_websocket_token()
@@ -674,10 +727,14 @@ class ViewerBot:
                     logging.error("Failed to get channel ID")
                     return False
 
+            logging.info(f"Starting WebSocket worker with token and channel_id {self.channel_id}")
+
             loop = asyncio.new_event_loop()
             try:
                 asyncio.set_event_loop(loop)
-                return loop.run_until_complete(self._websocket_worker(token, proxy_tuple))
+                result = loop.run_until_complete(self._websocket_worker(token, proxy_tuple))
+                logging.info(f"WebSocket worker completed with result: {result}")
+                return result
             finally:
                 try:
                     loop.run_until_complete(loop.shutdown_asyncgens())
@@ -689,27 +746,32 @@ class ViewerBot:
 
         except Exception as exc:  # noqa: BLE001
             logging.error(f"Error in send_websocket_view: {exc}")
+            traceback.print_exc()
             return False
         finally:
-            with self.active_threads_lock:
-                self.active_threads -= 1
+            self.status['active_threads'] = self.active_threads
 
     async def _websocket_worker(self, token, proxy_tuple):
         """Async WebSocket worker that maintains a long-lived connection."""
         proxy_type, proxy_address = proxy_tuple
-        self.configure_proxies(proxy_type, proxy_address)
+
+        # Note: websockets library doesn't natively support proxies
+        # The connection will be made directly without proxy
+        # For proxy support, you would need websocket-client or python-socks
+        logging.info(f"Attempting WebSocket connection (direct, no proxy support in websockets lib) for proxy {proxy_address}")
 
         ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
         connection_started = time.time()
 
         try:
+            logging.info(f"Connecting to WebSocket for channel {self.channel_id}...")
             async with websockets.connect(
                 ws_url,
-                extra_headers=WS_HEADERS,
+                additional_headers=WS_HEADERS,
                 ping_interval=None,
                 close_timeout=10
             ) as websocket:
-                logging.debug(f"WebSocket connected for channel {self.channel_id} using proxy {proxy_address}")
+                logging.info(f"✓ WebSocket connected for channel {self.channel_id} using proxy {proxy_address}")
 
                 handshake_msg = {
                     "type": "channel_handshake",
@@ -729,6 +791,13 @@ class ViewerBot:
                     try:
                         await websocket.send(json.dumps({"type": "ping"}))
                         self.request_count += 1
+                        self.status['request_count'] = self.request_count
+                        if self.request_count % 50 == 0:
+                            logging.info(
+                                "Stability bot has issued %d pings across %d active connections",
+                                self.request_count,
+                                self.active_connections,
+                            )
                     except websockets.exceptions.ConnectionClosedOK:
                         logging.debug("Connection closed gracefully while sending ping")
                         return True
@@ -752,6 +821,10 @@ class ViewerBot:
                         logging.error(f"Unexpected receive error for proxy {proxy_address}: {exc}")
                         return False
 
+        except websockets.exceptions.InvalidStatusCode as exc:
+            logging.error(f"WebSocket invalid status code for proxy {proxy_address}: {exc}")
+            traceback.print_exc()
+            return False
         except Exception as exc:  # noqa: BLE001
             logging.error(f"WebSocket error for proxy {proxy_address}: {exc}")
             traceback.print_exc()

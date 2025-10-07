@@ -14,15 +14,22 @@ from threading import Thread
 from werkzeug.utils import secure_filename
 from pathlib import Path
 
-# Configure logging
-logging.basicConfig(level=logging.ERROR)
-logger = logging.getLogger(__name__)
+# Configure logging for the entire service, defaulting to INFO but allowing overrides
+LOG_LEVEL_NAME = os.getenv("KICK_BOT_LOG_LEVEL", "INFO").upper()
+LOG_LEVEL = getattr(logging, LOG_LEVEL_NAME, logging.INFO)
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)],
+    force=True,
+)
+logger = logging.getLogger("kick_viewer_bot")
 
 # Import bot classes
 sys.path.append(str(Path(__file__).parent / "api"))
 try:
-    from viewer_bot import ViewerBot
-    from viewer_bot_stability import ViewerBot_Stability
+    from api.viewer_bot import ViewerBot
+    from api.viewer_bot_stability import ViewerBot_Stability
     BOT_AVAILABLE = True
 except ImportError:
     logger.warning("Bot modules not found. Running in mock mode.")
@@ -89,6 +96,7 @@ class BotManager:
         }
 
         logger.info(f"Starting bot: {channel_name}, threads: {threads}, stability: {stability_mode}")
+        print(f"Starting bot: {channel_name}, threads: {threads}, stability: {stability_mode}")
 
         normalized_status = (subscription_status or '').lower()
         if stability_mode and normalized_status not in ALLOWED_STABILITY_SUBSCRIPTIONS:
@@ -100,6 +108,7 @@ class BotManager:
 
         if BOT_AVAILABLE:
             bot_class = ViewerBot_Stability if stability_mode else ViewerBot
+            print(f"Using bot class: {bot_class.__name__}")
 
             self.bot = bot_class(
                 nb_of_threads=threads,
@@ -158,13 +167,19 @@ class BotManager:
             }
 
             # Bot stats
+            # En mode stability, afficher les connexions actives au lieu du nombre de requêtes
+            is_stability = self.config.get('stability_mode', False) if self.config else False
+            active_connections = getattr(self.bot, 'active_connections', 0) if self.bot else 0
+            request_count = getattr(self.bot, 'request_count', 0) if self.bot else 0
+
             stats = {
                 'is_running': self.is_running,
                 'channel_name': self.last_channel,
                 'active_threads': getattr(self.bot, 'active_threads', 0) if self.bot else 0,
+                'active_connections': active_connections,
                 'total_proxies': len(getattr(self.bot, 'all_proxies', [])) if self.bot else 0,
-                'alive_proxies': 0,
-                'request_count': getattr(self.bot, 'request_count', 0) if self.bot else 0,
+                'alive_proxies': getattr(self.bot, 'alive_proxies', 0) if self.bot else 0,
+                'request_count': active_connections if is_stability else request_count,
                 'config': self.config,
                 'status': getattr(self.bot, 'status', {
                     'state': 'stopped' if not self.is_running else 'running',
