@@ -53,7 +53,6 @@ export async function login(loginData: LoginData) {
       headers: {
         "Content-Type": "application/json",
       },
-      // Ajoutez ces options
       xsrfCookieName: "csrf_access_token",
       xsrfHeaderName: "X-CSRF-TOKEN",
     });

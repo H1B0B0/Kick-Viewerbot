@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import axios from "axios";
 
 const AUTH_CHECK_ENDPOINT =
   process.env.NEXT_PUBLIC_AUTH_CHECK_ENDPOINT ||
   "https://api.velbots.shop/users/profile";
 
 const PROTECTED_PATHS = ["/", "/dashboard", "/app", "/metrics"];
-const AUTH_COOKIE_NAMES = (process.env.NEXT_PUBLIC_AUTH_COOKIE_NAMES || "csrf_access_token,access_token")
+const AUTH_COOKIE_NAMES = (
+  process.env.NEXT_PUBLIC_AUTH_COOKIE_NAMES || "access_token"
+)
   .split(",")
   .map((name) => name.trim())
   .filter(Boolean);
@@ -40,17 +43,16 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(AUTH_CHECK_ENDPOINT, {
-      method: "GET",
+    const response = await axios.get(AUTH_CHECK_ENDPOINT, {
       headers: {
         Cookie: request.headers.get("cookie") || "",
         "User-Agent": request.headers.get("user-agent") || "Next.js middleware",
       },
-      cache: "no-store",
-      credentials: "include",
+      withCredentials: true,
+      timeout: 5000,
     });
 
-    if (response.ok) {
+    if (response.status >= 200 && response.status < 300) {
       return NextResponse.next();
     }
 
