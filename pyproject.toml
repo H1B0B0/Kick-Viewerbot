@@ -12,9 +12,7 @@ dependencies = [
     # Core Web Framework
     "flask>=2.0.0",
     "flask-cors>=4.0.0",
-    "flask-jwt-extended>=4.5.0",
     "werkzeug>=2.0.0",
-    "python-dotenv>=0.19.0",
     "gevent>=23.9.1",
     
     # Network and Streaming
@@ -25,9 +23,6 @@ dependencies = [
     "tls_client",
     
     # Security
-    "PyJWT>=2.6.0",
-    "cryptography>=40.0.0",
-    
     # UI and Formatting
     "rich>=13.0.0",
 

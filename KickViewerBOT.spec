@@ -40,7 +40,6 @@ dependencies = [
     ('websockets', 'websockets'),
     ('tls_client', 'tls_client'),
     ('cffi', 'cffi'),
-    ('Crypto', 'Crypto'),
     ('psutil', 'psutil'),
 ]
 
@@ -65,7 +64,6 @@ a = Analysis(
     datas=datas,
     hiddenimports=[
         'rich',
-        'dotenv',
         'trio',
         'websockets',
         'tls_client',
@@ -73,7 +71,6 @@ a = Analysis(
         'fake_useragent',
         'streamlink',
         'cffi',
-        'Crypto',
         'psutil',
     ],
     hookspath=[],

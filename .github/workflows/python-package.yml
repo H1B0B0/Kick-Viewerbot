@@ -103,16 +103,13 @@ jobs:
             --add-data "venv/Lib/site-packages/tls_client;tls_client" `
             --add-data "venv/Lib/site-packages/tls_client/dependencies;tls_client/dependencies" `
             --add-data "venv/Lib/site-packages/cffi;cffi" `
-            --add-data "venv/Lib/site-packages/Crypto;Crypto" `
             --add-data "venv/Lib/site-packages/psutil;psutil" `
             --collect-data fake_useragent `
             --collect-submodules streamlink `
             --collect-submodules websockets `
             --collect-submodules tls_client `
             --collect-submodules cffi `
-            --collect-submodules Crypto `
             --hidden-import rich `
-            --hidden-import dotenv `
             --hidden-import trio `
             "backend/main.py" `
             --name "KickViewerBOT.exe"

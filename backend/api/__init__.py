@@ -1,5 +1,6 @@
-from flask import Blueprint
-from .bot_controller import bot_api
+"""Utilities for backend bot implementations."""
 
-api = Blueprint('api', __name__)
-api.register_blueprint(bot_api, url_prefix='/bot')
+__all__ = [
+	"viewer_bot",
+	"viewer_bot_stability",
+]
