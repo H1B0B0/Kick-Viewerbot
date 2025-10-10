@@ -132,62 +132,111 @@ jobs:
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
 
           body: |
-            # 🚀 KickViewerBOT Release Notes V${{ steps.get_version.outputs.VERSION }}
+            # 🚀 KickViewerBOT Beta V3 - Major Architecture Upgrade
 
-            ## ✨ What's New - Stunning Visual Overhaul!
+            ## 🏗️ Revolutionary Architecture Redesign
 
-            This release brings a **complete visual transformation** to KickViewerBOT with beautiful animations and interactive effects that make monitoring your viewers more engaging than ever!
+            **Beta V3 introduces a complete architectural overhaul** that separates the frontend and backend into distinct services, bringing enterprise-grade reliability and developer flexibility to KickViewerBOT!
 
-            ### 🎨 Beautiful New Animations
+            ### ⚡ New Client-Server Architecture
 
-            **Title Animation:**
-            - The "Kick Viewer Bot" title now writes itself on screen like a hand-drawn signature
-            - Smooth, professional entrance that sets the tone for the whole interface
+            **What Changed:**
+            - **Frontend:** Now runs as a standalone web server (Next.js)
+            - **Backend:** Operates as a local service on your PC
+            - **Communication:** Real-time WebSocket connection between frontend and backend
+            - **Result:** Modern, scalable, and incredibly responsive architecture
 
-            **Page Entrance Effects:**
-            - All cards and elements now smoothly animate into view when you open the app
-            - 3D rotation effects and bouncy animations make the interface feel alive
-            - Everything flows naturally - no more sudden appearances!
+            ### 🎯 Why This Matters for You
 
-            ### 🎉 Celebration Effects When Viewers Increase!
+            **Enhanced Reliability:**
+            - 🔒 **More Stable Connections:** WebSocket-based communication ensures consistent real-time updates
+            - 🔄 **Auto-Reconnection:** Frontend automatically reconnects if connection drops
+            - 📊 **Better Error Handling:** Isolated services mean one component failure doesn't crash the entire app
+            - ⚡ **Faster Response Times:** Dedicated server processes improve overall performance
 
-            Your app now **celebrates with you** when viewers join your stream:
+            **Superior Developer Experience:**
+            - 🛠️ **Independent Updates:** Frontend and backend can be updated separately
+            - 🧪 **Easier Testing:** Each component can be tested in isolation
+            - 🚀 **Faster Development:** Hot reload and modern dev tools for quicker iterations
+            - 🎨 **Better UI Framework:** Next.js provides cutting-edge web capabilities
 
-            - **🎊 BIG WIN (50+ viewers at once):** Confetti explosion with colorful particles flying everywhere + Triple pulse glow + Large "+50" popup
-            - **💥 Great! (20-49 viewers):** Shockwave ripple effect + "+20" number popup + Card flash
-            - **✨ Nice! (5-19 viewers):** Subtle flash + "+5" number popup
-            - **🌟 Growing (1-4 viewers):** Gentle flash effect
+            **Future-Proof Foundation:**
+            - 📱 **Multi-Platform Ready:** Architecture supports future mobile apps or web dashboard
+            - 🌐 **Remote Access Potential:** Foundation for future remote monitoring features
+            - 🔌 **Plugin System Ready:** Modular design enables future extensibility
+            - 📈 **Scalability:** Can handle more viewers and features without performance degradation
 
-            **The bigger the viewer increase, the bigger the celebration!** 🎆
+            ### 🔧 Technical Highlights
 
-            ### 📊 Live Counter Animations
+            **Backend Service:**
+            - Python-based local service handling all bot operations
+            - WebSocket server on port 8080 for real-time communication
+            - Improved proxy management and connection stability
+            - Enhanced logging and debugging capabilities
 
-            - Numbers now **count up smoothly** instead of jumping instantly
-            - Request counter shows purple shockwave when you get lots of activity
-            - All stats update in real-time with beautiful transitions
+            **Frontend Application:**
+            - Next.js 15 with React 18 for modern UI
+            - Real-time WebSocket client for instant updates
+            - Beautiful glassmorphism design with smooth animations
+            - Dark/Light theme support with automatic detection
+            - Responsive design for all screen sizes
 
-            ### 🎯 Cleaner, Smoother Experience
+            **Communication Layer:**
+            - Bidirectional WebSocket protocol
+            - JSON-based message format for clarity
+            - Automatic reconnection with exponential backoff
+            - Health monitoring and status indicators
 
-            - Removed distracting button animations for a cleaner look
-            - Everything runs faster and smoother
-            - Animations only play when they should - no more flickering or repeating
-            - Fixed all bugs where numbers weren't updating properly
+            ### 🎨 User Experience Improvements
 
-            ### 🐛 Bug Fixes
+            **Visual Enhancements:**
+            - ✨ Smooth page transitions and animations
+            - 🎯 Real-time stats updates with no lag
+            - 📊 Better data visualization
+            - 🔔 Smart update notifications (non-intrusive toasts)
+            - 🌈 Adaptive theming for better readability
 
-            - ✅ Stats now update correctly in real-time
-            - ✅ Title animation works perfectly on page load
-            - ✅ Removed weird red square that appeared in corner
-            - ✅ All visual glitches and conflicts resolved
-            - ✅ Smooth performance on all devices
+            **Monitoring Features:**
+            - 📈 Live viewer count tracking
+            - 🔄 Connection status indicators
+            - ⚙️ Advanced settings panel
+            - 📊 Performance metrics dashboard
+            - 🎮 Streamlined bot controls
+
+            ### 🐛 Bug Fixes & Improvements
+
+            - ✅ Fixed connection stability issues
+            - ✅ Improved error recovery mechanisms
+            - ✅ Enhanced proxy rotation logic
+            - ✅ Better memory management
+            - ✅ Resolved UI state synchronization issues
+            - ✅ Fixed update checker notification persistence
+
+            ### ⚠️ Breaking Changes
+
+            **Important Notes:**
+            - This is a **beta release** - please report any issues on GitHub
+            - The new architecture requires both frontend and backend to run together
 
             ---
 
-            ## 📥 Download & Enjoy!
+            ## 📥 Download & Installation
 
-            **This is the most visually stunning version of KickViewerBOT yet!**
+            **This is the biggest update to KickViewerBOT ever!**
 
-            Experience the difference - your viewer bot monitoring has never looked this good! 🎨✨
+            The new architecture provides a solid foundation for years of future improvements while delivering better performance and reliability today.
+
+            ### Getting Started:
+            1. Download the appropriate version for your OS
+            2. Run the application (both services start automatically)
+            3. Access the interface (opens automatically in your browser)
+            4. Enjoy the enhanced experience!
+
+            **Need Help?** Check out our [GitHub Issues](https://github.com/H1B0B0/Kick-Viewerbot/issues) or join our community!
+
+            ---
+
+            *Thank you for being part of the KickViewerBOT Beta program! Your feedback helps make this tool better for everyone.* 🙏
 
           draft: false
           prerelease: false
