@@ -2,16 +2,24 @@
 
 @config "../tailwind.config.js";
 
-/* Custom Toastify styles for dark mode close button */
-.Toastify__toast-theme--dark .Toastify__close-button,
-.Toastify__close-button {
+/* Custom Toastify styles for close button */
+.Toastify__toast-theme--dark .Toastify__close-button {
   color: #ffffff !important;
   opacity: 0.7;
   transition: opacity 0.2s ease;
 }
 
-.Toastify__toast-theme--dark .Toastify__close-button:hover,
-.Toastify__close-button:hover {
+.Toastify__toast-theme--dark .Toastify__close-button:hover {
+  opacity: 1;
+}
+
+.Toastify__toast-theme--light .Toastify__close-button {
+  color: #000000 !important;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.Toastify__toast-theme--light .Toastify__close-button:hover {
   opacity: 1;
 }
 

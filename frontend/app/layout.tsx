@@ -84,8 +84,8 @@ export default function RootLayout({
             {!performanceMode && (
               <div className="absolute inset-0">
                 <Spline
-                  scene="https://prod.spline.design/fDEn2H4mhzWKkh09/scene.splinecode"
-                  className="absolute blur-sm"
+                  scene="https://prod.spline.design/0zfiWcHYJLJfg6nt/scene.splinecode"
+                  className="absolute"
                 />
               </div>
             )}
