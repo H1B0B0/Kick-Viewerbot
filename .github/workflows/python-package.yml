@@ -43,21 +43,51 @@ jobs:
           pyinstaller --noconfirm --onefile --uac-admin --icon "frontend/public/favicon.ico" `
             --paths "venv/Lib/site-packages" `
             --add-data "backend;." `
-            --add-data "venv/Lib/site-packages/fake_useragent/data;fake_useragent/data" `
-            --add-data "venv/Lib/site-packages/fake_useragent;fake_useragent" `
-            --add-data "venv/Lib/site-packages/streamlink;streamlink" `
-            --add-data "venv/Lib/site-packages/websockets;websockets" `
-            --add-data "venv/Lib/site-packages/tls_client;tls_client" `
-            --add-data "venv/Lib/site-packages/tls_client/dependencies;tls_client/dependencies" `
-            --add-data "venv/Lib/site-packages/cffi;cffi" `
-            --add-data "venv/Lib/site-packages/psutil;psutil" `
             --collect-data fake_useragent `
             --collect-submodules streamlink `
             --collect-submodules websockets `
             --collect-submodules tls_client `
-            --collect-submodules cffi `
+            --collect-submodules flask `
+            --collect-submodules flask_cors `
+            --collect-submodules flask_socketio `
+            --collect-submodules gevent `
+            --collect-submodules engineio `
+            --hidden-import flask `
+            --hidden-import flask_cors `
+            --hidden-import flask_socketio `
+            --hidden-import socketio `
+            --hidden-import werkzeug `
+            --hidden-import gevent `
+            --hidden-import gevent.socket `
+            --hidden-import gevent.select `
+            --hidden-import gevent._socket3 `
+            --hidden-import gevent.resolver.thread `
+            --hidden-import gevent.resolver.ares `
+            --hidden-import gevent.resolver.blocking `
+            --hidden-import gevent.event `
+            --hidden-import gevent.queue `
+            --hidden-import dns `
+            --hidden-import dns.resolver `
+            --hidden-import requests `
+            --hidden-import urllib3 `
+            --hidden-import certifi `
+            --hidden-import websockets `
+            --hidden-import websockets.legacy `
+            --hidden-import websockets.legacy.client `
+            --hidden-import websockets.legacy.server `
+            --hidden-import streamlink `
+            --hidden-import streamlink.plugins `
+            --hidden-import fake_useragent `
+            --hidden-import tls_client `
+            --hidden-import tls_client.dependencies `
             --hidden-import rich `
-            --hidden-import trio `
+            --hidden-import rich.console `
+            --hidden-import rich.progress `
+            --hidden-import psutil `
+            --hidden-import cffi `
+            --hidden-import engineio `
+            --hidden-import engineio.async_drivers `
+            --hidden-import engineio.async_drivers.gevent `
             "backend/main.py" `
             --name "KickViewerBOT.exe"
 
@@ -115,7 +145,14 @@ jobs:
     steps:
       - name: Extract tag name
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          # Check if tag contains beta, alpha, rc, or preview
+          if [[ "${GITHUB_REF#refs/tags/}" =~ (beta|alpha|rc|preview) ]]; then
+            echo "IS_PRERELEASE=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_PRERELEASE=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -130,6 +167,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ steps.get_version.outputs.VERSION }}
+          prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
 
           body: |
             # 🚀 KickViewerBOT Beta V3 - Major Architecture Upgrade
@@ -239,7 +277,6 @@ jobs:
             *Thank you for being part of the KickViewerBOT Beta program! Your feedback helps make this tool better for everyone.* 🙏
 
           draft: false
-          prerelease: false
 
       - name: Upload Windows Release Asset
         uses: actions/upload-release-asset@v1

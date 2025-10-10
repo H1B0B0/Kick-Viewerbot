@@ -26,34 +26,15 @@ except ImportError:
 import site
 site_packages = site.getsitepackages()[0]
 
-# Build data list with existence checks
+# Build data list - only include actual data files, not Python packages
 datas = [
     ('backend', '.'),
 ]
 
-# Add site-packages dependencies with existence checks
-dependencies = [
-    ('fake_useragent', 'fake_useragent'),
-    ('streamlink', 'streamlink'),
-    ('websockets', 'websockets'),
-    ('tls_client', 'tls_client'),
-    ('cffi', 'cffi'),
-    ('psutil', 'psutil'),
-]
-
-for dep, target in dependencies:
-    dep_path = os.path.join(site_packages, dep)
-    if os.path.exists(dep_path):
-        datas.append((dep_path, target))
-
 # Add fake_useragent data files if they exist
 fake_useragent_data = os.path.join(site_packages, 'fake_useragent', 'data')
-fake_useragent_json = os.path.join(site_packages, 'fake_useragent', 'data.json')
-
 if os.path.exists(fake_useragent_data):
     datas.append((fake_useragent_data, 'fake_useragent/data'))
-if os.path.exists(fake_useragent_json):
-    datas.append((fake_useragent_json, 'fake_useragent/data.json'))
 
 a = Analysis(
     ['backend/main.py'],
@@ -61,15 +42,60 @@ a = Analysis(
     binaries=tls_client_binaries,
     datas=datas,
     hiddenimports=[
-        'rich',
-        'trio',
+        # Flask and related
+        'flask',
+        'flask_cors',
+        'flask_socketio',
+        'socketio',
+        'werkzeug',
+        'gevent',
+        'gevent.socket',
+        'gevent.select',
+        'gevent._socket3',
+        'gevent.resolver.thread',
+        'gevent.resolver.ares',
+        'gevent.resolver.blocking',
+        'gevent.event',
+        'gevent.queue',
+        'dns',
+        'dns.dnssec',
+        'dns.e164',
+        'dns.hash',
+        'dns.namedict',
+        'dns.tsigkeyring',
+        'dns.update',
+        'dns.version',
+        'dns.zone',
+        # Network and HTTP
+        'requests',
+        'urllib3',
+        'certifi',
+        'charset_normalizer',
+        'idna',
+        # Websockets
         'websockets',
+        'websockets.legacy',
+        'websockets.legacy.client',
+        'websockets.legacy.server',
+        # Streaming
+        'streamlink',
+        'streamlink.plugins',
+        'fake_useragent',
+        # TLS Client
         'tls_client',
         'tls_client.dependencies',
-        'fake_useragent',
-        'streamlink',
-        'cffi',
+        # UI
+        'rich',
+        'rich.console',
+        'rich.progress',
+        'rich.table',
+        # Monitoring
         'psutil',
+        # Other
+        'cffi',
+        'engineio',
+        'engineio.async_drivers',
+        'engineio.async_drivers.gevent',
     ],
     hookspath=[],
     hooksconfig={},
