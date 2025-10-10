@@ -21,32 +21,44 @@ try:
 except ImportError:
     tls_client_binaries = []
 
-# Check if we're in a virtual environment
-if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-    # We're in a virtual environment
-    if sys.platform == "win32":
-        site_packages = os.path.join(sys.prefix, 'Lib', 'site-packages')
-    else:
-        site_packages = os.path.join(sys.prefix, 'lib', f'python{sys.version_info.major}.{sys.version_info.minor}', 'site-packages')
-else:
-    # We're not in a virtual environment, use default paths
-    import site
-    site_packages = site.getsitepackages()[0]
+# Use the current Python environment's site-packages (works for venv and CI)
+import site
+site_packages = site.getsitepackages()[0]
+
+# Build data list with existence checks
+datas = [
+    ('backend', '.'),
+]
+
+# Add site-packages dependencies with existence checks
+dependencies = [
+    ('fake_useragent', 'fake_useragent'),
+    ('streamlink', 'streamlink'),
+    ('websockets', 'websockets'),
+    ('tls_client', 'tls_client'),
+    ('cffi', 'cffi'),
+    ('psutil', 'psutil'),
+]
+
+for dep, target in dependencies:
+    dep_path = os.path.join(site_packages, dep)
+    if os.path.exists(dep_path):
+        datas.append((dep_path, target))
+
+# Add fake_useragent data files if they exist
+fake_useragent_data = os.path.join(site_packages, 'fake_useragent', 'data')
+fake_useragent_json = os.path.join(site_packages, 'fake_useragent', 'data.json')
+
+if os.path.exists(fake_useragent_data):
+    datas.append((fake_useragent_data, 'fake_useragent/data'))
+if os.path.exists(fake_useragent_json):
+    datas.append((fake_useragent_json, 'fake_useragent/data.json'))
 
 a = Analysis(
     ['backend/main.py'],
     pathex=[],
     binaries=tls_client_binaries,
-    datas=[
-        ('backend', '.'),
-        (os.path.join(site_packages, 'fake_useragent', 'data'), 'fake_useragent/data'),
-        (os.path.join(site_packages, 'fake_useragent'), 'fake_useragent'),
-        (os.path.join(site_packages, 'streamlink'), 'streamlink'),
-        (os.path.join(site_packages, 'websockets'), 'websockets'),
-        (os.path.join(site_packages, 'tls_client'), 'tls_client'),
-        (os.path.join(site_packages, 'cffi'), 'cffi'),
-        (os.path.join(site_packages, 'psutil'), 'psutil'),
-    ],
+    datas=datas,
     hiddenimports=[
         'rich',
         'trio',
