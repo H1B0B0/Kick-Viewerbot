@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import axios from "axios";
 
 const GITHUB_API =
@@ -21,6 +21,11 @@ export function useUpdateChecker() {
   const [latestVersion, setLatestVersion] = useState<GithubRelease | null>(
     null
   );
+  const [showToast, setShowToast] = useState(false);
+
+  const dismissUpdate = useCallback(() => {
+    setShowToast(false);
+  }, []);
 
   useEffect(() => {
     const checkForUpdates = async () => {
@@ -28,11 +33,24 @@ export function useUpdateChecker() {
         const response = await axios.get<GithubRelease>(GITHUB_API);
         const latest = response.data;
 
+        console.log("Update checker:", {
+          currentVersion: CURRENT_VERSION,
+          latestVersion: latest.tag_name,
+          latestVersionClean: latest.tag_name.replace("v", ""),
+        });
+
         const isNewer = latest.tag_name.replace("v", "") > CURRENT_VERSION;
+
+        console.log("Update check result:", {
+          isNewer,
+          willShow: isNewer,
+        });
 
         if (isNewer) {
           setUpdateAvailable(true);
           setLatestVersion(latest);
+          setShowToast(true);
+          console.log("Update notification should appear");
         }
       } catch (error) {
         console.error("Failed to check for updates:", error);
@@ -45,5 +63,5 @@ export function useUpdateChecker() {
     return () => clearInterval(interval);
   }, []);
 
-  return { updateAvailable, latestVersion };
+  return { updateAvailable, latestVersion, showToast, dismissUpdate };
 }

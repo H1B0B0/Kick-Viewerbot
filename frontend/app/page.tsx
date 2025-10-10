@@ -39,10 +39,6 @@ export default function ViewerBotInterface() {
   const { data: subscription, isLoading: isSubscriptionLoading } =
     useGetSubscription();
 
-  useEffect(() => {
-    console.log("User profile:", profile);
-  }, [profile]);
-
   // Hook WebSocket
   const {
     isConnected: wsConnected,
