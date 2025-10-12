@@ -5,34 +5,8 @@ block_cipher = None
 import os
 import sys
 
-# Try to get tls_client dependencies path
+# Note: tls_client binaries are now handled by hooks/hook-tls_client.py
 tls_client_binaries = []
-try:
-    import tls_client
-    tls_client_deps = os.path.join(os.path.dirname(tls_client.__file__), 'dependencies')
-
-    # Only add binaries that actually exist
-    potential_binaries = [
-        'tls-client-32.dll',
-        'tls-client-64.dll',
-        'tls-client-amd64.so',
-        'tls-client-arm64.dylib',
-        'tls-client-arm64.so',
-        'tls-client-x86.dylib',
-        'tls-client-x86.so',
-    ]
-
-    for binary in potential_binaries:
-        binary_path = os.path.join(tls_client_deps, binary)
-        if os.path.exists(binary_path):
-            tls_client_binaries.append((binary_path, 'tls_client/dependencies'))
-            print(f"Found tls_client binary: {binary}")
-
-    # Also include the entire dependencies folder as data
-    if os.path.exists(tls_client_deps):
-        print(f"Adding tls_client dependencies folder: {tls_client_deps}")
-except ImportError as e:
-    print(f"Warning: Could not import tls_client: {e}")
 
 
 # Use the current Python environment's site-packages (works for venv and CI)
@@ -44,20 +18,24 @@ datas = [
     ('backend', '.'),
 ]
 
-# Add fake_useragent data files if they exist
-fake_useragent_data = os.path.join(site_packages, 'fake_useragent', 'data')
-if os.path.exists(fake_useragent_data):
-    datas.append((fake_useragent_data, 'fake_useragent/data'))
-
-# Add tls_client dependencies folder if it exists
+# Add fake_useragent data files manually (hooks don't always catch data files)
 try:
-    import tls_client
-    tls_client_deps_dir = os.path.join(os.path.dirname(tls_client.__file__), 'dependencies')
-    if os.path.exists(tls_client_deps_dir):
-        datas.append((tls_client_deps_dir, 'tls_client/dependencies'))
-        print(f"Added tls_client dependencies to datas: {tls_client_deps_dir}")
-except:
-    pass
+    import fake_useragent
+    fake_useragent_base = os.path.dirname(fake_useragent.__file__)
+    fake_useragent_data = os.path.join(fake_useragent_base, 'data')
+
+    if os.path.exists(fake_useragent_data):
+        # Add the entire data directory with its contents
+        datas.append((fake_useragent_data, 'fake_useragent/data'))
+        print(f"[OK] Added fake_useragent data: {fake_useragent_data}")
+
+    # Also add py.typed if it exists
+    py_typed = os.path.join(fake_useragent_base, 'py.typed')
+    if os.path.exists(py_typed):
+        datas.append((py_typed, 'fake_useragent'))
+
+except Exception as e:
+    print(f"[WARNING] Could not add fake_useragent data: {e}")
 
 a = Analysis(
     ['backend/main.py'],
@@ -103,7 +81,12 @@ a = Analysis(
         # Streaming
         'streamlink',
         'streamlink.plugins',
+        # fake_useragent and its submodules
         'fake_useragent',
+        'fake_useragent.data',
+        'fake_useragent.utils',
+        'fake_useragent.fake',
+        'fake_useragent.errors',
         # TLS Client
         'tls_client',
         'tls_client.dependencies',
@@ -120,9 +103,9 @@ a = Analysis(
         'engineio.async_drivers',
         'engineio.async_drivers.gevent',
     ],
-    hookspath=[],
+    hookspath=['hooks'],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['hooks/runtime-hook-fake_useragent.py'],
     excludes=[],
     cipher=block_cipher,
     noarchive=False,
