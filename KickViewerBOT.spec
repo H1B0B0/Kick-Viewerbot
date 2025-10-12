@@ -6,20 +6,33 @@ import os
 import sys
 
 # Try to get tls_client dependencies path
+tls_client_binaries = []
 try:
     import tls_client
     tls_client_deps = os.path.join(os.path.dirname(tls_client.__file__), 'dependencies')
-    tls_client_binaries = [
-        (os.path.join(tls_client_deps, 'tls-client-32.dll'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-64.dll'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-amd64.so'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-arm64.dylib'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-arm64.so'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-x86.dylib'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-x86.so'), 'tls_client/dependencies'),
+
+    # Only add binaries that actually exist
+    potential_binaries = [
+        'tls-client-32.dll',
+        'tls-client-64.dll',
+        'tls-client-amd64.so',
+        'tls-client-arm64.dylib',
+        'tls-client-arm64.so',
+        'tls-client-x86.dylib',
+        'tls-client-x86.so',
     ]
-except ImportError:
-    tls_client_binaries = []
+
+    for binary in potential_binaries:
+        binary_path = os.path.join(tls_client_deps, binary)
+        if os.path.exists(binary_path):
+            tls_client_binaries.append((binary_path, 'tls_client/dependencies'))
+            print(f"Found tls_client binary: {binary}")
+
+    # Also include the entire dependencies folder as data
+    if os.path.exists(tls_client_deps):
+        print(f"Adding tls_client dependencies folder: {tls_client_deps}")
+except ImportError as e:
+    print(f"Warning: Could not import tls_client: {e}")
 
 
 # Use the current Python environment's site-packages (works for venv and CI)
@@ -35,6 +48,16 @@ datas = [
 fake_useragent_data = os.path.join(site_packages, 'fake_useragent', 'data')
 if os.path.exists(fake_useragent_data):
     datas.append((fake_useragent_data, 'fake_useragent/data'))
+
+# Add tls_client dependencies folder if it exists
+try:
+    import tls_client
+    tls_client_deps_dir = os.path.join(os.path.dirname(tls_client.__file__), 'dependencies')
+    if os.path.exists(tls_client_deps_dir):
+        datas.append((tls_client_deps_dir, 'tls_client/dependencies'))
+        print(f"Added tls_client dependencies to datas: {tls_client_deps_dir}")
+except:
+    pass
 
 a = Analysis(
     ['backend/main.py'],

@@ -40,56 +40,7 @@ jobs:
       - name: Build Windows Executable
         run: |
           .\venv\Scripts\activate
-          pyinstaller --noconfirm --onefile --uac-admin --icon "frontend/public/favicon.ico" `
-            --paths "venv/Lib/site-packages" `
-            --add-data "backend;." `
-            --collect-data fake_useragent `
-            --collect-submodules streamlink `
-            --collect-submodules websockets `
-            --collect-submodules tls_client `
-            --collect-submodules flask `
-            --collect-submodules flask_cors `
-            --collect-submodules flask_socketio `
-            --collect-submodules gevent `
-            --collect-submodules engineio `
-            --hidden-import flask `
-            --hidden-import flask_cors `
-            --hidden-import flask_socketio `
-            --hidden-import socketio `
-            --hidden-import werkzeug `
-            --hidden-import gevent `
-            --hidden-import gevent.socket `
-            --hidden-import gevent.select `
-            --hidden-import gevent._socket3 `
-            --hidden-import gevent.resolver.thread `
-            --hidden-import gevent.resolver.ares `
-            --hidden-import gevent.resolver.blocking `
-            --hidden-import gevent.event `
-            --hidden-import gevent.queue `
-            --hidden-import dns `
-            --hidden-import dns.resolver `
-            --hidden-import requests `
-            --hidden-import urllib3 `
-            --hidden-import certifi `
-            --hidden-import websockets `
-            --hidden-import websockets.legacy `
-            --hidden-import websockets.legacy.client `
-            --hidden-import websockets.legacy.server `
-            --hidden-import streamlink `
-            --hidden-import streamlink.plugins `
-            --hidden-import fake_useragent `
-            --hidden-import tls_client `
-            --hidden-import tls_client.dependencies `
-            --hidden-import rich `
-            --hidden-import rich.console `
-            --hidden-import rich.progress `
-            --hidden-import psutil `
-            --hidden-import cffi `
-            --hidden-import engineio `
-            --hidden-import engineio.async_drivers `
-            --hidden-import engineio.async_drivers.gevent `
-            "backend/main.py" `
-            --name "KickViewerBOT.exe"
+          pyinstaller --noconfirm KickViewerBOT.spec
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
