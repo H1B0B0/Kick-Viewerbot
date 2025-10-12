@@ -987,6 +987,7 @@ export default function ViewerBotInterface() {
                 {isStabilityLocked && !isSubscriptionLoading && (
                   <p className="mt-2 text-xs text-yellow-500">
                     An active subscription is required to enable stability mode.
+                    (in development)
                   </p>
                 )}
               </div>
