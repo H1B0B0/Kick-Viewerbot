@@ -14,17 +14,8 @@ export default function UpdateProvider() {
   const { theme } = useTheme();
 
   useEffect(() => {
-    console.log("UpdateProvider effect triggered:", {
-      showToast,
-      hasLatestVersion: !!latestVersion,
-      latestVersion: latestVersion?.tag_name,
-    });
 
     if (showToast && latestVersion) {
-      console.log(
-        "Displaying update toast for version:",
-        latestVersion.tag_name
-      );
 
       const isDark = theme === "dark";
 
@@ -33,7 +24,6 @@ export default function UpdateProvider() {
         <UpdateToastContent
           version={latestVersion.tag_name}
           onViewDetails={() => {
-            console.log("View details clicked");
             setIsModalOpen(true);
           }}
         />,
@@ -57,7 +47,6 @@ export default function UpdateProvider() {
             WebkitBackdropFilter: "blur(12px)",
           },
           onClose: () => {
-            console.log("Toast closed, dismissing update");
             dismissUpdate();
           },
         }

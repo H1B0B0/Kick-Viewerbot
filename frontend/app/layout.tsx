@@ -3,7 +3,8 @@ import "@/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import ThemeProvider from "../components/ThemeProvider";
 import ThemeSwitcher from "../components/ThemeSwitcher";
-import Spline from "@splinetool/react-spline";
+import SplineWithLoader from "../components/SplineWithLoader";
+import AppLoader from "../components/AppLoader";
 import ApiHealthProvider from "../components/ApiHealthProvider";
 import UpdateProvider from "../components/UpdateProvider";
 import { useEffect, useState } from "react";
@@ -15,6 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [performanceMode, setPerformanceMode] = useState(true);
+  const [isAppLoading, setIsAppLoading] = useState(true);
 
   useEffect(() => {
     // Load performance mode preference from localStorage
@@ -43,6 +45,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-mesh" suppressHydrationWarning>
+        {/* Global app loader */}
+        {isAppLoading && <AppLoader onLoadComplete={() => setIsAppLoading(false)} />}
+
         <ThemeProvider>
           {/* Background Elements */}
           <div className="fixed inset-0 w-full h-full overflow-hidden">
@@ -83,7 +88,7 @@ export default function RootLayout({
             {/* Spline 3D object (when not in performance mode) */}
             {!performanceMode && (
               <div className="absolute inset-0">
-                <Spline
+                <SplineWithLoader
                   scene="https://prod.spline.design/0zfiWcHYJLJfg6nt/scene.splinecode"
                   className="absolute"
                 />
