@@ -121,111 +121,53 @@ jobs:
           prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
 
           body: |
-            # 🚀 KickViewerBOT Beta V3 - Major Architecture Upgrade
+            # 🚀 KickViewerBOT – Smarter, Simpler, More Reliable!
 
-            ## 🏗️ Revolutionary Architecture Redesign
+            ## ✨ What’s New in This Release?
 
-            **Beta V3 introduces a complete architectural overhaul** that separates the frontend and backend into distinct services, bringing enterprise-grade reliability and developer flexibility to KickViewerBOT!
+            ### 🔥 Next-Level Connectivity & User Experience
 
-            ### ⚡ New Client-Server Architecture
+            - **Automatic Port Discovery:** No more port conflicts! The backend now scans and selects an available port for you. The frontend instantly detects and connects—no manual setup, no headaches.
+            - **Seamless Frontend-Backend Sync:** Both parts of the app share a single, smart configuration. You can move, restart, or run multiple instances—KickViewerBOT adapts instantly.
+            - **Crystal-Clear Error Messages:** If a port is busy, you get a friendly message and a clear solution. No more cryptic errors!
+            - **Zero Config, Zero Stress:** All connection URLs and ports are generated and synchronized automatically. Just launch and go!
+            - **Rock-Solid Reliability:** Even if your environment changes, KickViewerBOT keeps running and reconnects without user intervention.
 
-            **What Changed:**
-            - **Frontend:** Now runs as a standalone web server (Next.js)
-            - **Backend:** Operates as a local service on your PC
-            - **Communication:** Real-time WebSocket connection between frontend and backend
-            - **Result:** Modern, scalable, and incredibly responsive architecture
+            ### 🔧 Under the Hood
 
-            ### 🎯 Why This Matters for You
+            - **Unified Port Management:** Both backend and frontend use a shared config for all connection logic. No more mismatches or manual edits.
+            - **Smarter Startup:** The backend tries a list of recommended ports and picks the first available. The frontend scans the same list, so you always connect on the first try.
+            - **Enhanced Logging:** Startup and error logs are now clear, actionable, and user-friendly.
 
-            **Enhanced Reliability:**
-            - 🔒 **More Stable Connections:** WebSocket-based communication ensures consistent real-time updates
-            - 🔄 **Auto-Reconnection:** Frontend automatically reconnects if connection drops
-            - 📊 **Better Error Handling:** Isolated services mean one component failure doesn't crash the entire app
-            - ⚡ **Faster Response Times:** Dedicated server processes improve overall performance
+            ### 🔍 Why You’ll Love This Update
 
-            **Superior Developer Experience:**
-            - 🛠️ **Independent Updates:** Frontend and backend can be updated separately
-            - 🧪 **Easier Testing:** Each component can be tested in isolation
-            - 🚀 **Faster Development:** Hot reload and modern dev tools for quicker iterations
-            - 🎨 **Better UI Framework:** Next.js provides cutting-edge web capabilities
-
-            **Future-Proof Foundation:**
-            - 📱 **Multi-Platform Ready:** Architecture supports future mobile apps or web dashboard
-            - 🌐 **Remote Access Potential:** Foundation for future remote monitoring features
-            - 🔌 **Plugin System Ready:** Modular design enables future extensibility
-            - 📈 **Scalability:** Can handle more viewers and features without performance degradation
-
-            ### 🔧 Technical Highlights
-
-            **Backend Service:**
-            - Python-based local service handling all bot operations
-            - WebSocket server on port 8080 for real-time communication
-            - Improved proxy management and connection stability
-            - Enhanced logging and debugging capabilities
-
-            **Frontend Application:**
-            - Next.js 15 with React 18 for modern UI
-            - Real-time WebSocket client for instant updates
-            - Beautiful glassmorphism design with smooth animations
-            - Dark/Light theme support with automatic detection
-            - Responsive design for all screen sizes
-
-            **Communication Layer:**
-            - Bidirectional WebSocket protocol
-            - JSON-based message format for clarity
-            - Automatic reconnection with exponential backoff
-            - Health monitoring and status indicators
-
-            ### 🎨 User Experience Improvements
-
-            **Visual Enhancements:**
-            - ✨ Smooth page transitions and animations
-            - 🎯 Real-time stats updates with no lag
-            - 📊 Better data visualization
-            - 🔔 Smart update notifications (non-intrusive toasts)
-            - 🌈 Adaptive theming for better readability
-
-            **Monitoring Features:**
-            - 📈 Live viewer count tracking
-            - 🔄 Connection status indicators
-            - ⚙️ Advanced settings panel
-            - 📊 Performance metrics dashboard
-            - 🎮 Streamlined bot controls
-
-            ### 🐛 Bug Fixes & Improvements
-
-            - ✅ Fixed connection stability issues
-            - ✅ Improved error recovery mechanisms
-            - ✅ Enhanced proxy rotation logic
-            - ✅ Better memory management
-            - ✅ Resolved UI state synchronization issues
-            - ✅ Fixed update checker notification persistence
-
-            ### ⚠️ Breaking Changes
-
-            **Important Notes:**
-            - This is a **beta release** - please report any issues on GitHub
-            - The new architecture requires both frontend and backend to run together
+            - **Plug & Play:** Download, run, and you’re online—no technical skills required.
+            - **No More “Port Already in Use” Errors:** The app handles everything for you, even if you have other services running.
+            - **Future-Proof:** This foundation makes future updates, remote access, and multi-instance support a breeze.
 
             ---
 
-            ## 📥 Download & Installation
+            ## 🐛 Bug Fixes & Improvements
 
-            **This is the biggest update to KickViewerBOT ever!**
-
-            The new architecture provides a solid foundation for years of future improvements while delivering better performance and reliability today.
-
-            ### Getting Started:
-            1. Download the appropriate version for your OS
-            2. Run the application (both services start automatically)
-            3. Access the interface (opens automatically in your browser)
-            4. Enjoy the enhanced experience!
-
-            **Need Help?** Check out our [GitHub Issues](https://github.com/H1B0B0/Kick-Viewerbot/issues) or join our community!
+            - Improved connection stability and error handling
+            - Automatic frontend-backend sync for all connection settings
+            - Clearer logs and user feedback on startup
+            - Unified configuration for easier maintenance
 
             ---
 
-            *Thank you for being part of the KickViewerBOT Beta program! Your feedback helps make this tool better for everyone.* 🙏
+            ## 📥 How to Get Started
+
+            1. Download the version for your OS
+            2. Run the app (both services start automatically)
+            3. The interface opens in your browser—no setup required!
+            4. Enjoy a smoother, smarter KickViewerBOT experience 🚀
+
+            **Need help?** [Open an issue](https://github.com/H1B0B0/Kick-Viewerbot/issues) or join our community!
+
+            ---
+
+            *Thank you for supporting KickViewerBOT! Your feedback drives every improvement.* 🙏
 
           draft: false
 

@@ -382,23 +382,68 @@ def index():
 # Main
 # ============================================
 
+def find_available_port(preferred_ports, host='0.0.0.0'):
+    """Trouve un port disponible parmi la liste fournie"""
+    import socket
+
+    for port in preferred_ports:
+        try:
+            # Tester si le port est disponible
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            result = sock.connect_ex((host if host != '0.0.0.0' else 'localhost', port))
+            sock.close()
+
+            if result != 0:  # Port disponible
+                return port
+        except Exception as e:
+            logger.debug(f"Error testing port {port}: {e}")
+            continue
+
+    # Si aucun port de la liste n'est disponible, laisser le système en choisir un
+    return None
+
 if __name__ == '__main__':
     import argparse
     import webbrowser
     from threading import Timer
 
+    # Import shared port configuration
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    try:
+        from shared_config import AVAILABLE_PORTS, DEFAULT_HOST
+    except ImportError:
+        logger.warning("Could not import shared_config, using defaults")
+        AVAILABLE_PORTS = [8765, 9876, 7890, 6543, 5432, 8081, 8082, 8083]
+        DEFAULT_HOST = '0.0.0.0'
+
     parser = argparse.ArgumentParser()
-    parser.add_argument('--port', type=int, default=8080, help='Port to run on')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to bind to')
+    parser.add_argument('--port', type=int, default=None, help='Port to run on (if not specified, will try from the available list)')
+    parser.add_argument('--host', default=DEFAULT_HOST, help='Host to bind to')
     parser.add_argument('--no-browser', action='store_true', help='Do not open browser')
     args = parser.parse_args()
+
+    # Trouver un port disponible
+    if args.port:
+        selected_port = args.port
+        logger.info(f"Using specified port: {selected_port}")
+    else:
+        selected_port = find_available_port(AVAILABLE_PORTS, args.host)
+        if selected_port is None:
+            logger.error("Could not find any available port from the configured list!")
+            print("❌ Aucun port disponible trouvé. Veuillez fermer certaines applications et réessayer.")
+            sys.exit(1)
+        logger.info(f"Found available port: {selected_port}")
 
     print("=" * 60)
     print("🚀 Kick Viewer Bot - WebSocket Server")
     print("=" * 60)
-    print(f"📡 WebSocket: ws://{args.host}:{args.port}/socket.io/")
-    print(f"🌐 HTTP: http://{args.host}:{args.port}")
-    print(f"✅ Health: http://{args.host}:{args.port}/health")
+    print(f"📡 WebSocket: ws://{args.host}:{selected_port}/socket.io/")
+    print(f"🌐 HTTP: http://{args.host}:{selected_port}")
+    print(f"✅ Health: http://{args.host}:{selected_port}/health")
+    print("=" * 60)
+    print(f"\n🔌 Port utilisé: {selected_port}")
+    print(f"💡 Le frontend essaiera automatiquement de se connecter à ce port")
     print("=" * 60)
 
     # Open browser after 1.5 seconds if not disabled
@@ -408,10 +453,17 @@ if __name__ == '__main__':
 
     print("\nPress Ctrl+C to stop\n")
 
-    socketio.run(
-        app,
-        host=args.host,
-        port=args.port,
-        debug=False,
-        use_reloader=False
-    )
+    try:
+        socketio.run(
+            app,
+            host=args.host,
+            port=selected_port,
+            debug=False,
+            use_reloader=False
+        )
+    except OSError as e:
+        if "Address already in use" in str(e):
+            logger.error(f"Port {selected_port} is already in use!")
+            print(f"❌ Le port {selected_port} est déjà utilisé. Réessayez ou spécifiez un autre port avec --port")
+        else:
+            raise

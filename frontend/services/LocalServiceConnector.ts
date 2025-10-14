@@ -4,6 +4,7 @@
  */
 
 import { io, Socket } from "socket.io-client";
+import { generateConnectionUrls } from "../config/ports";
 
 export type ConnectionStatus =
   | "disconnected"
@@ -24,14 +25,8 @@ class LocalServiceConnector {
   private reconnectAttempts = 0;
   private maxReconnectAttempts = 5;
 
-  // Try multiple possible local addresses
-  private possibleUrls = [
-    "http://localhost:3001",
-    "http://localhost:443",
-    "https://localhost:443",
-    "http://127.0.0.1:3001",
-    "http://127.0.0.1:443",
-  ];
+  // Try multiple possible local addresses (from shared config)
+  private possibleUrls = generateConnectionUrls();
 
   private currentUrlIndex = 0;
 

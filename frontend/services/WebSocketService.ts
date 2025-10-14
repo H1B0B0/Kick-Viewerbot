@@ -2,6 +2,7 @@
  * WebSocket Service - Communication complète via WebSocket
  */
 import { io, Socket } from "socket.io-client";
+import { generateConnectionUrls } from "../config/ports";
 
 export type ConnectionStatus =
   | "disconnected"
@@ -51,13 +52,8 @@ class WebSocketService {
   private status: ConnectionStatus = "disconnected";
   private callbacks: Callbacks = {};
 
-  // URLs possibles pour le service local
-  private urls = [
-    "http://localhost:8080",
-    "http://localhost:3001",
-    "http://127.0.0.1:8080",
-    "http://127.0.0.1:3001",
-  ];
+  // URLs possibles pour le service local (générées depuis la config partagée)
+  private urls = generateConnectionUrls();
 
   private currentUrl = "";
 
