@@ -16,13 +16,27 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   const [performanceMode, setPerformanceMode] = useState(true);
-  const [isAppLoading, setIsAppLoading] = useState(true);
+  const [isAppLoading, setIsAppLoading] = useState(false);
 
   useEffect(() => {
+    // Check if the app has already been loaded in this session
+    const hasLoadedBefore = sessionStorage.getItem("appHasLoaded");
+
+    if (!hasLoadedBefore) {
+      // First time loading in this session - show loader
+      setIsAppLoading(true);
+    }
+
     // Load performance mode preference from localStorage
     const savedMode = localStorage.getItem("performanceMode");
     setPerformanceMode(savedMode === "true");
   }, []);
+
+  const handleLoadComplete = () => {
+    setIsAppLoading(false);
+    // Mark app as loaded for this session
+    sessionStorage.setItem("appHasLoaded", "true");
+  };
 
   const togglePerformanceMode = () => {
     const newMode = !performanceMode;
@@ -45,8 +59,8 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-mesh" suppressHydrationWarning>
-        {/* Global app loader */}
-        {isAppLoading && <AppLoader onLoadComplete={() => setIsAppLoading(false)} />}
+        {/* Global app loader - only shows once per session */}
+        {isAppLoading && <AppLoader onLoadComplete={handleLoadComplete} />}
 
         <ThemeProvider>
           {/* Background Elements */}

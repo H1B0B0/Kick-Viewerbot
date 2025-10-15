@@ -249,6 +249,38 @@ export default function RegisterPage() {
               >
                 {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
+
+              {/* Divider */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-default-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-background text-default-500">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              {/* Patreon Register Button */}
+              <Button
+                onPress={() =>
+                  (window.location.href =
+                    "https://api.velbots.shop/payments/patreon/redirect")
+                }
+                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-default-300 text-sm font-medium rounded-lg bg-[#FF424D] hover:bg-[#E8384C] text-white transition-colors duration-200 shadow-sm hover:shadow-md"
+              >
+                <svg
+                  className="w-5 h-5"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+                </svg>
+                Register with Patreon
+              </Button>
+
               <div className="mt-4 text-center">
                 <span className="text-sm text-gray-600">
                   Already have an account?{" "}

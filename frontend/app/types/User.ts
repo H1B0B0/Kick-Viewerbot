@@ -7,6 +7,10 @@ export interface User {
   role: string;
   hwid: string;
   subscription: string;
+  isSubscribed: boolean;
+  subscriptionEndsAt?: string;
+  isBanned: boolean;
+  patreonId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

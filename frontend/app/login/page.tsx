@@ -7,6 +7,7 @@ import { Button } from "@heroui/button";
 import "react-toastify/dist/ReactToastify.css";
 import React, { useState } from "react";
 import { login } from "../functions/UserAPI";
+import { PatreonLoginButton } from "@/components/PatreonLoginButton";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -81,7 +82,7 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <div>
+            <div className="space-y-4">
               <Button
                 type="submit"
                 isLoading={isLoading}
@@ -111,13 +112,29 @@ export default function LoginPage() {
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-default-200" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-background text-default-500">
+                    Or continue with
+                  </span>
+                </div>
+              </div>
+
+              {/* Smart Patreon Button - Adapts based on user status */}
+              <PatreonLoginButton />
+
               <div className="mt-4 text-center">
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-default-600">
                   Don&apos;t have an account?{" "}
                 </span>
                 <Button
-                  variant="ghost"
-                  className="text-sm text-green-600 hover:text-green-800"
+                  variant="light"
+                  className="text-sm text-green-600 hover:text-green-700 font-semibold"
                   onPress={() => (window.location.href = "/register")}
                 >
                   Register now

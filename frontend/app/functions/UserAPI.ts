@@ -12,11 +12,19 @@ export interface SubscriptionStatus {
   plan?: string;
 }
 
-interface ProfileUser {
-  id: string;
+export interface ProfileUser {
+  id?: string; // MongoDB ID returned by the API (check API response)
+  _id?: string; // Alternative MongoDB ID field (check API response)
   username: string;
+  email?: string;
   TwitchUsername?: string;
   subscription?: string;
+  isSubscribed?: boolean;
+  subscriptionEndsAt?: string;
+  isBanned?: boolean;
+  hwid?: string;
+  patreonId?: string; // Set when Patreon account is linked
+  // Note: patreonAccessToken and patreonRefreshToken are NEVER exposed to frontend for security
   [key: string]: unknown;
 }
 
@@ -25,8 +33,12 @@ export interface ProfileResponse {
 }
 
 const fetcher = async <T>(url: string): Promise<T> => {
-  const response = await axios.get<T>(url, { withCredentials: true });
-  return response.data;
+  try {
+    const response = await axios.get<T>(url, { withCredentials: true });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 };
 
 // Auth APIs
@@ -41,7 +53,6 @@ export async function register(userData: RegisterData) {
     );
     return response.data;
   } catch (error) {
-    console.error("Register error:", error);
     throw error;
   }
 }
@@ -59,7 +70,6 @@ export async function login(loginData: LoginData) {
 
     return response.data;
   } catch (error) {
-    console.error("Login error:", error);
     throw error;
   }
 }
@@ -75,7 +85,6 @@ export async function logout() {
     );
     return response.data;
   } catch (error) {
-    console.error("Logout error:", error);
     throw error;
   }
 }
@@ -110,7 +119,6 @@ export async function registerHWID(hwid: string) {
     );
     return response.data;
   } catch (error) {
-    console.error("Register HWID error:", error);
     throw error;
   }
 }
@@ -124,7 +132,19 @@ export async function banUser(userId: string) {
     );
     return response.data;
   } catch (error) {
-    console.error("Ban user error:", error);
+    throw error;
+  }
+}
+
+export async function refreshPatreonStatus() {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/users/refresh-patreon`,
+      {},
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
     throw error;
   }
 }
@@ -139,7 +159,6 @@ export async function createCheckoutSession(duration: number) {
     );
     return response.data;
   } catch (error) {
-    console.error("Create checkout error:", error);
     throw error;
   }
 }
