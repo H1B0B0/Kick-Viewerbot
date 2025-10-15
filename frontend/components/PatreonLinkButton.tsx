@@ -1,10 +1,12 @@
 "use client";
 import { Button } from "@heroui/button";
-import { useGetProfile, useGetSubscription } from "../app/functions/UserAPI";
+import { useGetProfile, useGetSubscription, refreshPatreonStatus } from "../app/functions/UserAPI";
+import { useState } from "react";
 
 export function PatreonLinkButton() {
-  const { data: profile } = useGetProfile();
+  const { data: profile, mutate } = useGetProfile();
   const { data: subscription } = useGetSubscription();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Check if user is logged in
   const isLoggedIn = !!profile?.user;
@@ -19,6 +21,22 @@ export function PatreonLinkButton() {
     ["active", "premium", "lifetime"].includes(
       subscription?.plan?.toLowerCase() || ""
     );
+
+  // Manual refresh function
+  const handleRefreshPatreon = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshPatreonStatus();
+      // Revalidate the profile to get updated subscription status
+      await mutate();
+      alert("Statut Patreon mis à jour !");
+    } catch (error) {
+      console.error("Erreur lors de la synchronisation Patreon:", error);
+      alert("Erreur lors de la synchronisation. Veuillez réessayer.");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Not logged in - show "Connect with Patreon" button (no parameters)
   if (!isLoggedIn) {
@@ -48,10 +66,28 @@ export function PatreonLinkButton() {
 
   // Logged in but Patreon not linked - include userId in URL
   if (!hasPatreonLinked) {
-    const userId = profile?.user?._id;
-    const linkUrl = userId
-      ? `https://api.velbots.shop/payments/patreon/redirect?link=true&userId=${userId}`
-      : "https://api.velbots.shop/payments/patreon/redirect?link=true";
+    // Support both 'id' and '_id' fields from the API
+    const userId = (profile?.user as any)?.id || profile?.user?._id;
+
+    // Debug log to verify userId is correctly retrieved
+    console.log('[PatreonLinkButton] User object:', profile?.user);
+    console.log('[PatreonLinkButton] userId extracted:', userId);
+
+    if (!userId) {
+      console.error('[PatreonLinkButton] ⚠️ No userId found! User must be logged in to link Patreon.');
+      return (
+        <Button
+          variant="bordered"
+          className="bg-gray-500 text-white border-none cursor-not-allowed"
+          disabled
+        >
+          Erreur: ID utilisateur manquant
+        </Button>
+      );
+    }
+
+    const linkUrl = `https://api.velbots.shop/payments/patreon/redirect?link=true&userId=${userId}`;
+    console.log('[PatreonLinkButton] Generated link URL:', linkUrl);
 
     return (
       <Button
@@ -80,26 +116,37 @@ export function PatreonLinkButton() {
   // Patreon linked but not subscribed
   if (!hasActiveSubscription) {
     return (
-      <Button
-        as="a"
-        href="https://api.velbots.shop/payments/patreon/redirect"
-        target="_blank"
-        rel="noopener noreferrer"
-        variant="bordered"
-        className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-none hover:scale-105 transition-transform animate-pulse"
-        startContent={
-          <svg
-            className="w-4 h-4"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
-          </svg>
-        }
-      >
-        Subscribe
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          as="a"
+          href="https://www.patreon.com/join/10327292"
+          target="_blank"
+          rel="noopener noreferrer"
+          variant="bordered"
+          className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-none hover:scale-105 transition-transform animate-pulse"
+          startContent={
+            <svg
+              className="w-4 h-4"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+            </svg>
+          }
+        >
+          Subscribe on Patreon
+        </Button>
+        <Button
+          onClick={handleRefreshPatreon}
+          isLoading={isRefreshing}
+          variant="bordered"
+          className="border-[#FF424D] text-[#FF424D] hover:bg-[#FF424D]/10"
+          startContent={!isRefreshing ? <span>🔄</span> : null}
+        >
+          {isRefreshing ? "Vérification..." : "Vérifier"}
+        </Button>
+      </div>
     );
   }
 

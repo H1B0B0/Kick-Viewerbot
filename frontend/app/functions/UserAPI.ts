@@ -13,7 +13,8 @@ export interface SubscriptionStatus {
 }
 
 interface ProfileUser {
-  id: string;
+  id?: string; // MongoDB ID returned by the API
+  _id?: string; // Alternative MongoDB ID field (for backward compatibility)
   username: string;
   TwitchUsername?: string;
   subscription?: string;
@@ -21,6 +22,9 @@ interface ProfileUser {
   subscriptionEndsAt?: string;
   isBanned?: boolean;
   patreonId?: string;
+  patreonAccessToken?: string; // Stored for automatic sync
+  patreonRefreshToken?: string; // Stored for automatic sync
+  patreonTokenExpiresAt?: string; // Token expiration date
   [key: string]: unknown;
 }
 
@@ -129,6 +133,20 @@ export async function banUser(userId: string) {
     return response.data;
   } catch (error) {
     console.error("Ban user error:", error);
+    throw error;
+  }
+}
+
+export async function refreshPatreonStatus() {
+  try {
+    const response = await axios.post(
+      `${API_BASE_URL}/users/refresh-patreon`,
+      {},
+      { withCredentials: true }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Refresh Patreon status error:", error);
     throw error;
   }
 }
