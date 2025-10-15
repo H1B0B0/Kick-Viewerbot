@@ -5,6 +5,9 @@ import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
 import { animate } from "animejs";
 
+// Force dynamic rendering for this page since it uses searchParams
+export const dynamic = "force-dynamic";
+
 export default function ErrorPage() {
   const router = useRouter();
   const searchParams = useSearchParams();

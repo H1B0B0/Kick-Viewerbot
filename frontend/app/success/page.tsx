@@ -6,6 +6,9 @@ import { Button } from "@heroui/button";
 import { animate } from "animejs";
 import { useGetSubscription } from "../functions/UserAPI";
 
+// Force dynamic rendering for this page since it uses searchParams
+export const dynamic = "force-dynamic";
+
 export default function SuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
