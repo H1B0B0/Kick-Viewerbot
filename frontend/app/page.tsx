@@ -923,15 +923,25 @@ export default function ViewerBotInterface() {
                     content={
                       <div className="max-w-xs p-2">
                         <p>
-                          Stability mode helps maintain a consistent viewer
-                          count over time. Instead of experiencing large
-                          fluctuations, such as dropping from 125 viewers to 25
-                          viewers, stability mode aims to keep the viewer count
-                          within a more stable range. This is particularly
-                          useful for long streaming sessions, ensuring that the
-                          viewer count remains steady. For example, if you have
-                          an average of 40 viewers, stability mode might keep
-                          the count between 30 and 50 viewers.
+                          <strong>Stability Mode</strong> uses advanced
+                          algorithms to keep your viewer count steady,
+                          minimizing sudden drops or spikes. <br />
+                          <span className="block mt-2"></span>
+                          <span className="font-semibold">
+                            How it works: If you set <code>100</code> threads,
+                            the bot will aim for approximately{" "}
+                            <b>140 viewers</b> (about 1.4× your thread count),
+                            and will automatically adjust to keep your live
+                            viewers within a narrow range (e.g., between 135 and
+                            145).
+                          </span>
+                          <span className="block mt-2 text-xs text-gray-500">
+                            This feature is ideal for streamers who want a more
+                            natural and reliable viewer presence.{" "}
+                            <p className="text-red-500">
+                              Requires an active subscription.
+                            </p>
+                          </span>
                         </p>
                       </div>
                     }
