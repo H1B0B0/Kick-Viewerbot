@@ -11,7 +11,7 @@ import json
 import traceback
 from threading import Thread
 from streamlink import Streamlink
-from queue import Queue, Empty
+from threading import Semaphore
 from rich.console import Console
 from fake_useragent import UserAgent
 from urllib.parse import urlparse
@@ -30,7 +30,7 @@ logging.getLogger("urllib3").setLevel(logging.ERROR)
 console = Console()
 
 # Configure logging
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s [%(levelname)s] %(name)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Session creating for request
 ua = UserAgent()
@@ -73,7 +73,10 @@ class ViewerBot_Stability:
         self.processes = []
         self.proxyrefreshed = False
         self.channel_url = "https://kick.com/" + self.channel_name
+        self.thread_semaphore = Semaphore(int(nb_of_threads))  # Semaphore to control thread count
         self.active_threads = 0
+        self.active_connections = 0  # Track number of active WebSocket connections
+        self.active_connections_lock = threading.Lock()  # Thread-safe lock for connection counter
         self.should_stop = False
         self.timeout = timeout
         self.type_of_proxy = type_of_proxy
@@ -81,18 +84,6 @@ class ViewerBot_Stability:
         self.request_per_second = 0  # Add counter for requests per second
         self.requests_in_current_second = 0
         self.last_request_time = time.time()
-        self.proxy_queue = Queue()
-        self.in_use_proxies = set()
-        self.proxy_failures = {}
-        self.proxy_lock = threading.Lock()
-        self.max_proxy_failures = 3
-        self.connection_retry_delay = 5
-        self.active_threads_lock = threading.Lock()
-        self.connection_refresh_interval = 5 * 60  # Keep connections alive for up to 5 minutes
-        self.ping_interval_range = (12, 17)
-        self.worker_retry_backoff = (3, 8)
-        self.alive_proxies = 0
-        self.active_connections = 0
         self.status = {
             'state': 'initialized',  # Current state of the bot
             'message': 'Bot initialized',  # Status message
@@ -103,8 +94,19 @@ class ViewerBot_Stability:
         self.stream_url_cache = None
         self.stream_url_last_updated = 0
         self.stream_url_lock = threading.Lock()
-        self.stream_url_cache_duration = 0.5  # Cache stream URL for 0.2 seconds
+        self.stream_url_cache_duration = 30  # Cache stream URL for 30 seconds (reduced API calls)
         self.channel_id = None  # Store channel ID for WebSocket connections
+        self.livestream_id = None  # Store livestream ID for tracking events
+        self.connection_retry_delay = 5  # Seconds to wait before reconnecting
+        self.min_active_connections = int(nb_of_threads * 0.9)  # Maintain at least 90% of connections
+        self.connection_delay = 0.5  # Delay between connection attempts (seconds)
+        self.max_retry_attempts = 3  # Maximum retry attempts before giving up
+        self.backoff_multiplier = 2  # Exponential backoff multiplier
+        
+        # Warn if thread count is too high
+        if nb_of_threads > 50:
+            logging.warning(f"⚠️  High thread count ({nb_of_threads}) may cause rate limiting. Recommended: 20-50 threads")
+        
         logging.debug(f"Type of proxy: {self.type_of_proxy}")
         logging.debug(f"Timeout: {self.timeout}")
         logging.debug(f"Proxy imported: {self.proxy_imported}")
@@ -139,6 +141,10 @@ class ViewerBot_Stability:
                     if response.status_code == 200:
                         data = response.json()
                         self.channel_id = data.get("id")
+                        # Also try to get livestream_id
+                        if 'livestream' in data and data['livestream']:
+                            self.livestream_id = data['livestream'].get('id')
+                            logging.info(f"✅ Retrieved livestream ID: {self.livestream_id}")
                         logging.debug(f"Retrieved channel ID from v2 API with tls_client: {self.channel_id}")
                         return self.channel_id
                     else:
@@ -159,6 +165,10 @@ class ViewerBot_Stability:
                 if response.status_code == 200:
                     data = response.json()
                     self.channel_id = data.get("id")
+                    # Also try to get livestream_id
+                    if 'livestream' in data and data['livestream']:
+                        self.livestream_id = data['livestream'].get('id')
+                        logging.info(f"✅ Retrieved livestream ID: {self.livestream_id}")
                     logging.debug(f"Retrieved channel ID from v1 API: {self.channel_id}")
                     return self.channel_id
             except Exception as e:
@@ -212,9 +222,12 @@ class ViewerBot_Stability:
             if HAS_TLS_CLIENT:
                 try:
                     s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
+                    
+                    # Use more realistic headers
                     s.headers.update({
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
                         'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
                         'Connection': 'keep-alive',
                         'Sec-Fetch-Dest': 'document',
                         'Sec-Fetch-Mode': 'navigate',
@@ -227,12 +240,28 @@ class ViewerBot_Stability:
                         'sec-ch-ua-platform': '"Windows"',
                     })
                     
-                    # Visit main page first to get session
+                    # Visit main page first to get session and cookies
                     session_resp = s.get("https://kick.com")
                     logging.debug(f"TLS client session request status: {session_resp.status_code}")
                     
-                    # Add client token and get WebSocket token
-                    s.headers["X-CLIENT-TOKEN"] = CLIENT_TOKEN
+                    if session_resp.status_code != 200:
+                        logging.warning(f"Failed to establish session with Kick: {session_resp.status_code}")
+                        raise Exception("Session establishment failed")
+                    
+                    # Small delay to mimic human behavior
+                    time.sleep(0.5)
+                    
+                    # Update headers for API request
+                    s.headers.update({
+                        'Accept': 'application/json, text/plain, */*',
+                        'Referer': 'https://kick.com/',
+                        'X-CLIENT-TOKEN': CLIENT_TOKEN,
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                    })
+                    
+                    # Get WebSocket token
                     response = s.get('https://websockets.kick.com/viewer/v1/token')
                     
                     logging.debug(f"TLS client token endpoint status: {response.status_code}")
@@ -241,13 +270,19 @@ class ViewerBot_Stability:
                         data = response.json()
                         token = data.get("data", {}).get("token")
                         if token:
-                            logging.debug(f"Retrieved WebSocket token with tls_client: {token[:20]}...")
+                            logging.info(f"✓ Retrieved fresh WebSocket token")
                             return token
+                        else:
+                            logging.error("Token endpoint returned 200 but no token in response")
+                    elif response.status_code == 403:
+                        logging.error("Token endpoint returned 403 - CLIENT_TOKEN may be invalid or IP blocked")
                     else:
                         logging.debug(f"TLS client token request failed: {response.status_code}")
                         
                 except Exception as e:
                     logging.debug(f"tls_client token retrieval failed: {e}")
+            else:
+                logging.warning("tls_client not available - this may result in detection by Kick")
             
             # Method 2: Fallback to requests method
             session = requests.Session()
@@ -269,6 +304,12 @@ class ViewerBot_Stability:
             
             session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
             logging.debug(f"Initial session request status: {session_resp.status_code}")
+            
+            if session_resp.status_code != 200:
+                logging.error(f"Failed to establish session: {session_resp.status_code}")
+                return None
+            
+            time.sleep(0.5)
             
             # Step 2: Get WebSocket token with client token
             token_headers = {
@@ -305,13 +346,15 @@ class ViewerBot_Stability:
                         data = response.json()
                         token = data.get("data", {}).get("token") or data.get("token")
                         if token:
-                            logging.debug(f"Retrieved WebSocket token from {endpoint}: {token[:20]}..." if token else "No token")
+                            logging.info(f"✓ Retrieved WebSocket token from {endpoint}")
                             return token
+                    elif response.status_code == 403:
+                        logging.error(f"Token endpoint {endpoint} returned 403 - CLIENT_TOKEN may be invalid")
                 except Exception as e:
                     logging.debug(f"Token endpoint {endpoint} failed: {e}")
                     continue
             
-            logging.error("Failed to get WebSocket token from all endpoints")
+            logging.error("❌ Failed to get WebSocket token from all endpoints - check CLIENT_TOKEN validity")
             return None
             
         except Exception as e:
@@ -335,111 +378,7 @@ class ViewerBot_Stability:
             **(({'proxy_loading_progress': proxy_loading_progress} if proxy_loading_progress is not None else {})),
             **(({'startup_progress': startup_progress} if startup_progress is not None else {}))
         })
-        self.status['active_threads'] = self.active_threads
-        self.status['request_count'] = self.request_count
-        self.status['active_connections'] = getattr(self, 'active_connections', 0)
-        self.status['alive_proxies'] = getattr(self, 'alive_proxies', 0)
         logging.info(f"Status updated: {self.status}")
-
-    def _update_activity_message(self):
-        self.status['message'] = (
-            f"Stability mode active: {self.active_connections} connections / "
-            f"{self.status.get('proxy_count', 0)} proxies available"
-        )
-
-    # --- Proxy pool helpers -------------------------------------------------
-
-    def _reset_proxy_pool(self, proxies):
-        """Initialise the proxy queue and bookkeeping for stability mode."""
-        logging.info(f"Resetting proxy pool with {len(proxies)} proxies")
-        self.all_proxies = list(proxies)
-        self.proxy_queue = Queue()
-        self.proxy_failures = {}
-        with self.proxy_lock:
-            self.in_use_proxies = set()
-
-        for proxy in proxies:
-            self.proxy_queue.put(proxy)
-            self.proxy_failures[proxy] = 0
-
-        # Keep proxy count in status for UI stats
-        self.status['proxy_count'] = len(proxies)
-        self.alive_proxies = len(proxies)
-        self.active_connections = 0
-        self.status['active_connections'] = 0
-        self._update_activity_message()
-        logging.info(f"Proxy pool reset complete, queue size: {self.proxy_queue.qsize()}")
-
-    def _available_proxy_count(self):
-        with self.proxy_lock:
-            return self.proxy_queue.qsize() + len(self.in_use_proxies)
-
-    def _acquire_proxy(self):
-        """Take the next available proxy if any."""
-        logging.info(f"_acquire_proxy called, queue size: {self.proxy_queue.qsize()}")
-        while not self.should_stop:
-            try:
-                proxy = self.proxy_queue.get(timeout=2)
-                logging.info(f"Got proxy from queue: {proxy}")
-            except Empty:
-                logging.warning(f"Proxy queue empty, waiting...")
-                if self.should_stop:
-                    return None
-                continue
-
-            logging.info(f"Trying to acquire lock for proxy: {proxy}")
-            with self.proxy_lock:
-                logging.info(f"Lock acquired for proxy: {proxy}")
-                if proxy in self.in_use_proxies:
-                    # Very unlikely, but skip to avoid double usage
-                    logging.warning(f"Proxy {proxy} already in use, skipping")
-                    continue
-                self.in_use_proxies.add(proxy)
-                # Calculate proxy count without calling _available_proxy_count (which would deadlock)
-                proxy_count = self.proxy_queue.qsize() + len(self.in_use_proxies)
-                self.status['proxy_count'] = proxy_count
-                self.active_connections = len(self.in_use_proxies)
-                self.status['active_connections'] = self.active_connections
-                self._update_activity_message()
-                logging.info(f"✓ Acquired proxy successfully: {proxy}")
-                return proxy
-
-        return None
-
-    def _release_proxy(self, proxy, success):
-        """Return proxy to the pool, optionally penalising repeated failures."""
-        if proxy is None:
-            return
-
-        with self.proxy_lock:
-            self.in_use_proxies.discard(proxy)
-            self.active_connections = len(self.in_use_proxies)
-            self.status['active_connections'] = self.active_connections
-
-        if success or self.should_stop:
-            # Reset failure count and reuse
-            self.proxy_failures[proxy] = 0
-            self.proxy_queue.put(proxy)
-        else:
-            failures = self.proxy_failures.get(proxy, 0) + 1
-            self.proxy_failures[proxy] = failures
-            if failures < self.max_proxy_failures:
-                self.proxy_queue.put(proxy)
-            else:
-                logging.warning(f"Discarding proxy after {failures} failures: {proxy}")
-                try:
-                    self.all_proxies.remove(proxy)
-                except ValueError:
-                    pass
-
-        # Calculate proxy count without deadlock
-        with self.proxy_lock:
-            current_available = self.proxy_queue.qsize() + len(self.in_use_proxies)
-        self.status['proxy_count'] = current_available
-        self.alive_proxies = current_available
-        self._update_activity_message()
-
-    # --- End proxy helpers --------------------------------------------------
 
     def get_proxies(self):
         self.update_status('loading_proxies', 'Starting proxy collection...')
@@ -452,7 +391,6 @@ class ViewerBot_Stability:
                         lines = [self.extract_ip_port(line.strip()) for line in f.readlines() if line.strip()]
                         self.proxyrefreshed = True
                         self.update_status('proxies_loaded', f'Loaded {len(lines)} proxies from file', proxy_count=len(lines))
-                        self._reset_proxy_pool(lines)
                         return lines
                 except FileNotFoundError:
                     self.update_status('error', 'Proxy file not found')
@@ -533,7 +471,6 @@ class ViewerBot_Stability:
                             )
                             # Debug: Log first few proxies
                             logging.debug(f"First 5 proxies: {proxies[:5]}")
-                            self._reset_proxy_pool(proxies)
                             return proxies
                         
                         logging.error("No valid proxies found in response")
@@ -558,7 +495,6 @@ class ViewerBot_Stability:
                                 proxy_count=len(proxies),
                                 proxy_loading_progress=100
                             )
-                            self._reset_proxy_pool(proxies)
                             return proxies
                     
                     self.update_status('error', 'Failed to fetch proxies from both sources')
@@ -662,175 +598,283 @@ class ViewerBot_Stability:
         self.processes.clear()
         self.active_threads = 0
         self.all_proxies = []
-        with self.proxy_lock:
-            self.in_use_proxies.clear()
-        self.proxy_queue = Queue()
         self.update_status('stopped', 'Bot has been stopped')
         logging.debug("Bot stopped and all threads cleaned up")
 
-    def _stability_worker(self, worker_id):
-        logging.info(f"Stability worker {worker_id} starting")
+    def open_url(self, proxy_data):
+        """Legacy method for compatibility - now uses WebSocket approach"""
+        self.send_websocket_view(proxy_data)
 
-        with self.active_threads_lock:
-            self.active_threads += 1
-            self.status['active_threads'] = self.active_threads
-            self._update_activity_message()
-
+    def send_websocket_view(self, proxy_data):
+        """Send view using WebSocket connection with proper authentication"""
+        self.active_threads += 1
         try:
-            while not self.should_stop:
-                logging.info(f"Worker {worker_id} acquiring proxy...")
-                proxy_tuple = self._acquire_proxy()
-                if proxy_tuple is None:
-                    if self.should_stop:
-                        break
-                    logging.warning(f"Worker {worker_id} could not acquire proxy, waiting...")
-                    time.sleep(1)
-                    continue
-
-                logging.info(f"Worker {worker_id} acquired proxy: {proxy_tuple[1]}")
-                success = False
-                try:
-                    success = self.send_websocket_view(proxy_tuple)
-                    logging.info(f"Worker {worker_id} websocket view result: {success}")
-                except Exception as exc:  # noqa: BLE001
-                    logging.error(f"Worker {worker_id} encountered error: {exc}")
-                    traceback.print_exc()
-                finally:
-                    self._release_proxy(proxy_tuple, success)
-
-                if not success and not self.should_stop:
-                    backoff = random.uniform(*self.worker_retry_backoff)
-                    logging.info(f"Worker {worker_id} backing off for {backoff:.2f}s after failure")
-                    time.sleep(backoff)
-        finally:
-            with self.active_threads_lock:
-                self.active_threads = max(self.active_threads - 1, 0)
-                self.status['active_threads'] = self.active_threads
-                self._update_activity_message()
-
-        logging.info(f"Stability worker {worker_id} exiting")
-
-    def send_websocket_view(self, proxy_tuple):
-        """Run a WebSocket session using the provided proxy."""
-        proxy_type, proxy_address = proxy_tuple
-        logging.info(f"send_websocket_view called with proxy {proxy_address}")
-
-        try:
-            token = self.get_websocket_token()
-            if not token:
-                logging.error("Failed to get WebSocket token")
-                return False
-
+            # Get channel ID if not already cached
             if not self.channel_id:
                 self.channel_id = self.get_channel_id()
                 if not self.channel_id:
                     logging.error("Failed to get channel ID")
-                    return False
-
-            logging.info(f"Starting WebSocket worker with token and channel_id {self.channel_id}")
-
-            loop = asyncio.new_event_loop()
+                    return
+            
+            # Run the async WebSocket connection in a new event loop
             try:
+                loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
-                result = loop.run_until_complete(self._websocket_worker(token, proxy_tuple))
-                logging.info(f"WebSocket worker completed with result: {result}")
-                return result
+                loop.run_until_complete(self._websocket_worker(proxy_data))
+            except Exception as e:
+                logging.error(f"Error in WebSocket worker: {e}")
             finally:
                 try:
-                    loop.run_until_complete(loop.shutdown_asyncgens())
-                except Exception:  # noqa: BLE001
-                    pass
-                finally:
-                    asyncio.set_event_loop(None)
                     loop.close()
-
-        except Exception as exc:  # noqa: BLE001
-            logging.error(f"Error in send_websocket_view: {exc}")
-            traceback.print_exc()
-            return False
+                except Exception:
+                    pass
+                    
+        except Exception as e:
+            logging.error(f"Error in send_websocket_view: {e}")
         finally:
-            self.status['active_threads'] = self.active_threads
+            self.active_threads -= 1
+            self.thread_semaphore.release()
 
-    async def _websocket_worker(self, token, proxy_tuple):
-        """Async WebSocket worker that maintains a long-lived connection."""
-        proxy_type, proxy_address = proxy_tuple
-
-        # Note: websockets library doesn't natively support proxies
-        # The connection will be made directly without proxy
-        # For proxy support, you would need websocket-client or python-socks
-        logging.info(f"Attempting WebSocket connection (direct, no proxy support in websockets lib) for proxy {proxy_address}")
-
-        ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
-        connection_started = time.time()
-
-        try:
-            logging.info(f"Connecting to WebSocket for channel {self.channel_id}...")
-            async with websockets.connect(
-                ws_url,
-                additional_headers=WS_HEADERS,
-                ping_interval=None,
-                close_timeout=10
-            ) as websocket:
-                logging.info(f"✓ WebSocket connected for channel {self.channel_id} using proxy {proxy_address}")
-
-                handshake_msg = {
-                    "type": "channel_handshake",
-                    "data": {"message": {"channelId": self.channel_id}}
-                }
-                await websocket.send(json.dumps(handshake_msg))
-                logging.debug(f"Sent handshake for channel {self.channel_id}")
-
-                while not self.should_stop:
-                    elapsed = time.time() - connection_started
-                    if elapsed >= self.connection_refresh_interval:
-                        logging.debug(
-                            f"Reached max connection age ({elapsed:.0f}s). Recycling proxy {proxy_address}."
-                        )
-                        return True
-
+    async def _websocket_worker(self, proxy_data):
+        """Async WebSocket worker that maintains connection and sends views with auto-reconnect"""
+        connection_id = random.randint(1000, 9999)
+        retry_count = 0
+        
+        logging.info(f"🚀 [{connection_id}] WebSocket worker started")
+        
+        while not self.should_stop and retry_count < self.max_retry_attempts:
+            try:
+                # Get a FRESH token for THIS connection (critical for proxy rotation)
+                logging.info(f"[{connection_id}] Getting WebSocket token...")
+                token = self.get_websocket_token()
+                if not token:
+                    logging.error(f"❌ [{connection_id}] Failed to get WebSocket token")
+                    break
+                
+                logging.info(f"[{connection_id}] Token obtained, preparing connection...")
+                
+                proxy_type, proxy_address = proxy_data['proxy']
+                proxies = self.configure_proxies(proxy_type, proxy_address)
+                
+                # Configure WebSocket connection with proxy if available
+                ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
+                
+                logging.info(f"[{connection_id}] Connecting to WebSocket...")
+                
+                # Connect to WebSocket (headers are automatically handled by websockets library)
+                async with websockets.connect(
+                    ws_url, 
+                    ping_interval=None, 
+                    ping_timeout=None
+                ) as websocket:
+                    logging.info(f"✅ [{connection_id}] WebSocket CONNECTED for channel {self.channel_id}")
+                    retry_count = 0  # Reset retry count on successful connection
+                    
+                    # Increment active connections counter
+                    with self.active_connections_lock:
+                        self.active_connections += 1
+                    
+                    logging.info(f"📊 [{connection_id}] Active connections: {self.active_connections}")
+                    
                     try:
-                        await websocket.send(json.dumps({"type": "ping"}))
-                        self.request_count += 1
-                        self.status['request_count'] = self.request_count
-                        if self.request_count % 50 == 0:
-                            logging.info(
-                                "Stability bot has issued %d pings across %d active connections",
-                                self.request_count,
-                                self.active_connections,
-                            )
-                    except websockets.exceptions.ConnectionClosedOK:
-                        logging.debug("Connection closed gracefully while sending ping")
-                        return True
-                    except Exception as exc:  # noqa: BLE001
-                        logging.error(f"Ping failed for proxy {proxy_address}: {exc}")
-                        return False
-
-                    wait_time = random.uniform(*self.ping_interval_range)
-                    try:
-                        await asyncio.wait_for(websocket.recv(), timeout=wait_time)
-                    except asyncio.TimeoutError:
-                        # Normal case: no message received, continue
-                        continue
-                    except websockets.exceptions.ConnectionClosedOK:
-                        logging.debug("Connection closed gracefully during receive")
-                        return True
-                    except websockets.exceptions.ConnectionClosed as exc:
-                        logging.warning(f"Connection closed for proxy {proxy_address}: {exc}")
-                        return False
-                    except Exception as exc:  # noqa: BLE001
-                        logging.error(f"Unexpected receive error for proxy {proxy_address}: {exc}")
-                        return False
-
-        except websockets.exceptions.InvalidStatusCode as exc:
-            logging.error(f"WebSocket invalid status code for proxy {proxy_address}: {exc}")
-            traceback.print_exc()
-            return False
-        except Exception as exc:  # noqa: BLE001
-            logging.error(f"WebSocket error for proxy {proxy_address}: {exc}")
-            traceback.print_exc()
-            return False
-
-        return True
+                        # Send initial handshake
+                        handshake_msg = {
+                            "type": "channel_handshake",
+                            "data": {
+                                "message": {"channelId": self.channel_id}
+                            }
+                        }
+                        await websocket.send(json.dumps(handshake_msg))
+                        logging.debug(f"Sent handshake [{connection_id}] for channel {self.channel_id}")
+                        
+                        # Wait a bit for any initial responses
+                        await asyncio.sleep(2)
+                        
+                        # Use livestream_id from class if available, otherwise try to get from response
+                        livestream_id = self.livestream_id
+                        
+                        if not livestream_id:
+                            # Try to receive livestream_id from Kick if not already set
+                            try:
+                                response = await asyncio.wait_for(websocket.recv(), timeout=2.0)
+                                logging.info(f"🔵 [{connection_id}] Initial response: {response}")
+                                response_data = json.loads(response)
+                                # Try to extract livestream_id if present
+                                if 'data' in response_data and 'message' in response_data['data']:
+                                    livestream_id = response_data['data']['message'].get('livestream_id')
+                                    if livestream_id:
+                                        logging.info(f"✅ [{connection_id}] Extracted livestream_id: {livestream_id}")
+                            except (asyncio.TimeoutError, json.JSONDecodeError, KeyError) as e:
+                                logging.debug(f"[{connection_id}] Could not extract livestream_id from initial response: {e}")
+                        else:
+                            logging.info(f"✅ [{connection_id}] Using pre-fetched livestream_id: {livestream_id}")
+                        
+                        # Keep connection alive with proper message sequence
+                        ping_count = 0
+                        handshake_count = 0
+                        user_event_count = 0
+                        last_ping_time = time.time()
+                        last_response_time = time.time()
+                        last_handshake_time = time.time()
+                        last_user_event_time = time.time()
+                        
+                        while not self.should_stop:
+                            current_time = time.time()
+                            
+                            # Send channel_handshake every 15 seconds
+                            if current_time - last_handshake_time >= 15:
+                                handshake_count += 1
+                                handshake_msg = {
+                                    "type": "channel_handshake",
+                                    "data": {
+                                        "message": {"channelId": self.channel_id}
+                                    }
+                                }
+                                await websocket.send(json.dumps(handshake_msg))
+                                last_handshake_time = current_time
+                                logging.debug(f"📋 [{connection_id}] Sent handshake #{handshake_count}")
+                            
+                            # Send user_event (tracking) every 30 seconds if we have livestream_id
+                            if livestream_id and current_time - last_user_event_time >= 30:
+                                user_event_count += 1
+                                user_event_msg = {
+                                    "type": "user_event",
+                                    "data": {
+                                        "message": {
+                                            "name": "tracking.user.watch.livestream",
+                                            "channel_id": self.channel_id,
+                                            "livestream_id": livestream_id
+                                        }
+                                    }
+                                }
+                                await websocket.send(json.dumps(user_event_msg))
+                                last_user_event_time = current_time
+                                logging.info(f"📺 [{connection_id}] Sent tracking event #{user_event_count}")
+                            
+                            # Send ping every 14 seconds (between handshakes)
+                            ping_count += 1
+                            ping_msg = {"type": "ping"}
+                            await websocket.send(json.dumps(ping_msg))
+                            self.request_count += 1
+                            
+                            # Log every 10 pings to reduce spam
+                            if ping_count % 10 == 0:
+                                uptime = int(current_time - last_ping_time)
+                                logging.debug(f"🏓 [{connection_id}] Ping #{ping_count} | Handshakes: {handshake_count} | Events: {user_event_count} | Uptime: {uptime}s")
+                            
+                            # Try to receive any messages from Kick with timeout
+                            try:
+                                # Use wait_for with short timeout to not block
+                                response = await asyncio.wait_for(websocket.recv(), timeout=1.0)
+                                last_response_time = current_time
+                                
+                                # Log ALL responses from Kick to understand what's happening
+                                logging.info(f"🔵 [{connection_id}] Kick response: {response[:200]}")  # First 200 chars
+                                
+                                # Try to parse as JSON to see structure
+                                try:
+                                    response_data = json.loads(response)
+                                    logging.info(f"🟢 [{connection_id}] Parsed response: {response_data}")
+                                except json.JSONDecodeError:
+                                    logging.info(f"🟡 [{connection_id}] Non-JSON response: {response}")
+                                    
+                            except asyncio.TimeoutError:
+                                # No response received - this is normal, continue
+                                pass
+                            except Exception as recv_error:
+                                logging.warning(f"⚠️ [{connection_id}] Error receiving message: {recv_error}")
+                            
+                            # Check if we haven't received ANY response for too long (might indicate dead connection)
+                            time_since_last_response = current_time - last_response_time
+                            if time_since_last_response > 60:
+                                logging.warning(f"⏰ [{connection_id}] No response from Kick for {int(time_since_last_response)}s - connection might be dead")
+                            
+                            # Fixed interval for stability (14 seconds - optimal for Kick)
+                            await asyncio.sleep(14)
+                        
+                        logging.debug(f"WebSocket [{connection_id}] gracefully closed after {ping_count} pings")
+                        break  # Exit loop if should_stop is True
+                        
+                    finally:
+                        # Decrement active connections counter
+                        with self.active_connections_lock:
+                            self.active_connections -= 1
+                        logging.info(f"📉 [{connection_id}] Connection closed. Active connections: {self.active_connections}")
+                    
+            except websockets.exceptions.ConnectionClosed as e:
+                if not self.should_stop:
+                    retry_count += 1
+                    backoff_delay = self.connection_retry_delay * (self.backoff_multiplier ** (retry_count - 1))
+                    logging.debug(f"WebSocket [{connection_id}] connection closed (attempt {retry_count}/{self.max_retry_attempts}), reconnecting in {backoff_delay}s...")
+                    await asyncio.sleep(backoff_delay)
+                    # Get fresh token for reconnection
+                    token = self.get_websocket_token()
+                    if not token:
+                        logging.error(f"Failed to get token for reconnection [{connection_id}]")
+                        break
+                else:
+                    break
+            except websockets.exceptions.InvalidStatusCode as e:
+                if e.status_code == 429:
+                    # Rate limited - use exponential backoff
+                    retry_count += 1
+                    backoff_delay = self.connection_retry_delay * (self.backoff_multiplier ** retry_count)
+                    logging.warning(f"WebSocket [{connection_id}] rate limited (HTTP 429), backing off for {backoff_delay}s (attempt {retry_count}/{self.max_retry_attempts})")
+                    await asyncio.sleep(backoff_delay)
+                    # Get fresh token
+                    token = self.get_websocket_token()
+                    if not token:
+                        logging.error(f"Failed to get token after rate limit [{connection_id}]")
+                        break
+                elif e.status_code == 403:
+                    # Forbidden - token might be invalid or proxy blocked
+                    retry_count += 1
+                    backoff_delay = self.connection_retry_delay * (self.backoff_multiplier ** retry_count)
+                    logging.warning(f"WebSocket [{connection_id}] forbidden (HTTP 403) - token invalid or proxy blocked, getting new token and retrying in {backoff_delay}s (attempt {retry_count}/{self.max_retry_attempts})")
+                    await asyncio.sleep(backoff_delay)
+                    
+                    # Force refresh token by clearing cache
+                    with self.token_lock:
+                        self.token_cache = None
+                        self.token_cache_time = 0
+                    
+                    # Get fresh token
+                    token = self.get_websocket_token()
+                    if not token:
+                        logging.error(f"Failed to get fresh token after 403 [{connection_id}]")
+                        break
+                else:
+                    logging.error(f"WebSocket [{connection_id}] invalid status code: {e.status_code}")
+                    break
+            except Exception as e:
+                if not self.should_stop:
+                    retry_count += 1
+                    backoff_delay = self.connection_retry_delay * (self.backoff_multiplier ** (retry_count - 1))
+                    
+                    # Log complete exception details for debugging
+                    import traceback
+                    logging.error(f"💥 [{connection_id}] Exception type: {type(e).__name__}")
+                    logging.error(f"💥 [{connection_id}] Exception message: {str(e)}")
+                    logging.error(f"💥 [{connection_id}] Traceback:\n{traceback.format_exc()}")
+                    
+                    # Check if it's a rate limit error in the exception message
+                    if "429" in str(e) or "rate" in str(e).lower():
+                        backoff_delay *= 2  # Double the delay for rate limits
+                        logging.warning(f"⏱️ [{connection_id}] Rate limit detected in error, backing off for {backoff_delay}s")
+                    else:
+                        logging.error(f"🔄 [{connection_id}] Reconnecting in {backoff_delay}s (attempt {retry_count}/{self.max_retry_attempts})...")
+                    
+                    await asyncio.sleep(backoff_delay)
+                    # Get fresh token for reconnection
+                    token = self.get_websocket_token()
+                    if not token:
+                        logging.error(f"❌ [{connection_id}] Failed to get token for reconnection")
+                        break
+                else:
+                    break
+        
+        if retry_count >= self.max_retry_attempts:
+            logging.error(f"WebSocket [{connection_id}] exceeded maximum retry attempts, giving up")
 
     def configure_proxies(self, proxy_type, proxy_address):
         try:
@@ -864,68 +908,131 @@ class ViewerBot_Stability:
             return {}
 
     def main(self):
-        self.should_stop = False
         self.update_status('starting', 'Starting bot...', startup_progress=0)
-
+        start = datetime.datetime.now()
+        last_connection_check = time.time()
+        
+        # Test token retrieval first
+        logging.info("Testing WebSocket token retrieval...")
+        test_token = self.get_websocket_token()
+        if not test_token:
+            self.update_status('error', '❌ Failed to get WebSocket token. Check CLIENT_TOKEN or network connection.')
+            logging.error("Cannot proceed without valid WebSocket token")
+            self.should_stop = True
+            return
+        else:
+            logging.info(f"✓ Successfully obtained WebSocket token")
+        
+        # Initialize channel ID first
         self.update_status('starting', 'Getting channel information...', startup_progress=10)
         self.channel_id = self.get_channel_id()
         if not self.channel_id:
-            logging.warning(
-                f"Could not get channel ID for {self.channel_name}, falling back to default IDs"
-            )
+            # Use fallback mode - try to continue with WebSocket-only approach
+            logging.warning(f"Could not get channel ID for {self.channel_name}, trying fallback mode...")
             self.update_status('starting', 'Channel ID unavailable, using fallback mode...', startup_progress=15)
+            
+            # Try some common test IDs or generate a fallback
             fallback_ids = {
-                'grndpagaming': '123456',
+                'grndpagaming': '123456',  # Common test channels with fallback IDs
                 'trainwreckstv': '234567',
                 'xqc': '345678',
                 'adinross': '456789',
                 'pokimane': '567890'
             }
+            
             self.channel_id = fallback_ids.get(self.channel_name.lower(), '999999')
             logging.info(f"Using fallback channel ID: {self.channel_id} for {self.channel_name}")
-
+            self.update_status('starting', f'Using fallback mode (ID: {self.channel_id})...', startup_progress=20)
+        
         proxies = self.get_proxies()
+        logging.debug(f"Proxies: {proxies}")
+        
         if not proxies:
             self.update_status('error', 'No proxies available. Stopping bot.')
             self.should_stop = True
             return
 
+        # Preload stream URL to avoid rate limiting (still useful for backup)
         self.update_status('starting', 'Getting stream URL...', startup_progress=50)
-        stream_url = self.get_url() or ""
-        if stream_url:
-            logging.debug("Fetched initial stream URL for potential fallback usage")
-
-        worker_count = max(1, min(int(self.nb_of_threads), len(proxies)))
+        stream_url = self.get_url()
+        if not stream_url:
+            self.update_status('warning', 'Could not get initial stream URL, will use WebSocket only')
+            stream_url = ""  # Set empty string as fallback
+        
+        # Initialize all_proxies with the preloaded URL
+        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies]
+        
         self.processes = []
+        
+        # Start initial connections with gradual ramp-up to avoid rate limiting
+        logging.info(f"Starting {self.nb_of_threads} connections with gradual ramp-up...")
+        for i in range(0, int(self.nb_of_threads)):
+            if self.thread_semaphore.acquire(blocking=False):
+                if len(self.all_proxies) > 0:
+                    threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
+                    self.processes.append(threaded)
+                    threaded.daemon = True
+                    threaded.start()
+                else:
+                    self.thread_semaphore.release()
+        
+        self.update_status('running', 'Bot is now running with persistent WebSocket connections', 
+                          proxy_count=len(self.all_proxies), 
+                          startup_progress=100)
+        
+        # Main monitoring loop
+        while not self.should_stop:
+            current_time = time.time()
+            elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
 
-        self.update_status(
-            'running',
-            f'Stability mode running with {worker_count} persistent connections',
-            proxy_count=len(self.all_proxies),
-            startup_progress=100
-        )
+            # Check connection health every 10 seconds
+            if current_time - last_connection_check >= 10:
+                last_connection_check = current_time
+                
+                # Clean up dead threads
+                self.processes = [t for t in self.processes if t.is_alive()]
+                active_count = len(self.processes)
+                
+                logging.debug(f"Active connections: {active_count}/{self.nb_of_threads}")
+                
+                # Maintain minimum connection count - restart if needed with rate limiting
+                if active_count < self.min_active_connections:
+                    needed = int(self.nb_of_threads) - active_count
+                    logging.info(f"Restarting {needed} connections to maintain stability")
+                    
+                    for i in range(needed):
+                        if self.thread_semaphore.acquire(blocking=False):
+                            if len(self.all_proxies) > 0:
+                                threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
+                                self.processes.append(threaded)
+                                threaded.daemon = True
+                                threaded.start()
+                            else:
+                                self.thread_semaphore.release()
 
-        for worker_id in range(worker_count):
-            worker = Thread(target=self._stability_worker, args=(worker_id,), daemon=True)
-            self.processes.append(worker)
-            worker.start()
+            # Refresh proxies periodically if not using imported file
+            if elapsed_seconds >= 300 and self.proxy_imported == False:
+                # Refresh the proxies after 300 seconds (5 minutes)
+                start = datetime.datetime.now()
+                self.proxyrefreshed = False
+                proxies = self.get_proxies()
+                # Update all_proxies with new proxies
+                self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
+                logging.debug(f"Proxies refreshed: {len(self.all_proxies)} proxies available")
+                elapsed_seconds = 0
 
-        try:
-            while not self.should_stop:
-                time.sleep(5)
-                if self.proxy_queue.empty() and not self.in_use_proxies:
-                    logging.error("All proxies exhausted. Stopping stability mode.")
-                    self.update_status(
-                        'failed',
-                        'All proxies have failed. Please refresh your proxy list to continue.'
-                    )
-                    self.should_stop = True
-        except KeyboardInterrupt:
-            logging.info("Received interrupt, stopping stability bot")
-            self.should_stop = True
-        finally:
-            for worker in self.processes:
-                worker.join()
-            if self.status.get('state') not in {'failed', 'error'}:
-                self.update_status('stopped', 'Bot has been stopped')
-            console.print("[bold red]Bot main loop ended[/bold red]")
+
+        # Cleanup on stop
+        logging.debug("Stopping main loop, waiting for threads...")
+        for t in self.processes:
+            if t.is_alive():
+                t.join(timeout=5)
+        
+        # Release all semaphores
+        for _ in range(self.nb_of_threads):
+            try:
+                self.thread_semaphore.release()
+            except ValueError:
+                pass
+                
+        console.print("[bold red]Bot main loop ended[/bold red]")
