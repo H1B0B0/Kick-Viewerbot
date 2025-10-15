@@ -68,7 +68,7 @@ export function PatreonLinkButton() {
     return (
       <Button
         as="a"
-        href="https://www.patreon.com/velbots"
+        href="https://www.patreon.com/10327292/join"
         target="_blank"
         rel="noopener noreferrer"
         variant="bordered"
