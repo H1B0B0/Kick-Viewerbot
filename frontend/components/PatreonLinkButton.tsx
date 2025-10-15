@@ -1,15 +1,28 @@
 "use client";
 import { Button } from "@heroui/button";
-import { useGetProfile, useGetSubscription, refreshPatreonStatus } from "../app/functions/UserAPI";
+import {
+  useGetProfile,
+  useGetSubscription,
+  refreshPatreonStatus,
+} from "../app/functions/UserAPI";
 import { useState } from "react";
 
 export function PatreonLinkButton() {
-  const { data: profile, mutate } = useGetProfile();
+  const { data: profile, mutate, isLoading: profileLoading } = useGetProfile();
   const { data: subscription } = useGetSubscription();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Check if user is logged in
   const isLoggedIn = !!profile?.user;
+
+  // Show loading state while fetching profile
+  if (profileLoading) {
+    return (
+      <Button variant="bordered" disabled>
+        Loading...
+      </Button>
+    );
+  }
 
   // Check if user has Patreon linked
   const hasPatreonLinked = !!profile?.user?.patreonId;
@@ -66,15 +79,20 @@ export function PatreonLinkButton() {
 
   // Logged in but Patreon not linked - include userId in URL
   if (!hasPatreonLinked) {
-    // Support both 'id' and '_id' fields from the API
-    const userId = (profile?.user as any)?.id || profile?.user?._id;
+    // MongoDB returns _id field
+    const user = profile?.user;
+    const userId = user?._id || (user as any)?._id || (user as any)?.id;
 
     // Debug log to verify userId is correctly retrieved
-    console.log('[PatreonLinkButton] User object:', profile?.user);
-    console.log('[PatreonLinkButton] userId extracted:', userId);
+    console.log("[PatreonLinkButton] Full profile object:", profile);
+    console.log("[PatreonLinkButton] User object:", user);
+    console.log("[PatreonLinkButton] User keys:", user ? Object.keys(user) : 'no user');
+    console.log("[PatreonLinkButton] userId extracted:", userId);
 
     if (!userId) {
-      console.error('[PatreonLinkButton] ⚠️ No userId found! User must be logged in to link Patreon.');
+      console.error(
+        "[PatreonLinkButton] ⚠️ No userId found! User must be logged in to link Patreon."
+      );
       return (
         <Button
           variant="bordered"
@@ -87,7 +105,7 @@ export function PatreonLinkButton() {
     }
 
     const linkUrl = `https://api.velbots.shop/payments/patreon/redirect?link=true&userId=${userId}`;
-    console.log('[PatreonLinkButton] Generated link URL:', linkUrl);
+    console.log("[PatreonLinkButton] Generated link URL:", linkUrl);
 
     return (
       <Button

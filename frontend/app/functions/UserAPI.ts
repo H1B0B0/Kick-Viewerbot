@@ -13,7 +13,6 @@ export interface SubscriptionStatus {
 }
 
 interface ProfileUser {
-  id?: string; // MongoDB ID returned by the API
   _id?: string; // Alternative MongoDB ID field (for backward compatibility)
   username: string;
   TwitchUsername?: string;
