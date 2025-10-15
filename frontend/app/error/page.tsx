@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardBody } from "@heroui/card";
 import { Button } from "@heroui/button";
@@ -9,6 +9,20 @@ import { animate } from "animejs";
 export const dynamic = "force-dynamic";
 
 export default function ErrorPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full flex justify-center items-center min-h-[40vh]">
+          Loading...
+        </div>
+      }
+    >
+      <ErrorPageContent />
+    </Suspense>
+  );
+}
+
+function ErrorPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [mounted, setMounted] = useState(false);
