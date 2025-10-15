@@ -42,7 +42,7 @@ export function PatreonLinkButton() {
     return (
       <Button
         as="a"
-        href="https://api.velbots.shop/payments/patreon/redirect"
+        href="https://api.velbots.shop/payments/patreon/redirect?link=true"
         target="_blank"
         rel="noopener noreferrer"
         variant="bordered"
