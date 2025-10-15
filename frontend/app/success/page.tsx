@@ -210,7 +210,7 @@ function SuccessPageContent() {
                   className="mt-3"
                   onPress={() =>
                     window.open(
-                      "https://www.patreon.com/10327292/join",
+                      "https://api.velbots.shop/payments/patreon/redirect",
                       "_blank"
                     )
                   }
