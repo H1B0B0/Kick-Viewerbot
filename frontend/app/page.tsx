@@ -18,6 +18,7 @@ import { SystemMetrics } from "../components/SystemMetrics";
 import { StatusBanner } from "../components/StatusBanner";
 import { animate, stagger } from "animejs";
 import { MotionCard } from "../components/MotionCard";
+import { PatreonLinkButton } from "@/components/PatreonLinkButton";
 
 interface MetricData {
   label: string;
@@ -631,17 +632,9 @@ export default function ViewerBotInterface() {
           index={0}
           className="relative text-center p-8 rounded-2xl border-none bg-background/90 backdrop-blur-xl shadow-xl"
         >
-          <Button
-            as="a"
-            href="https://www.patreon.com/c/HIBO"
-            target="_blank"
-            rel="noopener noreferrer"
-            variant="bordered"
-            className="absolute left-4 top-4 bg-gradient-to-r from-green-500 to-lime-400 text-white border-none hover:scale-105 transition-transform"
-            startContent={<span className="text-lg">❤️</span>}
-          >
-            Support Me
-          </Button>
+          <div className="absolute left-4 top-4">
+            <PatreonLinkButton />
+          </div>
           {profile && (
             <Button
               variant="bordered"

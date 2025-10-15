@@ -17,6 +17,10 @@ interface ProfileUser {
   username: string;
   TwitchUsername?: string;
   subscription?: string;
+  isSubscribed?: boolean;
+  subscriptionEndsAt?: string;
+  isBanned?: boolean;
+  patreonId?: string;
   [key: string]: unknown;
 }
 

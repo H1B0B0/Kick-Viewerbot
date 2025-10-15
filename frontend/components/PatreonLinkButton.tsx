@@ -1,0 +1,106 @@
+"use client";
+import { Button } from "@heroui/button";
+import { useGetProfile, useGetSubscription } from "../app/functions/UserAPI";
+
+export function PatreonLinkButton() {
+  const { data: profile } = useGetProfile();
+  const { data: subscription } = useGetSubscription();
+
+  // Check if user is logged in
+  const isLoggedIn = !!profile?.user;
+
+  // Check if user has Patreon linked
+  const hasPatreonLinked = !!profile?.user?.patreonId;
+
+  // Check if user has active subscription
+  const hasActiveSubscription =
+    profile?.user?.isSubscribed ||
+    subscription?.isSubscribed ||
+    ["active", "premium", "lifetime"].includes(
+      subscription?.plan?.toLowerCase() || ""
+    );
+
+  // Not logged in - show basic link button
+  if (!isLoggedIn) {
+    return (
+      <Button
+        as="a"
+        href="https://api.velbots.shop/payments/patreon/redirect"
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="bordered"
+        className="bg-gradient-to-r from-green-500 to-lime-400 text-white border-none hover:scale-105 transition-transform"
+        startContent={<span className="text-lg">❤️</span>}
+      >
+        Link Patreon
+      </Button>
+    );
+  }
+
+  // Logged in but Patreon not linked
+  if (!hasPatreonLinked) {
+    return (
+      <Button
+        as="a"
+        href="https://api.velbots.shop/payments/patreon/redirect"
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="bordered"
+        className="bg-gradient-to-r from-[#FF424D] to-[#E8384C] text-white border-none hover:scale-105 transition-transform"
+        startContent={
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+          </svg>
+        }
+      >
+        Link Patreon
+      </Button>
+    );
+  }
+
+  // Patreon linked but not subscribed
+  if (!hasActiveSubscription) {
+    return (
+      <Button
+        as="a"
+        href="https://www.patreon.com/velbots"
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="bordered"
+        className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-none hover:scale-105 transition-transform animate-pulse"
+        startContent={
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+          </svg>
+        }
+      >
+        Subscribe
+      </Button>
+    );
+  }
+
+  // Active subscription - show success state
+  return (
+    <Button
+      as="a"
+      href="https://www.patreon.com/settings/memberships"
+      target="_blank"
+      rel="noopener noreferrer"
+      variant="bordered"
+      className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-none hover:scale-105 transition-transform"
+      startContent={<span className="text-lg">✓</span>}
+    >
+      {subscription?.plan || "Subscribed"}
+    </Button>
+  );
+}
