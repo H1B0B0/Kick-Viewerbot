@@ -121,53 +121,70 @@ jobs:
           prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
 
           body: |
-            # 🚀 KickViewerBOT – Smarter, Simpler, More Reliable!
+            # 🚀 KickViewerBOT - Game-Changing Stability Update
 
-            ## ✨ What’s New in This Release?
+            ## ✨ What's New?
 
-            ### 🔥 Next-Level Connectivity & User Experience
+            ### 🔥 Introducing Stability Mode - The Ultimate Viewer Bot Experience
 
-            - **Automatic Port Discovery:** No more port conflicts! The backend now scans and selects an available port for you. The frontend instantly detects and connects—no manual setup, no headaches.
-            - **Seamless Frontend-Backend Sync:** Both parts of the app share a single, smart configuration. You can move, restart, or run multiple instances—KickViewerBOT adapts instantly.
-            - **Crystal-Clear Error Messages:** If a port is busy, you get a friendly message and a clear solution. No more cryptic errors!
-            - **Zero Config, Zero Stress:** All connection URLs and ports are generated and synchronized automatically. Just launch and go!
-            - **Rock-Solid Reliability:** Even if your environment changes, KickViewerBOT keeps running and reconnects without user intervention.
+            **Stability Mode is a revolutionary approach to viewer botting that changes everything:**
 
-            ### 🔧 Under the Hood
+            - **🎯 Persistent Connections:** Unlike traditional bots that reconnect constantly, Stability Mode maintains long-lived WebSocket connections that stay active for hours
+            - **📈 Rock-Solid Viewer Counts:** Say goodbye to fluctuating numbers! Your viewer count stays consistent and stable, just like real viewers
+            - **🛡️ Platform-Friendly:** Mimics real user behavior with proper handshakes, tracking events, and ping/pong cycles - exactly how Kick expects it
+            - **⚡ Set It & Forget It:** Start the bot and walk away - connections maintain themselves with automatic health monitoring and reconnection
+            - **💪 Premium Feature:** Available exclusively for Active, Premium, and Lifetime subscribers
 
-            - **Unified Port Management:** Both backend and frontend use a shared config for all connection logic. No more mismatches or manual edits.
-            - **Smarter Startup:** The backend tries a list of recommended ports and picks the first available. The frontend scans the same list, so you always connect on the first try.
-            - **Enhanced Logging:** Startup and error logs are now clear, actionable, and user-friendly.
+            **How Stability Mode Works:**
+            - Sends proper `channel_handshake` messages every 15 seconds (just like real browsers)
+            - Maintains viewer tracking with `user_event` messages every 30 seconds
+            - Keeps connections alive with smart ping/pong cycles
+            - Auto-recovers from disconnections with exponential backoff
+            - Monitors connection health and maintains 90% uptime target
 
-            ### 🔍 Why You’ll Love This Update
+            ### 🔧 Smart Port Management
 
-            - **Plug & Play:** Download, run, and you’re online—no technical skills required.
-            - **No More “Port Already in Use” Errors:** The app handles everything for you, even if you have other services running.
-            - **Future-Proof:** This foundation makes future updates, remote access, and multi-instance support a breeze.
+            - **Automatic Port Discovery:** Bot automatically finds an available port - no more "port already in use" errors!
+            - **Crystal-Clear Error Messages:** If something goes wrong, you get helpful troubleshooting steps
+            - **Browser Compatibility:** Improved handling of browser WebSocket connections
+            - **Multi-Instance Support:** Run multiple bots without conflicts
 
-            ---
+            ### 🐛 Bug Fixes & Improvements
 
-            ## 🐛 Bug Fixes & Improvements
-
-            - Improved connection stability and error handling
-            - Automatic frontend-backend sync for all connection settings
-            - Clearer logs and user feedback on startup
-            - Unified configuration for easier maintenance
-
-            ---
-
-            ## 📥 How to Get Started
-
-            1. Download the version for your OS
-            2. Run the app (both services start automatically)
-            3. The interface opens in your browser—no setup required!
-            4. Enjoy a smoother, smarter KickViewerBOT experience 🚀
-
-            **Need help?** [Open an issue](https://github.com/H1B0B0/Kick-Viewerbot/issues) or join our community!
+            - ✅ Fixed viewer count dropping after 1 minute (now sends proper tracking events)
+            - ✅ Enhanced WebSocket message handling with full Kick protocol support
+            - ✅ Improved connection stability with better error recovery
+            - ✅ Added comprehensive logging for debugging
+            - ✅ Better proxy rotation and token management
+            - ✅ Frontend correctly displays "Active Connections" in Stability Mode
 
             ---
 
-            *Thank you for supporting KickViewerBOT! Your feedback drives every improvement.* 🙏
+            ## 📥 Getting Started
+
+            ### For Stability Mode:
+            1. Download and run the bot
+            2. Enable "Stability Mode" in settings (requires active support with patreon)
+            3. Set your desired thread count
+            4. Watch your viewer count stabilize and stay there! 🎯
+
+            ### For Standard Mode:
+            - Works exactly as before with short-lived connections
+            - Perfect for quick boosts or testing
+
+            ---
+
+            ## 💡 Why This Update Matters
+
+            **Before:** Viewer counts would spike, then drop, then spike again - inconsistent and suspicious.
+
+            **After:** Smooth, stable viewer counts that look completely natural. Stability Mode makes your stream look genuinely popular! 🌟
+
+            ---
+
+            **Need help?** [Open an issue](https://github.com/H1B0B0/Kick-Viewerbot/issues) or join our Discord community!
+
+            *Thank you for supporting KickViewerBOT! This is our biggest stability improvement yet.* 🙏
 
           draft: false
 
