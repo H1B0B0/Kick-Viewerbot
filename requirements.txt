@@ -19,3 +19,8 @@ rich>=13.0.0
 
 # Monitoring
 psutil>=7.0.0
+
+# AI Chat (Optional - for chat feature)
+# Install with: pip install transformers torch
+# transformers>=4.30.0
+# torch>=2.0.0

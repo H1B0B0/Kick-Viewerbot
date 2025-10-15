@@ -208,6 +208,19 @@ class BotManager:
 # Global bot manager
 bot_manager = BotManager()
 
+# Initialize chat service
+sys.path.append(str(Path(__file__).parent / "services"))
+try:
+    from services.chat_service import chat_service
+    CHAT_AVAILABLE = True
+    # Load model asynchronously on startup
+    chat_service.load_model_async()
+    logger.info("🤖 Chat service initialized (model loading in background)")
+except ImportError as e:
+    logger.warning(f"Chat service not available: {e}")
+    CHAT_AVAILABLE = False
+    chat_service = None
+
 # Upload directory
 UPLOAD_FOLDER = Path('uploads')
 UPLOAD_FOLDER.mkdir(exist_ok=True)
@@ -340,6 +353,179 @@ def handle_ping():
         'timestamp': time.time(),
         'status': 'ok'
     })
+
+# ============================================
+# Chat AI WebSocket Events
+# ============================================
+
+@socketio.on('chat_status')
+def handle_chat_status():
+    """Get chat service status"""
+    if not CHAT_AVAILABLE:
+        emit('chat_status_response', {
+            'available': False,
+            'message': 'Chat service not available. Install: pip install transformers torch'
+        })
+        return
+    
+    status = chat_service.get_status()
+    emit('chat_status_response', {
+        'available': True,
+        **status
+    })
+
+@socketio.on('chat_message')
+def handle_chat_message(data):
+    """Handle incoming chat message and generate AI response"""
+    if not CHAT_AVAILABLE:
+        emit('chat_response', {
+            'error': 'Chat service not available',
+            'response': '❌ Chat AI is not available. Please install required packages.'
+        })
+        return
+    
+    try:
+        user_message = data.get('message', '')
+        session_id = data.get('session_id', request.sid)
+        
+        if not user_message:
+            emit('chat_response', {
+                'error': 'Empty message',
+                'response': '❌ Please provide a message.'
+            })
+            return
+        
+        logger.info(f"💬 Chat message from {session_id}: {user_message}")
+        
+        # Generate response
+        response = chat_service.generate_response(user_message, session_id)
+        
+        emit('chat_response', {
+            'message': user_message,
+            'response': response,
+            'session_id': session_id,
+            'timestamp': time.time()
+        })
+        
+        logger.info(f"🤖 Chat response: {response}")
+        
+    except Exception as e:
+        logger.error(f"Error in chat: {e}")
+        emit('chat_response', {
+            'error': str(e),
+            'response': f'❌ Error: {str(e)}'
+        })
+
+@socketio.on('chat_clear')
+def handle_chat_clear(data):
+    """Clear chat conversation history"""
+    if not CHAT_AVAILABLE:
+        return
+    
+    try:
+        session_id = data.get('session_id', request.sid)
+        success = chat_service.clear_conversation(session_id)
+        
+        emit('chat_cleared', {
+            'success': success,
+            'session_id': session_id
+        })
+        
+        logger.info(f"🗑️  Chat history cleared for session {session_id}")
+        
+    except Exception as e:
+        logger.error(f"Error clearing chat: {e}")
+        emit('chat_error', {'error': str(e)})
+
+@socketio.on('chat_history')
+def handle_chat_history(data):
+    """Get chat conversation history"""
+    if not CHAT_AVAILABLE:
+        emit('chat_history_response', {'history': []})
+        return
+    
+    try:
+        session_id = data.get('session_id', request.sid)
+        history = chat_service.get_conversation_history(session_id)
+        
+        emit('chat_history_response', {
+            'history': history,
+            'session_id': session_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting chat history: {e}")
+        emit('chat_error', {'error': str(e)})
+
+@socketio.on('kick_chat_start')
+def handle_kick_chat_start(data):
+    """Start AI bot for Kick chat"""
+    if not CHAT_AVAILABLE:
+        emit('kick_chat_error', {'error': 'Chat service not available'})
+        return
+    
+    try:
+        channel_name = data.get('channel_name')
+        auth_token = data.get('auth_token')  # Optional
+        response_chance = data.get('response_chance', 0.2)  # 20% default
+        min_interval = data.get('min_interval', 5)  # 5 seconds default
+        
+        if not channel_name:
+            emit('kick_chat_error', {'error': 'Channel name required'})
+            return
+        
+        success = chat_service.start_kick_chat(
+            channel_name, 
+            auth_token, 
+            response_chance, 
+            min_interval
+        )
+        
+        if success:
+            emit('kick_chat_started', {
+                'channel': channel_name,
+                'message': f'AI chat bot started for {channel_name}'
+            })
+            logger.info(f"🤖 Kick chat bot started for {channel_name}")
+        else:
+            emit('kick_chat_error', {'error': 'Failed to start Kick chat bot'})
+            
+    except Exception as e:
+        logger.error(f"Error starting Kick chat: {e}")
+        emit('kick_chat_error', {'error': str(e)})
+
+@socketio.on('kick_chat_stop')
+def handle_kick_chat_stop():
+    """Stop Kick chat bot"""
+    if not CHAT_AVAILABLE:
+        return
+    
+    try:
+        success = chat_service.stop_kick_chat()
+        
+        if success:
+            emit('kick_chat_stopped', {'message': 'Kick chat bot stopped'})
+            logger.info("🛑 Kick chat bot stopped")
+        else:
+            emit('kick_chat_error', {'error': 'Kick chat bot not running'})
+            
+    except Exception as e:
+        logger.error(f"Error stopping Kick chat: {e}")
+        emit('kick_chat_error', {'error': str(e)})
+
+@socketio.on('kick_chat_status')
+def handle_kick_chat_status():
+    """Get Kick chat bot status"""
+    if not CHAT_AVAILABLE:
+        emit('kick_chat_status_response', {'enabled': False})
+        return
+    
+    try:
+        status = chat_service.get_kick_chat_status()
+        emit('kick_chat_status_response', status)
+    except Exception as e:
+        logger.error(f"Error getting Kick chat status: {e}")
+        emit('kick_chat_error', {'error': str(e)})
 
 # ============================================
 # Background Task - Auto broadcast stats
