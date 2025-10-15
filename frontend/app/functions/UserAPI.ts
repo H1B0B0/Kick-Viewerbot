@@ -33,8 +33,16 @@ export interface ProfileResponse {
 }
 
 const fetcher = async <T>(url: string): Promise<T> => {
-  const response = await axios.get<T>(url, { withCredentials: true });
-  return response.data;
+  console.log("🌐 [UserAPI] Fetching from:", url);
+  try {
+    const response = await axios.get<T>(url, { withCredentials: true });
+    console.log("✅ [UserAPI] Response received from:", url);
+    console.log("✅ [UserAPI] Response data:", response.data);
+    return response.data;
+  } catch (error) {
+    console.error("❌ [UserAPI] Fetch error from:", url, error);
+    throw error;
+  }
 };
 
 // Auth APIs
@@ -90,21 +98,41 @@ export async function logout() {
 
 // User APIs
 export function useGetProfile() {
-  return useSWR<ProfileResponse, Error>(
+  console.log("🔧 [UserAPI] useGetProfile hook initialized");
+  const result = useSWR<ProfileResponse, Error>(
     `${API_BASE_URL}/users/profile`,
     (url: string) => fetcher<ProfileResponse>(url),
     {
       revalidateOnFocus: false,
+      onSuccess: (data) => {
+        console.log("✅ [UserAPI] useGetProfile SUCCESS:", data);
+      },
+      onError: (error) => {
+        console.error("❌ [UserAPI] useGetProfile ERROR:", error);
+      }
     }
   );
+  console.log("🔧 [UserAPI] useGetProfile state:", {
+    isLoading: result.isLoading,
+    hasData: !!result.data,
+    hasError: !!result.error
+  });
+  return result;
 }
 
 export function useGetSubscription() {
+  console.log("🔧 [UserAPI] useGetSubscription hook initialized");
   return useSWR<SubscriptionStatus>(
     `${API_BASE_URL}/users/subscription`,
     (url) => fetcher<SubscriptionStatus>(url),
     {
       revalidateOnFocus: false,
+      onSuccess: (data) => {
+        console.log("✅ [UserAPI] useGetSubscription SUCCESS:", data);
+      },
+      onError: (error) => {
+        console.error("❌ [UserAPI] useGetSubscription ERROR:", error);
+      }
     }
   );
 }
@@ -138,15 +166,17 @@ export async function banUser(userId: string) {
 }
 
 export async function refreshPatreonStatus() {
+  console.log("🔄 [UserAPI] refreshPatreonStatus called");
   try {
     const response = await axios.post(
       `${API_BASE_URL}/users/refresh-patreon`,
       {},
       { withCredentials: true }
     );
+    console.log("✅ [UserAPI] refreshPatreonStatus SUCCESS:", response.data);
     return response.data;
   } catch (error) {
-    console.error("Refresh Patreon status error:", error);
+    console.error("❌ [UserAPI] refreshPatreonStatus ERROR:", error);
     throw error;
   }
 }
