@@ -20,29 +20,12 @@ export function PatreonLinkButton() {
       subscription?.plan?.toLowerCase() || ""
     );
 
-  // Not logged in - show basic link button
+  // Not logged in - show "Connect with Patreon" button (no parameters)
   if (!isLoggedIn) {
     return (
       <Button
         as="a"
         href="https://api.velbots.shop/payments/patreon/redirect"
-        target="_blank"
-        rel="noopener noreferrer"
-        variant="bordered"
-        className="bg-gradient-to-r from-green-500 to-lime-400 text-white border-none hover:scale-105 transition-transform"
-        startContent={<span className="text-lg">❤️</span>}
-      >
-        Link Patreon
-      </Button>
-    );
-  }
-
-  // Logged in but Patreon not linked
-  if (!hasPatreonLinked) {
-    return (
-      <Button
-        as="a"
-        href="https://api.velbots.shop/payments/patreon/redirect?link=true"
         target="_blank"
         rel="noopener noreferrer"
         variant="bordered"
@@ -58,7 +41,38 @@ export function PatreonLinkButton() {
           </svg>
         }
       >
-        Link Patreon
+        Se connecter avec Patreon
+      </Button>
+    );
+  }
+
+  // Logged in but Patreon not linked - include userId in URL
+  if (!hasPatreonLinked) {
+    const userId = profile?.user?.id;
+    const linkUrl = userId
+      ? `https://api.velbots.shop/payments/patreon/redirect?link=true&userId=${userId}`
+      : "https://api.velbots.shop/payments/patreon/redirect?link=true";
+
+    return (
+      <Button
+        as="a"
+        href={linkUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        variant="bordered"
+        className="bg-gradient-to-r from-[#FF424D] to-[#E8384C] text-white border-none hover:scale-105 transition-transform"
+        startContent={
+          <svg
+            className="w-4 h-4"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+          </svg>
+        }
+      >
+        Lier mon compte Patreon
       </Button>
     );
   }
