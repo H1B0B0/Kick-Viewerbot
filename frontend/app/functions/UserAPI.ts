@@ -33,14 +33,10 @@ export interface ProfileResponse {
 }
 
 const fetcher = async <T>(url: string): Promise<T> => {
-  console.log("🌐 [UserAPI] Fetching from:", url);
   try {
     const response = await axios.get<T>(url, { withCredentials: true });
-    console.log("✅ [UserAPI] Response received from:", url);
-    console.log("✅ [UserAPI] Response data:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ [UserAPI] Fetch error from:", url, error);
     throw error;
   }
 };
@@ -57,7 +53,6 @@ export async function register(userData: RegisterData) {
     );
     return response.data;
   } catch (error) {
-    console.error("Register error:", error);
     throw error;
   }
 }
@@ -75,7 +70,6 @@ export async function login(loginData: LoginData) {
 
     return response.data;
   } catch (error) {
-    console.error("Login error:", error);
     throw error;
   }
 }
@@ -91,48 +85,27 @@ export async function logout() {
     );
     return response.data;
   } catch (error) {
-    console.error("Logout error:", error);
     throw error;
   }
 }
 
 // User APIs
 export function useGetProfile() {
-  console.log("🔧 [UserAPI] useGetProfile hook initialized");
-  const result = useSWR<ProfileResponse, Error>(
+  return useSWR<ProfileResponse, Error>(
     `${API_BASE_URL}/users/profile`,
     (url: string) => fetcher<ProfileResponse>(url),
     {
       revalidateOnFocus: false,
-      onSuccess: (data) => {
-        console.log("✅ [UserAPI] useGetProfile SUCCESS:", data);
-      },
-      onError: (error) => {
-        console.error("❌ [UserAPI] useGetProfile ERROR:", error);
-      }
     }
   );
-  console.log("🔧 [UserAPI] useGetProfile state:", {
-    isLoading: result.isLoading,
-    hasData: !!result.data,
-    hasError: !!result.error
-  });
-  return result;
 }
 
 export function useGetSubscription() {
-  console.log("🔧 [UserAPI] useGetSubscription hook initialized");
   return useSWR<SubscriptionStatus>(
     `${API_BASE_URL}/users/subscription`,
     (url) => fetcher<SubscriptionStatus>(url),
     {
       revalidateOnFocus: false,
-      onSuccess: (data) => {
-        console.log("✅ [UserAPI] useGetSubscription SUCCESS:", data);
-      },
-      onError: (error) => {
-        console.error("❌ [UserAPI] useGetSubscription ERROR:", error);
-      }
     }
   );
 }
@@ -146,7 +119,6 @@ export async function registerHWID(hwid: string) {
     );
     return response.data;
   } catch (error) {
-    console.error("Register HWID error:", error);
     throw error;
   }
 }
@@ -160,23 +132,19 @@ export async function banUser(userId: string) {
     );
     return response.data;
   } catch (error) {
-    console.error("Ban user error:", error);
     throw error;
   }
 }
 
 export async function refreshPatreonStatus() {
-  console.log("🔄 [UserAPI] refreshPatreonStatus called");
   try {
     const response = await axios.post(
       `${API_BASE_URL}/users/refresh-patreon`,
       {},
       { withCredentials: true }
     );
-    console.log("✅ [UserAPI] refreshPatreonStatus SUCCESS:", response.data);
     return response.data;
   } catch (error) {
-    console.error("❌ [UserAPI] refreshPatreonStatus ERROR:", error);
     throw error;
   }
 }
@@ -191,7 +159,6 @@ export async function createCheckoutSession(duration: number) {
     );
     return response.data;
   } catch (error) {
-    console.error("Create checkout error:", error);
     throw error;
   }
 }
