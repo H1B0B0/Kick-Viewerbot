@@ -386,6 +386,8 @@ def find_available_port(preferred_ports, host='0.0.0.0'):
     """Trouve un port disponible parmi la liste fournie"""
     import socket
 
+    logger.info(f"🔍 Searching for available port among: {preferred_ports}")
+    
     for port in preferred_ports:
         try:
             # Tester si le port est disponible
@@ -395,12 +397,17 @@ def find_available_port(preferred_ports, host='0.0.0.0'):
             sock.close()
 
             if result != 0:  # Port disponible
+                logger.info(f"✅ Port {port} is available - Selected!")
                 return port
+            else:
+                logger.info(f"❌ Port {port} is already in use - Trying next...")
         except Exception as e:
             logger.debug(f"Error testing port {port}: {e}")
+            logger.info(f"⚠️  Port {port} - Test error - Trying next...")
             continue
 
     # Si aucun port de la liste n'est disponible, laisser le système en choisir un
+    logger.error("❌ NO available port found in the list!")
     return None
 
 if __name__ == '__main__':
@@ -426,12 +433,27 @@ if __name__ == '__main__':
     # Trouver un port disponible
     if args.port:
         selected_port = args.port
-        logger.info(f"Using specified port: {selected_port}")
+        logger.info(f"📌 Using specified port: {selected_port}")
     else:
+        logger.info("🔄 No port specified, searching for available port...")
         selected_port = find_available_port(AVAILABLE_PORTS, args.host)
         if selected_port is None:
-            logger.error("Could not find any available port from the configured list!")
-            print("❌ Aucun port disponible trouvé. Veuillez fermer certaines applications et réessayer.")
+            logger.error("❌ Could not find any available port from the configured list!")
+            print("\n" + "=" * 70)
+            print("❌ ERROR: No available ports found")
+            print("=" * 70)
+            print(f"Tested ports: {AVAILABLE_PORTS}")
+            print("\n💡 Troubleshooting steps:")
+            print("  1. Close applications using these ports (check Task Manager)")
+            print("  2. Close browser tabs connected to the bot (Chrome/Firefox/Edge)")
+            print("  3. Kill any hung Python processes: taskkill /F /IM python.exe")
+            print("  4. Restart your computer if the issue persists")
+            print("\n🔍 Common causes:")
+            print("  - Previous bot instance still running")
+            print("  - Browser keeping WebSocket connection alive")
+            print("  - Antivirus/Firewall blocking ports")
+            print("  - Another service using the same ports")
+            print("=" * 70 + "\n")
             sys.exit(1)
         logger.info(f"Found available port: {selected_port}")
 
