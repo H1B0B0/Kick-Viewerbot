@@ -12,18 +12,19 @@ export interface SubscriptionStatus {
   plan?: string;
 }
 
-interface ProfileUser {
-  _id?: string; // Alternative MongoDB ID field (for backward compatibility)
+export interface ProfileUser {
+  id?: string; // MongoDB ID returned by the API (check API response)
+  _id?: string; // Alternative MongoDB ID field (check API response)
   username: string;
+  email?: string;
   TwitchUsername?: string;
   subscription?: string;
   isSubscribed?: boolean;
   subscriptionEndsAt?: string;
   isBanned?: boolean;
-  patreonId?: string;
-  patreonAccessToken?: string; // Stored for automatic sync
-  patreonRefreshToken?: string; // Stored for automatic sync
-  patreonTokenExpiresAt?: string; // Token expiration date
+  hwid?: string;
+  patreonId?: string; // Set when Patreon account is linked
+  // Note: patreonAccessToken and patreonRefreshToken are NEVER exposed to frontend for security
   [key: string]: unknown;
 }
 

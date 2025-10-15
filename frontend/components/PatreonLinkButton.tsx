@@ -79,19 +79,25 @@ export function PatreonLinkButton() {
 
   // Logged in but Patreon not linked - include userId in URL
   if (!hasPatreonLinked) {
-    // MongoDB returns _id field
     const user = profile?.user;
-    const userId = user?._id || (user as any)?._id || (user as any)?.id;
 
-    // Debug log to verify userId is correctly retrieved
-    console.log("[PatreonLinkButton] Full profile object:", profile);
-    console.log("[PatreonLinkButton] User object:", user);
-    console.log("[PatreonLinkButton] User keys:", user ? Object.keys(user) : 'no user');
-    console.log("[PatreonLinkButton] userId extracted:", userId);
+    // Try both 'id' and '_id' fields (API can return either)
+    const userId = user?.id || user?._id;
+
+    // Detailed debug logs to diagnose the issue
+    console.log("[PatreonLinkButton] ==================== DEBUG START ====================");
+    console.log("[PatreonLinkButton] Full profile object:", JSON.stringify(profile, null, 2));
+    console.log("[PatreonLinkButton] User object:", JSON.stringify(user, null, 2));
+    console.log("[PatreonLinkButton] Available user keys:", user ? Object.keys(user) : 'NO USER OBJECT');
+    console.log("[PatreonLinkButton] user.id value:", user?.id);
+    console.log("[PatreonLinkButton] user._id value:", user?._id);
+    console.log("[PatreonLinkButton] Final userId extracted:", userId);
+    console.log("[PatreonLinkButton] userId type:", typeof userId);
+    console.log("[PatreonLinkButton] ==================== DEBUG END ====================");
 
     if (!userId) {
       console.error(
-        "[PatreonLinkButton] ⚠️ No userId found! User must be logged in to link Patreon."
+        "[PatreonLinkButton] ❌ CRITICAL ERROR: No userId found! Cannot link Patreon without user ID."
       );
       return (
         <Button
