@@ -71,11 +71,6 @@ export function PatreonLoginButton() {
           </svg>
           Link Patreon Account
         </Button>
-        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-          <p className="text-xs text-center text-blue-600 dark:text-blue-400">
-            💡 Link your Patreon to unlock premium features
-          </p>
-        </div>
       </div>
     );
   }

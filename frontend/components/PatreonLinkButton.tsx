@@ -41,7 +41,7 @@ export function PatreonLinkButton() {
           </svg>
         }
       >
-        Se connecter avec Patreon
+        Connect with Patreon
       </Button>
     );
   }
@@ -49,6 +49,8 @@ export function PatreonLinkButton() {
   // Logged in but Patreon not linked - include userId in URL
   if (!hasPatreonLinked) {
     const userId = profile?.user?.id;
+    console.log("User ID for linking:", userId);
+    console.log(profile);
     const linkUrl = userId
       ? `https://api.velbots.shop/payments/patreon/redirect?link=true&userId=${userId}`
       : "https://api.velbots.shop/payments/patreon/redirect?link=true";
@@ -72,7 +74,7 @@ export function PatreonLinkButton() {
           </svg>
         }
       >
-        Lier mon compte Patreon
+        Link my Patreon account
       </Button>
     );
   }
