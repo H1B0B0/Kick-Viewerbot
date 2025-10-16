@@ -121,70 +121,61 @@ jobs:
           prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
 
           body: |
-            # 🚀 KickViewerBOT - Game-Changing Stability Update
+            # 🚀 KickViewerBOT — Stability Update & Deployment Notes
 
-            ## ✨ What's New?
+            ## ✨ Key Highlights
 
-            ### 🔥 Introducing Stability Mode - The Ultimate Viewer Bot Experience
+            ### 🔥 Stability Mode
 
-            **Stability Mode is a revolutionary approach to viewer botting that changes everything:**
+            Stability Mode remains the core of this release: it maintains long-lived WebSocket connections and emulates real browser behavior to stabilize viewer counts.
 
-            - **🎯 Persistent Connections:** Unlike traditional bots that reconnect constantly, Stability Mode maintains long-lived WebSocket connections that stay active for hours
-            - **📈 Rock-Solid Viewer Counts:** Say goodbye to fluctuating numbers! Your viewer count stays consistent and stable, just like real viewers
-            - **🛡️ Platform-Friendly:** Mimics real user behavior with proper handshakes, tracking events, and ping/pong cycles - exactly how Kick expects it
-            - **⚡ Set It & Forget It:** Start the bot and walk away - connections maintain themselves with automatic health monitoring and reconnection
-            - **💪 Premium Feature:** Available exclusively for Active, Premium, and Lifetime subscribers
-
-            **How Stability Mode Works:**
-            - Sends proper `channel_handshake` messages every 15 seconds (just like real browsers)
-            - Maintains viewer tracking with `user_event` messages every 30 seconds
-            - Keeps connections alive with smart ping/pong cycles
-            - Auto-recovers from disconnections with exponential backoff
-            - Monitors connection health and maintains 90% uptime target
+            - 🎯 Persistent connections: regular handshakes and session maintenance
+            - 📈 Stable viewer counts: periodic tracking events
+            - 🛡️ Platform-friendly behavior: ping/pong, user_event, and error handling
+            - ⚡ "Set & forget" mode with monitoring and automatic reconnection
 
             ### 🔧 Smart Port Management
 
-            - **Automatic Port Discovery:** Bot automatically finds an available port - no more "port already in use" errors!
-            - **Crystal-Clear Error Messages:** If something goes wrong, you get helpful troubleshooting steps
-            - **Browser Compatibility:** Improved handling of browser WebSocket connections
-            - **Multi-Instance Support:** Run multiple bots without conflicts
+            We've simplified deployment: the executable no longer requires administrator privileges. We no longer use the reserved ports 80 and 443 that required elevated rights.
 
-            ### 🐛 Bug Fixes & Improvements
+            - No UAC elevation required for the Windows executable
+            - The bot now uses non-reserved ports and automatically discovers a free port
+            - Fewer permission and firewall issues during installation and runtime
 
-            - ✅ Fixed viewer count dropping after 1 minute (now sends proper tracking events)
-            - ✅ Enhanced WebSocket message handling with full Kick protocol support
-            - ✅ Improved connection stability with better error recovery
-            - ✅ Added comprehensive logging for debugging
-            - ✅ Better proxy rotation and token management
-            - ✅ Frontend correctly displays "Active Connections" in Stability Mode
+            ### 🐛 Fixes & Improvements
+
+            - ✅ Fixed the viewer count dropping after 1 minute (improved tracking)
+            - ✅ Better handling of WebSocket messages and Kick protocol
+            - ✅ Improved resilience with exponential backoff
+            - ✅ Enhanced logging for easier debugging
+            - ✅ Improved proxy rotation and token management
+            - ✅ Frontend: correct display of "Active Connections"
 
             ---
+
+            ## 📥 Deployment Notes (Recommended Practices)
+
+            1. The provided executable no longer needs to run as administrator on Windows: simply run `KickViewerBOT.exe` as a standard user.
+            2. If you're behind a strict firewall or network endpoint, allow the binary to establish outbound connections on the configured ports (by default, the bot selects a non-reserved port).
+            3. Check your OS/antivirus rules if the executable is blocked on first run.
 
             ## 📥 Getting Started
 
-            ### For Stability Mode:
-            1. Download and run the bot
-            2. Enable "Stability Mode" in settings (requires active support with patreon)
-            3. Set your desired thread count
-            4. Watch your viewer count stabilize and stay there! 🎯
-
-            ### For Standard Mode:
-            - Works exactly as before with short-lived connections
-            - Perfect for quick boosts or testing
+            - For Stability Mode: download and run the executable as a standard user, enable Stability Mode in settings, and adjust thread count.
+            - For Standard Mode: works as before with short-lived connections.
 
             ---
 
-            ## 💡 Why This Update Matters
+            ## 💡 Why this update matters
 
-            **Before:** Viewer counts would spike, then drop, then spike again - inconsistent and suspicious.
-
-            **After:** Smooth, stable viewer counts that look completely natural. Stability Mode makes your stream look genuinely popular! 🌟
+            - Before: elevation was required to bind to reserved ports (caused deployment friction).
+            - Now: simplified install and run experience, reduced friction for users.
 
             ---
 
-            **Need help?** [Open an issue](https://github.com/H1B0B0/Kick-Viewerbot/issues) or join our Discord community!
+            **Need help?** Open an issue: https://github.com/H1B0B0/Kick-Viewerbot/issues
 
-            *Thank you for supporting KickViewerBOT! This is our biggest stability improvement yet.* 🙏
+            *Thanks for your support — this update makes the bot easier to deploy and more robust.* 🙏
 
           draft: false
 

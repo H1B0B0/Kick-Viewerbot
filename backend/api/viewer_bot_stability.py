@@ -22,7 +22,7 @@ try:
     HAS_TLS_CLIENT = True
 except ImportError:
     HAS_TLS_CLIENT = False
-    logging.warning("tls_client not available, using requests (may be detected by Kick)")
+    logging.warning("tls_client not available, using requests")
 
 # Add this near the top of the file, after imports
 logging.getLogger("urllib3").setLevel(logging.ERROR)
