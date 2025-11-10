@@ -5,13 +5,23 @@ import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import "react-toastify/dist/ReactToastify.css";
-import React, { useState } from "react";
-import { login } from "../functions/UserAPI";
+import React, { useState, useEffect } from "react";
+import { login, useGetProfile } from "../functions/UserAPI";
 import { PatreonLoginButton } from "@/components/PatreonLoginButton";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { data: profile, isLoading: isProfileLoading } = useGetProfile();
+  const router = useRouter();
+
+  // Redirect to home if user is already logged in
+  useEffect(() => {
+    if (!isProfileLoading && profile?.user) {
+      router.push("/");
+    }
+  }, [profile, isProfileLoading, router]);
 
   async function handleLogin(formData: FormData) {
     try {

@@ -4,9 +4,9 @@ import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { register } from "../functions/UserAPI";
+import { register, useGetProfile } from "../functions/UserAPI";
 import { RegisterData } from "../types/User";
 
 export default function RegisterPage() {
@@ -25,6 +25,14 @@ export default function RegisterPage() {
     confirmPassword?: string;
   }>({});
   const router = useRouter();
+  const { data: profile, isLoading: isProfileLoading } = useGetProfile();
+
+  // Redirect to home if user is already logged in
+  useEffect(() => {
+    if (!isProfileLoading && profile?.user) {
+      router.push("/");
+    }
+  }, [profile, isProfileLoading, router]);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {
