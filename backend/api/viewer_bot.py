@@ -201,28 +201,46 @@ class ViewerBot:
             if HAS_TLS_CLIENT:
                 try:
                     s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
+                    
+                    # Use more realistic headers
                     s.headers.update({
                         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
                         'Accept-Language': 'en-US,en;q=0.9',
+                        'Accept-Encoding': 'gzip, deflate, br',
                         'Connection': 'keep-alive',
                         'Sec-Fetch-Dest': 'document',
                         'Sec-Fetch-Mode': 'navigate',
                         'Sec-Fetch-Site': 'none',
                         'Sec-Fetch-User': '?1',
                         'Upgrade-Insecure-Requests': '1',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
                         'sec-ch-ua-mobile': '?0',
                         'sec-ch-ua-platform': '"Windows"',
                     })
                     
-                    # Visit main page first to get session
-                    session_resp = s.get("https://kick.com")
-                    logging.debug(f"TLS client session request status: {session_resp.status_code}")
+                    # Visit main page first to get session and cookies
+                    try:
+                        session_resp = s.get("https://kick.com", timeout_seconds=15)
+                        logging.debug(f"TLS client session request status: {session_resp.status_code}")
+                    except Exception as e:
+                        logging.warning(f"Failed to visit main page: {e}")
+
+                    # Small delay to mimic human behavior
+                    time.sleep(random.uniform(0.5, 1.5))
                     
-                    # Add client token and get WebSocket token
-                    s.headers["X-CLIENT-TOKEN"] = CLIENT_TOKEN
-                    response = s.get('https://websockets.kick.com/viewer/v1/token')
+                    # Update headers for API request
+                    s.headers.update({
+                        'Accept': 'application/json, text/plain, */*',
+                        'Referer': 'https://kick.com/',
+                        'X-CLIENT-TOKEN': CLIENT_TOKEN,
+                        'Sec-Fetch-Dest': 'empty',
+                        'Sec-Fetch-Mode': 'cors',
+                        'Sec-Fetch-Site': 'same-origin',
+                    })
+                    
+                    # Get WebSocket token
+                    response = s.get('https://websockets.kick.com/viewer/v1/token', timeout_seconds=10)
                     
                     logging.debug(f"TLS client token endpoint status: {response.status_code}")
                     
@@ -230,20 +248,26 @@ class ViewerBot:
                         data = response.json()
                         token = data.get("data", {}).get("token")
                         if token:
-                            logging.debug(f"Retrieved WebSocket token with tls_client: {token[:20]}...")
+                            logging.info(f"✓ Retrieved fresh WebSocket token")
                             return token
+                        else:
+                            logging.error("Token endpoint returned 200 but no token in response")
+                    elif response.status_code == 403:
+                        logging.error("Token endpoint returned 403 - CLIENT_TOKEN may be invalid or IP blocked")
                     else:
                         logging.debug(f"TLS client token request failed: {response.status_code}")
                         
                 except Exception as e:
                     logging.debug(f"tls_client token retrieval failed: {e}")
+            else:
+                logging.warning("tls_client not available - this may result in detection by Kick")
             
             # Method 2: Fallback to requests method
             session = requests.Session()
             
             # Step 1: First visit Kick.com to get session cookies
             initial_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -254,14 +278,23 @@ class ViewerBot:
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
                 'Sec-Fetch-User': '?1',
+                'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
             }
             
-            session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
-            logging.debug(f"Initial session request status: {session_resp.status_code}")
+            try:
+                session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
+                if session_resp.status_code != 200:
+                    logging.warning(f"Initial session request status: {session_resp.status_code} - proceeding to token retrieval anyway")
+            except Exception as e:
+                logging.warning(f"Initial session request failed: {e}")
+            
+            time.sleep(random.uniform(0.5, 1.5))
             
             # Step 2: Get WebSocket token with client token
             token_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'application/json, text/plain, */*',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -273,7 +306,7 @@ class ViewerBot:
                 'Sec-Fetch-Mode': 'cors',
                 'Sec-Fetch-Site': 'same-origin',
                 'X-CLIENT-TOKEN': CLIENT_TOKEN,
-                'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',
             }
@@ -287,7 +320,7 @@ class ViewerBot:
             
             for endpoint in token_endpoints:
                 try:
-                    response = session.get(endpoint, headers=token_headers, timeout=10)
+                    response = session.get(endpoint, headers=token_headers, timeout=15)
                     logging.debug(f"Token endpoint {endpoint} status: {response.status_code}")
                     
                     if response.status_code == 200:
@@ -536,9 +569,10 @@ class ViewerBot:
         self.update_status('stopping', 'Stopping bot...')
         self.should_stop = True
         
+        # Stop all threads immediately
         for thread in self.processes:
             if thread.is_alive():
-                thread.join(timeout=1)
+                thread.join(timeout=0.1)
         
         # Vider la liste des threads
         self.processes.clear()
@@ -775,43 +809,70 @@ class ViewerBot:
                           proxy_count=len(self.all_proxies), 
                           startup_progress=100)
         
-        while True:
-            if len(self.all_proxies) == 0:
-                console.print("[bold red]No proxies available. Stopping bot.[/bold red]")
-                break
+        try:
+            while not self.should_stop:
+                if len(self.all_proxies) == 0:
+                    console.print("[bold red]No proxies available. Stopping bot.[/bold red]")
+                    break
 
-            elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
+                elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
 
-            for i in range(0, int(self.nb_of_threads)):
-                acquired = self.thread_semaphore.acquire()
-                if acquired and len(self.all_proxies) > 0:  # Vérifier à nouveau avant de créer le thread
-                    threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
-                    self.processes.append(threaded)
-                    threaded.daemon = True
-                    threaded.start()
-                elif acquired:
-                    self.thread_semaphore.release()  # Relâcher le sémaphore si on ne peut pas créer de thread
+                # Try to spawn threads up to the limit, but don't block
+                # This allows us to check self.should_stop frequently
+                for i in range(0, int(self.nb_of_threads)):
+                    if self.should_stop:
+                        break
+                        
+                    # Use non-blocking acquire
+                    if self.thread_semaphore.acquire(blocking=False):
+                        if len(self.all_proxies) > 0:
+                            try:
+                                proxy_data = self.all_proxies[random.randrange(len(self.all_proxies))]
+                                threaded = Thread(target=self.open_url, args=(proxy_data,))
+                                self.processes.append(threaded)
+                                threaded.daemon = True
+                                threaded.start()
+                            except Exception as e:
+                                logging.error(f"Error starting thread: {e}")
+                                self.thread_semaphore.release()
+                        else:
+                            self.thread_semaphore.release()
+                    else:
+                        # If we can't acquire, we are at max threads
+                        break
 
-            if elapsed_seconds >= 300 and self.proxy_imported == False:
-                # Refresh the proxies after 300 seconds (5 minutes)
-                start = datetime.datetime.now()
-                self.proxyrefreshed = False
-                proxies = self.get_proxies()
-                # Update all_proxies with new proxies
-                self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
-                logging.debug(f"Proxies refreshed: {self.all_proxies}")
-                elapsed_seconds = 0
+                if elapsed_seconds >= 300 and self.proxy_imported == False:
+                    # Refresh the proxies after 300 seconds (5 minutes)
+                    start = datetime.datetime.now()
+                    self.proxyrefreshed = False
+                    proxies = self.get_proxies()
+                    if proxies:
+                        # Update all_proxies with new proxies
+                        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
+                        logging.debug(f"Proxies refreshed: {len(self.all_proxies)} proxies available")
+                        elapsed_seconds = 0
 
-            if self.should_stop:
-                logging.debug("Stopping main loop")
-                # Relâcher tous les sémaphores restants
-                for _ in range(self.nb_of_threads):
-                    try:
-                        self.thread_semaphore.release()
-                    except ValueError:
-                        pass  # Ignore si déjà relâché
-                break
+                # Prevent CPU hogging
+                time.sleep(1)
+                
+        except Exception as e:
+            logging.error(f"Critical error in main loop: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
+            self.should_stop = True
+            
+        finally:
+            logging.debug("Stopping main loop and cleaning up")
+            # Relâcher tous les sémaphores restants pour éviter les blocages
+            for _ in range(self.nb_of_threads):
+                try:
+                    self.thread_semaphore.release()
+                except ValueError:
+                    pass
+            
+            self.stop()
 
         for t in self.processes:
-            t.join()
+            if t.is_alive():
+                t.join(timeout=0.1)
         console.print("[bold red]Bot main loop ended[/bold red]")

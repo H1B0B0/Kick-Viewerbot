@@ -234,15 +234,18 @@ class ViewerBot_Stability:
                         'Sec-Fetch-Site': 'none',
                         'Sec-Fetch-User': '?1',
                         'Upgrade-Insecure-Requests': '1',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                        'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
                         'sec-ch-ua-mobile': '?0',
                         'sec-ch-ua-platform': '"Windows"',
                     })
                     
                     # Visit main page first to get session and cookies
-                    session_resp = s.get("https://kick.com")
-                    logging.debug(f"TLS client session request status: {session_resp.status_code}")
+                    try:
+                        session_resp = s.get("https://kick.com", timeout_seconds=15)
+                        logging.debug(f"TLS client session request status: {session_resp.status_code}")
+                    except Exception as e:
+                        logging.warning(f"Failed to visit main page: {e}")
                     
                     if session_resp.status_code != 200:
                         logging.warning(f"Failed to establish initial session (Status {session_resp.status_code}), attempting to get token directly...")
@@ -261,7 +264,7 @@ class ViewerBot_Stability:
                     })
                     
                     # Get WebSocket token
-                    response = s.get('https://websockets.kick.com/viewer/v1/token')
+                    response = s.get('https://websockets.kick.com/viewer/v1/token', timeout_seconds=10)
                     
                     logging.debug(f"TLS client token endpoint status: {response.status_code}")
                     
@@ -288,7 +291,7 @@ class ViewerBot_Stability:
             
             # Step 1: First visit Kick.com to get session cookies
             initial_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -299,17 +302,23 @@ class ViewerBot_Stability:
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
                 'Sec-Fetch-User': '?1',
+                'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+                'sec-ch-ua-mobile': '?0',
+                'sec-ch-ua-platform': '"Windows"',
             }
             
-            session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
-            if session_resp.status_code != 200:
-                logging.warning(f"Initial session request status: {session_resp.status_code} - proceeding to token retrieval anyway")
+            try:
+                session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
+                if session_resp.status_code != 200:
+                    logging.warning(f"Initial session request status: {session_resp.status_code} - proceeding to token retrieval anyway")
+            except Exception as e:
+                logging.warning(f"Initial session request failed: {e}")
             
             time.sleep(random.uniform(0.5, 1.5))
             
             # Step 2: Get WebSocket token with client token
             token_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
                 'Accept': 'application/json, text/plain, */*',
                 'Accept-Language': 'en-US,en;q=0.9',
                 'Accept-Encoding': 'gzip, deflate, br',
@@ -321,7 +330,7 @@ class ViewerBot_Stability:
                 'Sec-Fetch-Mode': 'cors',
                 'Sec-Fetch-Site': 'same-origin',
                 'X-CLIENT-TOKEN': CLIENT_TOKEN,
-                'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                'sec-ch-ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
                 'sec-ch-ua-mobile': '?0',
                 'sec-ch-ua-platform': '"Windows"',
             }
@@ -335,7 +344,7 @@ class ViewerBot_Stability:
             
             for endpoint in token_endpoints:
                 try:
-                    response = session.get(endpoint, headers=token_headers, timeout=10)
+                    response = session.get(endpoint, headers=token_headers, timeout=15)
                     logging.debug(f"Token endpoint {endpoint} status: {response.status_code}")
                     
                     if response.status_code == 200:
@@ -586,14 +595,23 @@ class ViewerBot_Stability:
         self.update_status('stopping', 'Stopping bot...')
         self.should_stop = True
         
+        # Stop all threads immediately
         for thread in self.processes:
             if thread.is_alive():
-                thread.join(timeout=1)
+                # We can't force kill threads in Python easily, but we can set the flag
+                # and wait a short time
+                thread.join(timeout=0.1)
         
         # Vider la liste des threads
         self.processes.clear()
         self.active_threads = 0
         self.all_proxies = []
+        
+        # Reset specific stability variables
+        if hasattr(self, 'active_connections'):
+            with self.active_connections_lock:
+                self.active_connections = 0
+        
         self.update_status('stopped', 'Bot has been stopped')
         logging.debug("Bot stopped and all threads cleaned up")
 
@@ -1014,46 +1032,68 @@ class ViewerBot_Stability:
                           proxy_count=len(self.all_proxies), 
                           startup_progress=100)
         
-        # Main monitoring loop
-        while not self.should_stop:
-            current_time = time.time()
-            elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
+        try:
+            while not self.should_stop:
+                current_time = time.time()
+                elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
 
-            # Check connection health every 10 seconds
-            if current_time - last_connection_check >= 10:
-                last_connection_check = current_time
-                
-                # Clean up dead threads
-                self.processes = [t for t in self.processes if t.is_alive()]
-                active_count = len(self.processes)
-                
-                logging.debug(f"Active connections: {active_count}/{self.nb_of_threads}")
-                
-                # Maintain minimum connection count - restart if needed with rate limiting
-                if active_count < self.min_active_connections:
-                    needed = int(self.nb_of_threads) - active_count
-                    logging.info(f"Restarting {needed} connections to maintain stability")
+                # Check connection health every 10 seconds
+                if current_time - last_connection_check >= 10:
+                    last_connection_check = current_time
                     
-                    for i in range(needed):
-                        if self.thread_semaphore.acquire(blocking=False):
-                            if len(self.all_proxies) > 0:
-                                threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
-                                self.processes.append(threaded)
-                                threaded.daemon = True
-                                threaded.start()
-                            else:
-                                self.thread_semaphore.release()
+                    # Clean up dead threads
+                    self.processes = [t for t in self.processes if t.is_alive()]
+                    active_count = len(self.processes)
+                    
+                    logging.debug(f"Active connections: {active_count}/{self.nb_of_threads}")
+                    
+                    # Maintain minimum connection count - restart if needed with rate limiting
+                    if active_count < self.min_active_connections:
+                        needed = int(self.nb_of_threads) - active_count
+                        if needed > 0:
+                            logging.info(f"Restarting {needed} connections to maintain stability")
+                            
+                            for i in range(needed):
+                                if self.should_stop:
+                                    break
+                                    
+                                if self.thread_semaphore.acquire(blocking=False):
+                                    if len(self.all_proxies) > 0:
+                                        try:
+                                            proxy_data = self.all_proxies[random.randrange(len(self.all_proxies))]
+                                            threaded = Thread(target=self.open_url, args=(proxy_data,))
+                                            self.processes.append(threaded)
+                                            threaded.daemon = True
+                                            threaded.start()
+                                        except Exception as e:
+                                            logging.error(f"Error starting thread: {e}")
+                                            self.thread_semaphore.release()
+                                    else:
+                                        self.thread_semaphore.release()
 
-            # Refresh proxies periodically if not using imported file
-            if elapsed_seconds >= 300 and self.proxy_imported == False:
-                # Refresh the proxies after 300 seconds (5 minutes)
-                start = datetime.datetime.now()
-                self.proxyrefreshed = False
-                proxies = self.get_proxies()
-                # Update all_proxies with new proxies
-                self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
-                logging.debug(f"Proxies refreshed: {len(self.all_proxies)} proxies available")
-                elapsed_seconds = 0
+                # Refresh proxies periodically if not using imported file
+                if elapsed_seconds >= 300 and self.proxy_imported == False:
+                    # Refresh the proxies after 300 seconds (5 minutes)
+                    start = datetime.datetime.now()
+                    self.proxyrefreshed = False
+                    proxies = self.get_proxies()
+                    if proxies:
+                        # Update all_proxies with new proxies
+                        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': ""} for p in proxies]
+                        logging.debug(f"Proxies refreshed: {len(self.all_proxies)} proxies available")
+                        elapsed_seconds = 0
+                
+                # Prevent CPU hogging
+                time.sleep(1)
+                
+        except Exception as e:
+            logging.error(f"Critical error in main loop: {e}")
+            import traceback
+            logging.error(traceback.format_exc())
+            # Force stop on critical error
+            self.should_stop = True
+        finally:
+            self.stop()
 
 
         # Cleanup on stop
