@@ -3,10 +3,8 @@ import "@/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import ThemeProvider from "../components/ThemeProvider";
 import ThemeSwitcher from "../components/ThemeSwitcher";
-import ModernLoader from "../components/ModernLoader";
 import ApiHealthProvider from "../components/ApiHealthProvider";
 import UpdateProvider from "../components/UpdateProvider";
-import { useEffect, useState } from "react";
 // import { Button } from "@heroui/button"; // Removed performance button as Spline is gone
 
 export default function RootLayout({
@@ -14,24 +12,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [isAppLoading, setIsAppLoading] = useState(false);
-
-  useEffect(() => {
-    // Check if the app has already been loaded in this session
-    const hasLoadedBefore = sessionStorage.getItem("appHasLoaded");
-
-    if (!hasLoadedBefore) {
-      // First time loading in this session - show loader
-      setIsAppLoading(true);
-    }
-  }, []);
-
-  const handleLoadComplete = () => {
-    setIsAppLoading(false);
-    // Mark app as loaded for this session
-    sessionStorage.setItem("appHasLoaded", "true");
-  };
-
   return (
     <html suppressHydrationWarning>
       <head>
@@ -47,8 +27,6 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen bg-background text-foreground antialiased selection:bg-green-500/30 selection:text-green-500" suppressHydrationWarning>
-        {/* Global app loader - only shows once per session */}
-        {isAppLoading && <ModernLoader onLoadComplete={handleLoadComplete} />}
 
         <ThemeProvider>
           {/* Background Elements - Replaced Spline with CSS Grid/Mesh */}
