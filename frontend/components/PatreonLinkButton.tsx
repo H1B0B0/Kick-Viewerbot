@@ -79,7 +79,7 @@ export function PatreonLinkButton() {
     return (
       <Button
         as="a"
-        href="https://www.patreon.com/velbots"
+        href="https://www.patreon.com/HIBO"
         target="_blank"
         rel="noopener noreferrer"
         size="sm"

@@ -125,7 +125,7 @@ export function PatreonLoginButton() {
           <Button
             size="sm"
             className="w-full bg-[#FF424D] text-white hover:bg-[#E8384C]"
-            onPress={() => window.open("https://www.patreon.com/velbots", "_blank")}
+            onPress={() => window.open("https://www.patreon.com/HIBO", "_blank")}
           >
             Subscribe
           </Button>
