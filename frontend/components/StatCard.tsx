@@ -102,7 +102,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
     } else if (title.toLowerCase().includes("prox")) {
       return (
         <svg
-          className="w-4 h-4 text-blue-500 opacity-70"
+          className="w-4 h-4 text-green-500 opacity-70"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -119,7 +119,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
     } else if (title.toLowerCase().includes("request")) {
       return (
         <svg
-          className="w-4 h-4 text-purple-500 opacity-70"
+          className="w-4 h-4 text-lime-500 opacity-70"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -144,7 +144,6 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
         "border-none glass-card transition-all duration-300 h-full w-full",
         isRequestCard && isIncreasing && "ring-2 ring-green-500/50"
       )}
-      shadow="sm"
     >
       <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full relative overflow-hidden">
         {/* Subtle background pattern */}
@@ -190,7 +189,7 @@ export function StatCard({ title, value, total, increment }: StatCardProps) {
               )}
             >
               {title.toLowerCase().includes("thread") ||
-              title.toLowerCase().includes("requests") ? (
+                title.toLowerCase().includes("requests") ? (
                 <AnimatedCounter value={value} />
               ) : (
                 value.toLocaleString()

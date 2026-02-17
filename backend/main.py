@@ -37,7 +37,8 @@ except ImportError:
     ViewerBot = None
     ViewerBot_Stability = None
 
-ALLOWED_STABILITY_SUBSCRIPTIONS = {'active', 'premium', 'lifetime'}
+ALLOWED_STABILITY_SUBSCRIPTIONS = {'active', 'premium', 'lifetime', 'development', 'dev'}
+IS_DEV_MODE = os.getenv("KICK_BOT_DEV_MODE", "false").lower() == "true" or os.getenv("NODE_ENV") == "development"
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'kick-viewer-bot-secret'
@@ -64,6 +65,22 @@ class BotManager:
         self.last_channel = None
         self.last_net_io = psutil.net_io_counters()
         self.last_net_io_time = time.time()
+        self.version = "unknown"
+        try:
+            import json
+            pkg_path = Path(__file__).parent / "frontend" / "package.json"
+            if not pkg_path.exists():
+                # Try parent if we're in backend/
+                pkg_path = Path(__file__).parent.parent / "frontend" / "package.json"
+                
+            if pkg_path.exists():
+                with open(pkg_path, 'r') as f:
+                    pkg_data = json.load(f)
+                    self.version = pkg_data.get("version", "unknown")
+            logger.info(f"Application version: {self.version}")
+        except Exception as e:
+            logger.warning(f"Could not load version from package.json: {e}")
+
         self.stability_mode = False
         self.config = {
             'threads': 0,
@@ -99,7 +116,9 @@ class BotManager:
         print(f"Starting bot: {channel_name}, threads: {threads}, stability: {stability_mode}")
 
         normalized_status = (subscription_status or '').lower()
-        if stability_mode and normalized_status not in ALLOWED_STABILITY_SUBSCRIPTIONS:
+        is_dev_request = normalized_status in ('development', 'dev') or IS_DEV_MODE
+        
+        if stability_mode and not is_dev_request and normalized_status not in ALLOWED_STABILITY_SUBSCRIPTIONS:
             logger.warning("Stability mode requested without valid subscription")
             return {
                 'success': False,
@@ -180,6 +199,7 @@ class BotManager:
                 'total_proxies': len(getattr(self.bot, 'all_proxies', [])) if self.bot else 0,
                 'alive_proxies': getattr(self.bot, 'alive_proxies', 0) if self.bot else 0,
                 'request_count': active_connections if is_stability else request_count,
+                'version': self.version,
                 'config': self.config,
                 'status': getattr(self.bot, 'status', {
                     'state': 'stopped' if not self.is_running else 'running',
@@ -532,11 +552,24 @@ def handle_kick_chat_status():
 # ============================================
 
 def stats_broadcast_task():
-    """Broadcast stats to all connected clients every 2 seconds"""
+    """Broadcast stats with optimized frequencies"""
+    last_system_update = 0
+    system_metrics = None
+    
     while True:
-        socketio.sleep(2)
+        socketio.sleep(1) # Frequency for bot stats
+        
         if bot_manager.is_running:
+            current_time = time.time()
             stats = bot_manager.get_stats()
+            
+            # Only update system metrics every 5 seconds to reduce load
+            if current_time - last_system_update >= 5 or system_metrics is None:
+                system_metrics = stats.get('system_metrics')
+                last_system_update = current_time
+            else:
+                stats['system_metrics'] = system_metrics
+                
             socketio.emit('stats_update', stats)
 
 # Start background task

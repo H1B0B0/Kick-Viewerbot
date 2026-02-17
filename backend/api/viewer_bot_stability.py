@@ -245,11 +245,10 @@ class ViewerBot_Stability:
                     logging.debug(f"TLS client session request status: {session_resp.status_code}")
                     
                     if session_resp.status_code != 200:
-                        logging.warning(f"Failed to establish session with Kick: {session_resp.status_code}")
-                        raise Exception("Session establishment failed")
-                    
-                    # Small delay to mimic human behavior
-                    time.sleep(0.5)
+                        logging.warning(f"Failed to establish initial session (Status {session_resp.status_code}), attempting to get token directly...")
+                    else:
+                        # Small delay to mimic human behavior
+                        time.sleep(random.uniform(0.5, 1.5))
                     
                     # Update headers for API request
                     s.headers.update({
@@ -303,13 +302,10 @@ class ViewerBot_Stability:
             }
             
             session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
-            logging.debug(f"Initial session request status: {session_resp.status_code}")
-            
             if session_resp.status_code != 200:
-                logging.error(f"Failed to establish session: {session_resp.status_code}")
-                return None
+                logging.warning(f"Initial session request status: {session_resp.status_code} - proceeding to token retrieval anyway")
             
-            time.sleep(0.5)
+            time.sleep(random.uniform(0.5, 1.5))
             
             # Step 2: Get WebSocket token with client token
             token_headers = {
@@ -659,14 +655,55 @@ class ViewerBot_Stability:
                 # Configure WebSocket connection with proxy if available
                 ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
                 
-                logging.info(f"[{connection_id}] Connecting to WebSocket...")
+                logging.info(f"[{connection_id}] Connecting to WebSocket via proxy...")
                 
-                # Connect to WebSocket (headers are automatically handled by websockets library)
-                async with websockets.connect(
-                    ws_url, 
-                    ping_interval=None, 
-                    ping_timeout=None
-                ) as websocket:
+                # Create proxy tunnel using python-socks
+                proxy_sock = None
+                try:
+                    from python_socks.async_.asyncio import Proxy
+                    from python_socks import ProxyType
+                    
+                    proxy_url = proxies.get('https') or proxies.get('http')
+                    if proxy_url:
+                        # Parse proxy type
+                        pt = proxy_type.lower()
+                        if pt == 'socks5':
+                            p_type = ProxyType.SOCKS5
+                        elif pt == 'socks4':
+                            p_type = ProxyType.SOCKS4
+                        else:
+                            p_type = ProxyType.HTTP
+                        
+                        # Parse proxy address (host:port or host:port:user:pass)
+                        parts = proxy_address.split(':')
+                        p_host = parts[0]
+                        p_port = int(parts[1])
+                        p_user = parts[2] if len(parts) >= 4 else None
+                        p_pass = parts[3] if len(parts) >= 4 else None
+                        
+                        proxy = Proxy(p_type, p_host, p_port, p_user, p_pass)
+                        proxy_sock = await proxy.connect(
+                            dest_host='websockets.kick.com',
+                            dest_port=443
+                        )
+                        logging.debug(f"[{connection_id}] Proxy tunnel established via {p_host}:{p_port}")
+                except Exception as proxy_err:
+                    logging.warning(f"[{connection_id}] Proxy tunnel failed ({proxy_err}), connecting directly")
+                    proxy_sock = None
+                
+                # Connect to WebSocket (through proxy tunnel or directly)
+                connect_kwargs = {
+                    'ping_interval': None,
+                    'ping_timeout': None,
+                }
+                if proxy_sock is not None:
+                    import ssl
+                    ssl_context = ssl.create_default_context()
+                    connect_kwargs['sock'] = proxy_sock
+                    connect_kwargs['ssl'] = ssl_context
+                    connect_kwargs['server_hostname'] = 'websockets.kick.com'
+                
+                async with websockets.connect(ws_url, **connect_kwargs) as websocket:
                     logging.info(f"✅ [{connection_id}] WebSocket CONNECTED for channel {self.channel_id}")
                     retry_count = 0  # Reset retry count on successful connection
                     
@@ -768,15 +805,20 @@ class ViewerBot_Stability:
                                 response = await asyncio.wait_for(websocket.recv(), timeout=1.0)
                                 last_response_time = current_time
                                 
-                                # Log ALL responses from Kick to understand what's happening
-                                logging.info(f"🔵 [{connection_id}] Kick response: {response[:200]}")  # First 200 chars
-                                
-                                # Try to parse as JSON to see structure
+                                # Try to parse as JSON
                                 try:
                                     response_data = json.loads(response)
-                                    logging.info(f"🟢 [{connection_id}] Parsed response: {response_data}")
+                                    msg_type = response_data.get("type", "")
+                                    
+                                    # Respond to server pings (Pusher protocol) - CRITICAL for connection stability
+                                    if msg_type in ("pusher:ping", "ping"):
+                                        pong_msg = {"type": "pusher:pong" if "pusher" in msg_type else "pong"}
+                                        await websocket.send(json.dumps(pong_msg))
+                                        logging.debug(f"🏓 [{connection_id}] Responded to {msg_type} with pong")
+                                    else:
+                                        logging.debug(f"🟢 [{connection_id}] Kick message: {msg_type}")
                                 except json.JSONDecodeError:
-                                    logging.info(f"🟡 [{connection_id}] Non-JSON response: {response}")
+                                    logging.debug(f"🟡 [{connection_id}] Non-JSON response: {response[:100]}")
                                     
                             except asyncio.TimeoutError:
                                 # No response received - this is normal, continue
@@ -912,16 +954,8 @@ class ViewerBot_Stability:
         start = datetime.datetime.now()
         last_connection_check = time.time()
         
-        # Test token retrieval first
-        logging.info("Testing WebSocket token retrieval...")
-        test_token = self.get_websocket_token()
-        if not test_token:
-            self.update_status('error', '❌ Failed to get WebSocket token. Check CLIENT_TOKEN or network connection.')
-            logging.error("Cannot proceed without valid WebSocket token")
-            self.should_stop = True
-            return
-        else:
-            logging.info(f"✓ Successfully obtained WebSocket token")
+        # Token test removed to match Normal Mode behavior and avoid immediate startup failure
+        # Each worker thread will retrieve its own token independently.
         
         # Initialize channel ID first
         self.update_status('starting', 'Getting channel information...', startup_progress=10)

@@ -39,7 +39,20 @@ export function useUpdateChecker() {
           latestVersionClean: latest.tag_name.replace("v", ""),
         });
 
-        const isNewer = latest.tag_name.replace("v", "") > CURRENT_VERSION;
+        const compareVersions = (v1: string, v2: string) => {
+          const parts1 = v1.replace("v", "").split(".").map(Number);
+          const parts2 = v2.replace("v", "").split(".").map(Number);
+
+          for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+            const num1 = parts1[i] || 0;
+            const num2 = parts2[i] || 0;
+            if (num1 > num2) return 1;
+            if (num1 < num2) return -1;
+          }
+          return 0;
+        };
+
+        const isNewer = compareVersions(latest.tag_name, CURRENT_VERSION) > 0;
 
         console.log("Update check result:", {
           isNewer,

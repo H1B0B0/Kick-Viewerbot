@@ -82,7 +82,10 @@ export default function ViewerBotInterface() {
       ? subscription.plan.toLowerCase()
       : null;
 
+  const isDevMode = process.env.NODE_ENV === "development";
+
   const hasActiveSubscription =
+    isDevMode ||
     (backendSubscriptionStatus &&
       ALLOWED_STABILITY_SUBSCRIPTIONS.has(backendSubscriptionStatus)) ||
     (profileSubscriptionStatus &&
@@ -96,15 +99,16 @@ export default function ViewerBotInterface() {
       ALLOWED_STABILITY_SUBSCRIPTIONS.has(backendSubscriptionStatus)
       ? backendSubscriptionStatus
       : profileSubscriptionStatus &&
-          ALLOWED_STABILITY_SUBSCRIPTIONS.has(profileSubscriptionStatus)
+        ALLOWED_STABILITY_SUBSCRIPTIONS.has(profileSubscriptionStatus)
         ? profileSubscriptionStatus
         : subscriptionPlan &&
-            ALLOWED_STABILITY_SUBSCRIPTIONS.has(subscriptionPlan)
+          ALLOWED_STABILITY_SUBSCRIPTIONS.has(subscriptionPlan)
           ? subscriptionPlan
           : "active"
     : "none";
 
-  const isStabilityLocked = !hasActiveSubscription || isSubscriptionLoading;
+  const isStabilityLocked =
+    !hasActiveSubscription || (isSubscriptionLoading && !isDevMode);
 
   // DEBUG: Removed test animation that was causing the red square
 
@@ -349,9 +353,8 @@ export default function ViewerBotInterface() {
       cards.forEach((card, index) => {
         (card as HTMLElement).style.opacity = "0";
         (card as HTMLElement).style.transformOrigin = "center bottom";
-        (card as HTMLElement).style.transform = `perspective(1000px) rotateY(${
-          index % 2 === 0 ? -15 : 15
-        }deg) translateY(50px)`;
+        (card as HTMLElement).style.transform = `perspective(1000px) rotateY(${index % 2 === 0 ? -15 : 15
+          }deg) translateY(50px)`;
       });
 
       // Animate with 3D rotation
@@ -566,8 +569,7 @@ export default function ViewerBotInterface() {
       );
     } catch (err) {
       toast.error(
-        `Failed to start bot: ${
-          err instanceof Error ? err.message : "Unknown error"
+        `Failed to start bot: ${err instanceof Error ? err.message : "Unknown error"
         }`
       );
       setIsLoading(false);
@@ -630,7 +632,7 @@ export default function ViewerBotInterface() {
         {/* Header Section */}
         <MotionCard
           index={0}
-          className="relative text-center p-8 rounded-2xl border-none bg-background/90 backdrop-blur-xl shadow-xl"
+          className="relative text-center p-8 rounded-2xl border-none glass-card"
         >
           <div className="absolute left-4 top-4">
             <PatreonLinkButton />
@@ -639,24 +641,25 @@ export default function ViewerBotInterface() {
             <Button
               variant="bordered"
               onPress={handleLogout}
-              className="absolute right-4 top-4 hover:scale-105 transition-transform"
+              className="absolute right-4 top-4 hover:scale-105 transition-transform border-white/10 hover:bg-red-500/10 hover:text-red-500 text-zinc-400"
               color="danger"
+              size="sm"
             >
               Logout
             </Button>
           )}
           <h1
             ref={titleRef}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black mb-3 bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent"
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black mb-3 text-white tracking-tighter"
           >
-            Kick Viewer Bot
+            KICK<span className="text-green-500">VIEWER</span>BOT
           </h1>
-          <p className="text-base sm:text-lg md:text-xl font-medium">
+          <p className="text-base sm:text-lg md:text-xl font-medium text-zinc-400 tracking-wide">
             {profile
               ? `Welcome back, ${profile.user.username}`
               : "Monitor and control your viewer bot"}
           </p>
-          <div className="mt-4">
+          <div className="mt-6 flex justify-center">
             <WebSocketStatus
               status={wsStatus}
               currentUrl={wsUrl}
@@ -669,17 +672,18 @@ export default function ViewerBotInterface() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MotionCard
             index={1}
-            className="h-full border-none bg-background/90 backdrop-blur-xl shadow-xl"
+            className="h-full border-none glass-card"
           >
-            <CardHeader className="pb-2">
-              <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
+            <CardHeader className="pb-2 px-6 pt-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <span className="w-2 h-8 bg-green-500 rounded-full"></span>
                 Live Monitoring
               </h2>
             </CardHeader>
-            <CardBody>
+            <CardBody className="px-6 pb-6 pt-2">
               <div
                 ref={statsCardsRef}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full"
+                className="grid grid-cols-1 md:grid-cols-2 gap-4 h-full"
               >
                 <div className="w-full stat-card-item">
                   <ViewerStatCard value={currentViewers} />
@@ -712,7 +716,7 @@ export default function ViewerBotInterface() {
             </CardBody>
           </MotionCard>
 
-          <MotionCard index={2} disableHoverTilt={true} className="border-none">
+          <MotionCard index={2} disableHoverTilt={true} className="border-none glass-card">
             <SystemMetrics metrics={systemMetrics} />
           </MotionCard>
         </div>
@@ -721,11 +725,12 @@ export default function ViewerBotInterface() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <MotionCard
             index={3}
-            className="border-none bg-background/90 backdrop-blur-xl shadow-xl"
+            className="border-none glass-card"
           >
-            <CardHeader className="pb-2">
-              <h2 className="text-xl sm:text-2xl font-semibold bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent animate-gradient-x">
-                Basic Configuration
+            <CardHeader className="pb-2 px-6 pt-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <span className="w-2 h-8 bg-green-500 rounded-full"></span>
+                Configuration
               </h2>
             </CardHeader>
             <CardBody className="space-y-6">
@@ -871,10 +876,11 @@ export default function ViewerBotInterface() {
 
           <MotionCard
             index={4}
-            className="border-none bg-background/90 backdrop-blur-xl shadow-xl "
+            className="border-none glass-card"
           >
             <CardHeader className="pb-2">
-              <h2 className="text-2xl font-semibold bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent animate-gradient-x">
+              <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+                <span className="w-2 h-8 bg-green-500 rounded-full"></span>
                 Advanced Settings
               </h2>
             </CardHeader>
@@ -990,7 +996,6 @@ export default function ViewerBotInterface() {
                 {isStabilityLocked && !isSubscriptionLoading && (
                   <p className="mt-2 text-xs text-yellow-500">
                     An active subscription is required to enable stability mode.
-                    (in development)
                   </p>
                 )}
               </div>
@@ -1026,10 +1031,10 @@ export default function ViewerBotInterface() {
         {/* Information Panel */}
         <MotionCard
           index={5}
-          className="border-none bg-background/90 backdrop-blur-xl shadow-xl gradient-border"
+          className="border-none glass-card"
         >
           <CardBody className="text-center">
-            <p className="text-lg font-medium bg-gradient-to-r from-blue-500 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <p className="text-lg font-medium bg-gradient-to-r from-green-500 via-emerald-400 to-lime-400 bg-clip-text text-transparent">
               Please note that it may take some time for the viewers to appear
               on your live stream. This is normal, so please be patient.
             </p>
@@ -1048,12 +1053,11 @@ export default function ViewerBotInterface() {
             botStatus.state.toLowerCase() === "starting" ||
             unactivated
           }
-          className={`relative group overflow-hidden ${
-            botStatus.state.toLowerCase() === "stopping" ||
+          className={`relative group overflow-hidden ${botStatus.state.toLowerCase() === "stopping" ||
             botStatus.state.toLowerCase() === "starting"
-              ? "opacity-50 cursor-not-allowed pointer-events-none"
-              : ""
-          }`}
+            ? "opacity-50 cursor-not-allowed pointer-events-none"
+            : ""
+            }`}
         >
           <span className="relative z-10">
             {botStatus.state.toLowerCase() === "stopping"

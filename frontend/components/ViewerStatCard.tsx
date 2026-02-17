@@ -110,7 +110,6 @@ export function ViewerStatCard({ value }: ViewerStatCardProps) {
         "border-none glass-card transition-all duration-300 h-full w-full",
         showGlow && "ring-2 ring-green-500/50"
       )}
-      shadow="sm"
     >
       <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full relative overflow-hidden">
         {/* Subtle background pattern */}

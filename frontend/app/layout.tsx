@@ -3,19 +3,17 @@ import "@/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import ThemeProvider from "../components/ThemeProvider";
 import ThemeSwitcher from "../components/ThemeSwitcher";
-import SplineWithLoader from "../components/SplineWithLoader";
-import AppLoader from "../components/AppLoader";
+import ModernLoader from "../components/ModernLoader";
 import ApiHealthProvider from "../components/ApiHealthProvider";
 import UpdateProvider from "../components/UpdateProvider";
 import { useEffect, useState } from "react";
-import { Button } from "@heroui/button";
+// import { Button } from "@heroui/button"; // Removed performance button as Spline is gone
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [performanceMode, setPerformanceMode] = useState(true);
   const [isAppLoading, setIsAppLoading] = useState(false);
 
   useEffect(() => {
@@ -26,22 +24,12 @@ export default function RootLayout({
       // First time loading in this session - show loader
       setIsAppLoading(true);
     }
-
-    // Load performance mode preference from localStorage
-    const savedMode = localStorage.getItem("performanceMode");
-    setPerformanceMode(savedMode === "true");
   }, []);
 
   const handleLoadComplete = () => {
     setIsAppLoading(false);
     // Mark app as loaded for this session
     sessionStorage.setItem("appHasLoaded", "true");
-  };
-
-  const togglePerformanceMode = () => {
-    const newMode = !performanceMode;
-    setPerformanceMode(newMode);
-    localStorage.setItem("performanceMode", String(newMode));
   };
 
   return (
@@ -58,56 +46,19 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-mesh" suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-green-500/30 selection:text-green-500" suppressHydrationWarning>
         {/* Global app loader - only shows once per session */}
-        {isAppLoading && <AppLoader onLoadComplete={handleLoadComplete} />}
+        {isAppLoading && <ModernLoader onLoadComplete={handleLoadComplete} />}
 
         <ThemeProvider>
-          {/* Background Elements */}
-          <div className="fixed inset-0 w-full h-full overflow-hidden">
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 opacity-20">
-              <svg
-                width="100%"
-                height="100%"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <pattern
-                    id="smallGrid"
-                    width="20"
-                    height="20"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <path
-                      d="M 20 0 L 0 0 0 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="0.5"
-                      opacity="0.2"
-                    />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#smallGrid)" />
-              </svg>
-            </div>
+          {/* Background Elements - Replaced Spline with CSS Grid/Mesh */}
+          <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
+            {/* Base Grid */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
 
-            {/* Cool background gradient blobs */}
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-float"></div>
-            <div
-              className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-float"
-              style={{ animationDelay: "2s" }}
-            ></div>
-
-            {/* Spline 3D object (when not in performance mode) */}
-            {!performanceMode && (
-              <div className="absolute inset-0">
-                <SplineWithLoader
-                  scene="https://prod.spline.design/0zfiWcHYJLJfg6nt/scene.splinecode"
-                  className="absolute"
-                />
-              </div>
-            )}
+            {/* Radial Gradient Glows */}
+            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-green-500/5 blur-[120px]"></div>
+            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/5 blur-[120px]"></div>
           </div>
 
           <main className="w-full relative z-10 overflow-x-hidden">
@@ -118,16 +69,10 @@ export default function RootLayout({
 
           <div className="fixed bottom-4 left-4 z-50 flex gap-2">
             <ThemeSwitcher />
-            <Button
-              variant="bordered"
-              onPress={togglePerformanceMode}
-              className="bg-background/80 backdrop-blur-sm shadow-lg"
-            >
-              {performanceMode ? "🚀 Performance" : "✨ Visual"}
-            </Button>
+            {/* Performance Mode toggle removed as 3D is gone */}
           </div>
 
-          <div className="fixed bottom-0 w-full h-12 bg-gradient-to-t from-background/80 to-transparent z-10 pointer-events-none"></div>
+          <div className="fixed bottom-0 w-full h-24 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
           <UpdateProvider />
         </ThemeProvider>
       </body>

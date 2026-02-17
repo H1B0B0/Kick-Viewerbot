@@ -121,61 +121,46 @@ jobs:
           prerelease: ${{ steps.get_version.outputs.IS_PRERELEASE }}
 
           body: |
-            # 🚀 KickViewerBOT — Stability Update & Deployment Notes
+            # 🚀 KickViewerBOT v3.0.2 — Proxy WebSocket Support & Version System
 
-            ## ✨ Key Highlights
+            ## ✨ What's New
 
-            ### 🔥 Stability Mode
+            ### 🌐 Proxy-Tunneled WebSocket Connections
 
-            Stability Mode remains the core of this release: it maintains long-lived WebSocket connections and emulates real browser behavior to stabilize viewer counts.
+            Viewer connections now route through your proxies via SOCKS4/SOCKS5/HTTP tunnels. Each viewer appears from a unique IP address, dramatically improving viewer count accuracy and scalability.
 
-            - 🎯 Persistent connections: regular handshakes and session maintenance
-            - 📈 Stable viewer counts: periodic tracking events
-            - 🛡️ Platform-friendly behavior: ping/pong, user_event, and error handling
+            - 🎯 Each WebSocket connection is tunneled through a dedicated proxy
+            - 📈 More stable and accurate viewer counts on Kick
+            - 🛡️ Supports SOCKS4, SOCKS5, and HTTP proxies with authentication
+            - ⚡ Automatic fallback to direct connection if a proxy fails
+
+            ### 🔥 Stability Mode Enhancements
+
+            - 🎯 Persistent connections with regular handshakes and session maintenance
+            - 📈 Periodic tracking events to keep viewer counts stable
+            - 🛡️ Full Kick protocol compliance: ping/pong, user_event, error handling
             - ⚡ "Set & forget" mode with monitoring and automatic reconnection
 
-            ### 🔧 Smart Port Management
+            ## 🐛 Fixes & Improvements
 
-            We've simplified deployment: the executable no longer requires administrator privileges. We no longer use the reserved ports 80 and 443 that required elevated rights.
-
-            - No UAC elevation required for the Windows executable
-            - The bot now uses non-reserved ports and automatically discovers a free port
-            - Fewer permission and firewall issues during installation and runtime
-
-            ### 🐛 Fixes & Improvements
-
-            - ✅ Fixed the viewer count dropping after 1 minute (improved tracking)
-            - ✅ Better handling of WebSocket messages and Kick protocol
-            - ✅ Improved resilience with exponential backoff
-            - ✅ Enhanced logging for easier debugging
-            - ✅ Improved proxy rotation and token management
-            - ✅ Frontend: correct display of "Active Connections"
+            - ✅ Fixed viewer count dropping after 1 minute
+            - ✅ Improved WebSocket message handling and Kick protocol compliance
+            - ✅ Better resilience with exponential backoff on reconnections
+            - ✅ Enhanced proxy rotation and token management
+            - ✅ No admin/UAC required — uses non-reserved ports automatically
+            - ✅ Frontend: correct display of active connections count
 
             ---
-
-            ## 📥 Deployment Notes (Recommended Practices)
-
-            1. The provided executable no longer needs to run as administrator on Windows: simply run `KickViewerBOT.exe` as a standard user.
-            2. If you're behind a strict firewall or network endpoint, allow the binary to establish outbound connections on the configured ports (by default, the bot selects a non-reserved port).
-            3. Check your OS/antivirus rules if the executable is blocked on first run.
 
             ## 📥 Getting Started
 
-            - For Stability Mode: download and run the executable as a standard user, enable Stability Mode in settings, and adjust thread count.
-            - For Standard Mode: works as before with short-lived connections.
-
-            ---
-
-            ## 💡 Why this update matters
-
-            - Before: elevation was required to bind to reserved ports (caused deployment friction).
-            - Now: simplified install and run experience, reduced friction for users.
-
-            ---
+            1. Download the executable for your platform below
+            2. Run `KickViewerBOT` — no admin privileges required
+            3. Load your proxies and enable **Stability Mode** for best results
 
             **Need help?** Open an issue: https://github.com/H1B0B0/Kick-Viewerbot/issues
 
-            *Thanks for your support — this update makes the bot easier to deploy and more robust.* 🙏
+            *Thanks for your support!* 🙏
 
           draft: false
 

@@ -96,6 +96,9 @@ export function useGetProfile() {
     (url: string) => fetcher<ProfileResponse>(url),
     {
       revalidateOnFocus: false,
+      shouldRetryOnError: true,
+      errorRetryCount: 3,
+      dedupingInterval: 5000,
     }
   );
 }
@@ -105,7 +108,10 @@ export function useGetSubscription() {
     `${API_BASE_URL}/users/subscription`,
     (url) => fetcher<SubscriptionStatus>(url),
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: true, // Revalidate on focus to catch subscription updates
+      shouldRetryOnError: true,
+      errorRetryCount: 5, // More aggressive retries for subscription
+      dedupingInterval: 2000,
     }
   );
 }

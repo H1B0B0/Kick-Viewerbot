@@ -551,6 +551,8 @@ class ViewerBot:
         """Legacy method for compatibility - now uses WebSocket approach"""
         self.send_websocket_view(proxy_data)
 
+
+
     def send_websocket_view(self, proxy_data):
         """Send view using WebSocket connection with proper authentication"""
         self.active_threads += 1
@@ -590,16 +592,61 @@ class ViewerBot:
     async def _websocket_worker(self, token, proxy_data):
         """Async WebSocket worker that maintains connection and sends views"""
         try:
+            # Stagger connections to avoid all threads starting simultaneously
+            await asyncio.sleep(random.uniform(0, 3))
             proxy_type, proxy_address = proxy_data['proxy']
             proxies = self.configure_proxies(proxy_type, proxy_address)
-            
-            # Configure WebSocket connection with proxy if available
+
+            # Configure WebSocket connection
             ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
-            
-            # Connect to WebSocket
-            async with websockets.connect(ws_url) as websocket:
-                logging.debug(f"WebSocket connected for channel {self.channel_id}")
+
+            # Create proxy tunnel using python-socks
+            proxy_sock = None
+            try:
+                from python_socks.async_.asyncio import Proxy
+                from python_socks import ProxyType
                 
+                proxy_url = proxies.get('https') or proxies.get('http')
+                if proxy_url:
+                    pt = proxy_type.lower()
+                    if pt == 'socks5':
+                        p_type = ProxyType.SOCKS5
+                    elif pt == 'socks4':
+                        p_type = ProxyType.SOCKS4
+                    else:
+                        p_type = ProxyType.HTTP
+                    
+                    parts = proxy_address.split(':')
+                    p_host = parts[0]
+                    p_port = int(parts[1])
+                    p_user = parts[2] if len(parts) >= 4 else None
+                    p_pass = parts[3] if len(parts) >= 4 else None
+                    
+                    proxy = Proxy(p_type, p_host, p_port, p_user, p_pass)
+                    proxy_sock = await proxy.connect(
+                        dest_host='websockets.kick.com',
+                        dest_port=443
+                    )
+                    logging.debug(f"Proxy tunnel established via {p_host}:{p_port}")
+            except Exception as proxy_err:
+                logging.warning(f"Proxy tunnel failed ({proxy_err}), connecting directly")
+                proxy_sock = None
+            
+            # Connect to WebSocket (through proxy tunnel or directly)
+            connect_kwargs = {
+                'ping_interval': None,
+                'ping_timeout': None,
+            }
+            if proxy_sock is not None:
+                import ssl
+                ssl_context = ssl.create_default_context()
+                connect_kwargs['sock'] = proxy_sock
+                connect_kwargs['ssl'] = ssl_context
+                connect_kwargs['server_hostname'] = 'websockets.kick.com'
+            
+            async with websockets.connect(ws_url, **connect_kwargs) as websocket:
+                logging.debug(f"WebSocket connected for channel {self.channel_id}")
+
                 # Send initial handshake
                 handshake_msg = {
                     "type": "channel_handshake",
@@ -609,29 +656,44 @@ class ViewerBot:
                 }
                 await websocket.send(json.dumps(handshake_msg))
                 logging.debug(f"Sent handshake for channel {self.channel_id}")
-                
-                # Keep connection alive with pings
+
+                max_pings = random.randint(8, 15)
                 ping_count = 0
-                while not self.should_stop and ping_count < 10:  # Limit to 10 pings per connection
+                while not self.should_stop and ping_count < max_pings:
                     ping_count += 1
-                    
+
                     # Send ping
                     ping_msg = {"type": "ping"}
                     await websocket.send(json.dumps(ping_msg))
                     self.request_count += 1
                     logging.debug(f"Sent ping #{ping_count} to channel {self.channel_id}")
-                    
-                    # Wait between pings (12-17 seconds as in the working example)
+
+                    # Read incoming messages and respond to Pusher pings
+                    try:
+                        msg = await asyncio.wait_for(websocket.recv(), timeout=1.0)
+                        data = json.loads(msg) if isinstance(msg, str) else {}
+                        msg_type = data.get("type", "")
+                        if msg_type in ("pusher:ping", "ping"):
+                            pong_msg = {"type": "pusher:pong" if "pusher" in msg_type else "pong"}
+                            await websocket.send(json.dumps(pong_msg))
+                    except asyncio.TimeoutError:
+                        pass
+                    except Exception:
+                        pass
+
+                    # Wait between pings (12-17 seconds)
                     sleep_time = 12 + random.randint(1, 5)
                     await asyncio.sleep(sleep_time)
-                
+
                 logging.debug(f"WebSocket worker completed for channel {self.channel_id}")
-                
+
         except websockets.exceptions.ConnectionClosed:
             logging.debug("WebSocket connection closed")
         except Exception as e:
             logging.error(f"WebSocket error: {e}")
             traceback.print_exc()
+
+
 
     def configure_proxies(self, proxy_type, proxy_address):
         try:

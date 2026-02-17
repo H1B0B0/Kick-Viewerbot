@@ -1,4 +1,4 @@
-import { Card, CardBody } from "@heroui/card";
+import { Card, CardBody, CardHeader } from "@heroui/card";
 import { Progress } from "@heroui/progress";
 import { Badge } from "@heroui/badge";
 import { useEffect, useRef, useState } from "react";
@@ -98,7 +98,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
     metric: MetricData,
     progressRef?: React.RefObject<HTMLDivElement | null>
   ) => (
-    <Card key={metric.label} className="border-none glass-card" shadow="sm">
+    <Card key={metric.label} className="border-none glass-card">
       <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-5">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -127,7 +127,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
             {metric.unit}
           </Badge>
         </div>
-        <div ref={progressRef}>
+        <div ref={progressRef as any}>
           <Progress
             aria-label={`${metric.label} usage`}
             value={(metric.value / metric.maxValue) * 100}
@@ -146,7 +146,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
   );
 
   const renderNetworkMetric = () => (
-    <Card className="border-none glass-card" shadow="sm">
+    <Card className="border-none glass-card">
       <CardBody className="space-y-4 p-6 flex flex-col justify-between h-full relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none opacity-5">
           <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
@@ -170,7 +170,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
         </div>
         <span className="text-sm font-medium block mb-3">Network Traffic</span>
         <div className="grid grid-cols-2 gap-4">
-          <Card className="border-none glass-card" shadow="sm">
+          <Card className="border-none glass-card">
             <CardBody className="p-3">
               <div className="absolute inset-0 pointer-events-none opacity-5">
                 <svg
@@ -198,7 +198,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
               </div>
               <div className="flex justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-purple-400 text-lg">↑</span>
+                  <span className="text-green-400 text-lg">↑</span>
                   <span className="text-xs font-medium">Upload</span>
                 </div>
                 <Badge variant="flat" className="text-xs">
@@ -209,7 +209,7 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
             </CardBody>
           </Card>
 
-          <Card className="border-none glass-card" shadow="sm">
+          <Card className="border-none glass-card">
             <CardBody className="p-3">
               <div className="absolute inset-0 pointer-events-none opacity-5">
                 <svg
@@ -237,10 +237,10 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
               </div>
               <div className="flex justify-between mb-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-red-400 text-lg">↓</span>
+                  <span className="text-lime-400 text-lg">↓</span>
                   <span className="text-xs font-medium">Download</span>
                 </div>
-                <Badge color="danger" variant="flat" className="text-xs">
+                <Badge variant="flat" className="text-xs">
                   {metrics.network_down.value.toFixed(1)}
                   {metrics.network_down.unit}
                 </Badge>
@@ -253,17 +253,20 @@ export const SystemMetrics = ({ metrics }: SystemMetricsProps) => {
   );
 
   return (
-    <Card className="w-full border-none bg-background/90 backdrop-blur-xl shadow-xl hover:shadow-2xl transition-all duration-300">
-      <CardBody>
-        <h3 className="text-2xl font-semibold mb-4 bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent">
+    <>
+      <CardHeader className="pb-2 px-6 pt-6">
+        <h2 className="text-xl sm:text-2xl font-bold text-white flex items-center gap-2">
+          <span className="w-2 h-8 bg-green-500 rounded-full"></span>
           System Metrics
-        </h3>
+        </h2>
+      </CardHeader>
+      <CardBody className="px-6 pb-6 pt-2">
         <div className="space-y-4">
           {renderBasicMetric(metrics.cpu, cpuProgressRef)}
           {renderBasicMetric(metrics.memory, memoryProgressRef)}
           {renderNetworkMetric()}
         </div>
       </CardBody>
-    </Card>
+    </>
   );
 };
