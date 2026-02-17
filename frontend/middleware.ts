@@ -28,6 +28,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // Allow access to auth callback pages
+  if (pathname === "/success" || pathname === "/error") {
+    return NextResponse.next();
+  }
+
   if (!isProtectedPath(pathname)) {
     return NextResponse.next();
   }
@@ -49,7 +54,7 @@ export async function middleware(request: NextRequest) {
         "User-Agent": request.headers.get("user-agent") || "Next.js middleware",
       },
       withCredentials: true,
-      timeout: 5000,
+      timeout: 10000, // Increased timeout to 10 seconds
     });
 
     if (response.status >= 200 && response.status < 300) {
@@ -62,6 +67,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   } catch (error) {
     console.error("Middleware auth check failed", error);
+
+    // If it's a timeout error and user has access_token cookie, let them through
+    // The client-side auth check will handle the validation
+    if (axios.isAxiosError(error) && error.code === "ETIMEDOUT" && hasRequiredCookie) {
+      console.log("API timeout but user has valid cookie, allowing access");
+      return NextResponse.next();
+    }
 
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
