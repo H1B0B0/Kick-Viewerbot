@@ -18,6 +18,14 @@ datas = [
     ('backend', '.'),
 ]
 
+try:
+    import tls_client
+    tls_client_path = os.path.dirname(tls_client.__file__)
+    datas.append((tls_client_path, 'tls_client'))
+    print(f"[OK] Added tls_client package from: {tls_client_path}")
+except ImportError:
+    print("[WARNING] tls_client not found in build environment!")
+
 # Add fake_useragent data files manually (hooks don't always catch data files)
 try:
     import fake_useragent
@@ -102,6 +110,13 @@ a = Analysis(
         'engineio',
         'engineio.async_drivers',
         'engineio.async_drivers.gevent',
+        'python_socks',
+        'python_socks.async_',
+        'python_socks.sync',
+        'python_socks.async_.asyncio',
+        'python_socks.async_.trio',
+        'python_socks.async_.curio',
+        'python_socks.async_.anyio',
     ],
     hookspath=['hooks'],
     hooksconfig={},

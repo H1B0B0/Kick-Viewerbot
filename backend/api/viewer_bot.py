@@ -20,9 +20,10 @@ from urllib.parse import urlparse
 try:
     import tls_client
     HAS_TLS_CLIENT = True
-except ImportError:
+except ImportError as e:
     HAS_TLS_CLIENT = False
-    logging.warning("tls_client not available, using requests")
+    logging.warning(f"tls_client not available: {e}")
+    logging.warning("Using requests as fallback (risk of detection)")
 
 # Add this near the top of the file, after imports
 logging.getLogger("urllib3").setLevel(logging.ERROR)
