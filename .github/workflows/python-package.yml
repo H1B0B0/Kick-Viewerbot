@@ -36,6 +36,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel pyinstaller
           pip install -r requirements.txt
+          pip install tls-client python-socks[asyncio]
+          pip list
+          python -c "import tls_client; print('tls_client found at:', tls_client.__file__)"
+          python -c "import python_socks; print('python_socks found at:', python_socks.__file__)"
 
       - name: Build Windows Executable
         run: |
@@ -72,6 +76,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install pyinstaller
           pip install -r requirements.txt
+          # Force install critical dependencies and print debug info
+          pip install tls-client python-socks[asyncio]
+          pip list
+          python -c "import tls_client; print('tls_client found at:', tls_client.__file__)"
+          python -c "import python_socks; print('python_socks found at:', python_socks.__file__)"
 
       - name: Build MacOS App
         run: |

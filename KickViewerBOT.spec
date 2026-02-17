@@ -17,14 +17,19 @@ site_packages = site.getsitepackages()[0]
 datas = [
     ('backend', '.'),
 ]
-
+ # Force include tls_client package
 try:
-    import tls_client
-    tls_client_path = os.path.dirname(tls_client.__file__)
-    datas.append((tls_client_path, 'tls_client'))
-    print(f"[OK] Added tls_client package from: {tls_client_path}")
-except ImportError:
-    print("[WARNING] tls_client not found in build environment!")
+    import importlib.util
+    package_name = 'tls_client'
+    spec = importlib.util.find_spec(package_name)
+    if spec and spec.origin:
+        tls_client_path = os.path.dirname(spec.origin)
+        datas.append((tls_client_path, package_name))
+        print(f"[OK] Added {package_name} package from: {tls_client_path}")
+    else:
+        print(f"[WARNING] {package_name} not found in build environment (find_spec failed)!")
+except Exception as e:
+    print(f"[WARNING] Failed to find {package_name}: {e}")
 
 # Add fake_useragent data files manually (hooks don't always catch data files)
 try:
