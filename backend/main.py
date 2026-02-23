@@ -161,9 +161,8 @@ class BotManager:
         if self.bot and BOT_AVAILABLE:
             self.bot.stop()
 
-        self.is_running = False
-        logger.info("Bot stopped")
-        return {'success': True, 'message': 'Bot stopped successfully'}
+        logger.info("Bot stop command sent")
+        return {'success': True, 'message': 'Bot stop command sent'}
 
     def get_stats(self):
         try:
@@ -197,7 +196,7 @@ class BotManager:
                 'active_threads': getattr(self.bot, 'active_threads', 0) if self.bot else 0,
                 'active_connections': active_connections,
                 'total_proxies': len(getattr(self.bot, 'all_proxies', [])) if self.bot else 0,
-                'alive_proxies': getattr(self.bot, 'alive_proxies', 0) if self.bot else 0,
+                'alive_proxies': getattr(self.bot, 'alive_proxies', 0) if (self.bot and getattr(self.bot, 'alive_proxies', 0) > 0) else (getattr(self.bot, 'active_threads', 0) if self.bot else 0),
                 'request_count': active_connections if is_stability else request_count,
                 'version': self.version,
                 'config': self.config,
@@ -486,19 +485,48 @@ def handle_kick_chat_start(data):
     
     try:
         channel_name = data.get('channel_name')
-        auth_token = data.get('auth_token')  # Optional
-        response_chance = data.get('response_chance', 0.2)  # 20% default
-        min_interval = data.get('min_interval', 5)  # 5 seconds default
+        auth_tokens = data.get('auth_tokens') or []
+        min_interval = int(data.get('min_interval', 3))
+        response_chance = float(data.get('response_chance', 0.3))
         
-        if not channel_name:
-            emit('kick_chat_error', {'error': 'Channel name required'})
-            return
+        token_source = "frontend"
+        
+        # Log what we received
+        if auth_tokens:
+            logger.info(f"🔑 Received {len(auth_tokens)} tokens from frontend")
+            for i, t in enumerate(auth_tokens):
+                # Show first/last chars for debugging without exposing full token
+                preview = f"{t[:8]}...{t[-8:]}" if len(t) > 20 else f"{t[:8]}..."
+                logger.info(f"  Token {i}: {len(t)} chars, starts with '{preview}'")
+        else:
+            logger.info("📋 No tokens from frontend, checking accounts.txt...")
+        
+        # Auto-load tokens from accounts.txt if none provided
+        if not auth_tokens:
+            token_source = "accounts.txt"
+            accounts_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'accounts.txt')
+            if os.path.exists(accounts_file):
+                import re
+                with open(accounts_file, 'r') as f:
+                    content = f.read()
+                auth_tokens = re.findall(r'acc token-\s*(\S+)', content)
+                if auth_tokens:
+                    logger.info(f"📋 Auto-loaded {len(auth_tokens)} tokens from accounts.txt")
+                    for i, t in enumerate(auth_tokens):
+                        preview = f"{t[:8]}...{t[-8:]}" if len(t) > 20 else f"{t[:8]}..."
+                        logger.info(f"  Token {i}: {len(t)} chars, starts with '{preview}'")
+                else:
+                    logger.warning("⚠️ accounts.txt found but no tokens parsed")
+            else:
+                logger.warning("⚠️ No auth tokens provided and no accounts.txt found")
+        
+        logger.info(f"🤖 Starting chat: channel={channel_name}, tokens={len(auth_tokens)} (from {token_source}), interval={min_interval}s, chance={response_chance}")
         
         success = chat_service.start_kick_chat(
-            channel_name, 
-            auth_token, 
-            response_chance, 
-            min_interval
+            channel_name=channel_name,
+            auth_tokens=auth_tokens,
+            min_interval=min_interval,
+            response_chance=response_chance
         )
         
         if success:
@@ -514,7 +542,7 @@ def handle_kick_chat_start(data):
         logger.error(f"Error starting Kick chat: {e}")
         emit('kick_chat_error', {'error': str(e)})
 
-@socketio.on('kick_chat_stop')
+@socketio.on('stop_kick_chat')
 def handle_kick_chat_stop():
     """Stop Kick chat bot"""
     if not CHAT_AVAILABLE:
@@ -533,7 +561,7 @@ def handle_kick_chat_stop():
         logger.error(f"Error stopping Kick chat: {e}")
         emit('kick_chat_error', {'error': str(e)})
 
-@socketio.on('kick_chat_status')
+@socketio.on('get_kick_chat_status')
 def handle_kick_chat_status():
     """Get Kick chat bot status"""
     if not CHAT_AVAILABLE:

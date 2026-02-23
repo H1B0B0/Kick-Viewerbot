@@ -1,10 +1,9 @@
 "use client";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
-import "react-toastify/dist/ReactToastify.css";
 import React, { useState, useEffect } from "react";
 import { login, useGetProfile } from "../functions/UserAPI";
 import { PatreonLoginButton } from "@/components/PatreonLoginButton";
@@ -67,7 +66,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <ToastContainer />
       <Card className="space-y-8 p-8 w-96 md:w-[500px]">
         <CardHeader className="flex flex-col space-y-5">
           <h2 className="text-3xl font-extrabold text-center bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">

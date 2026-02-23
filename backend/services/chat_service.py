@@ -176,21 +176,8 @@ class ChatService:
             return True
         return False
     
-    def get_conversation_history(self, session_id: str = "default") -> List[Dict]:
-        """Get conversation history for a session"""
-        return self.conversation_history.get(session_id, [])
-    
-    def start_kick_chat(self, channel_name: str, auth_token: Optional[str] = None, 
-                       response_chance: float = 0.2, min_interval: int = 5):
-        """
-        Start AI bot for Kick chat
-        
-        Args:
-            channel_name: Kick channel to monitor
-            auth_token: Authentication token to send messages (optional)
-            response_chance: Probability of responding to a message (0-1)
-            min_interval: Minimum seconds between responses
-        """
+    def start_kick_chat(self, channel_name: str, auth_tokens: List[str], min_interval: int = 3, response_chance: float = 0.3):
+        """Start Kick chat bot integration"""
         if not self.model_loaded:
             logger.warning("⚠️ AI model not loaded yet. Load model first.")
             return False
@@ -198,14 +185,19 @@ class ChatService:
         try:
             from services.kick_chat_bot import KickChatBot
             
-            # Create chat bot
-            self.kick_chat_bot = KickChatBot(channel_name, auth_token)
+            # Create chat bot (KickChatBot will also clean the name anyway)
+            self.kick_chat_bot = KickChatBot(channel_name, auth_tokens)
+            # Use the cleaned name from the bot for service consistency
+            channel_name = self.kick_chat_bot.channel_name
             self.kick_chat_bot.set_response_settings(min_interval, response_chance)
             
             # Set up callbacks
             self.kick_chat_bot.on_message(self._handle_kick_message)
             self.kick_chat_bot.on_connect(lambda: logger.info("🟢 Connected to Kick chat"))
             self.kick_chat_bot.on_disconnect(lambda: logger.info("🔴 Disconnected from Kick chat"))
+            
+            # Wire up AI model for proactive message generation
+            self.kick_chat_bot.set_generate_callback(self.generate_response)
             
             # Start bot
             self.kick_chat_bot.start()
@@ -235,7 +227,10 @@ class ChatService:
         try:
             # Check if we should respond
             if not self.kick_chat_bot.should_respond(username, content):
+                logger.debug(f"⏭️ Skipping response to {username} (rate limit or random chance)")
                 return
+            
+            logger.info(f"🤖 Generating AI response for {username}...")
             
             # Get conversation context
             context = self.kick_chat_bot.get_conversation_context()
@@ -254,10 +249,10 @@ class ChatService:
                 response = response[:197] + "..."
             
             # Send to Kick chat
-            if self.kick_chat_bot.auth_token:
+            if self.kick_chat_bot.auth_tokens:
                 await self.kick_chat_bot.send_message(response)
             else:
-                logger.info(f"🤖 Would respond: {response}")
+                logger.info(f"🤖 Would respond: {response} (No tokens provided)")
                 
         except Exception as e:
             logger.error(f"Error handling Kick message: {e}")

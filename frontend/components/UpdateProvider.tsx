@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
 import { useTheme } from "next-themes";
 import { useUpdateChecker } from "../hooks/useUpdateChecker";
 import UpdateNotification from "./UpdateNotification";
@@ -74,8 +73,6 @@ export default function UpdateProvider() {
 
   return (
     <>
-      <ToastContainer />
-
       {/* Modal de détails */}
       {latestVersion && isModalOpen && (
         <UpdateNotification

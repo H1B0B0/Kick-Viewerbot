@@ -138,3 +138,4 @@ backend/certs/velbots.shop.cert
 backend/certs/velbots.shop.key.backup
 backend/certs/velbots.shop.cert.backup
 backend/certs/velbots.shop.key
+accounts.txt

@@ -1,10 +1,10 @@
-"use client";
-import { Chip } from "@heroui/chip";
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
 import { Button } from "@heroui/button";
-import Link from "next/link";
+import { Chip } from "@heroui/chip";
 import { ConnectionStatus } from "@/services/WebSocketService";
 import { useState } from "react";
+import { LuGlobe, LuInfo, LuDownload, LuRefreshCw } from "react-icons/lu";
+import { cn } from "../utils/cn";
 
 interface WebSocketStatusProps {
   status: ConnectionStatus;
@@ -19,72 +19,65 @@ export function WebSocketStatus({
 }: WebSocketStatusProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  const getStatusColor = (): "success" | "warning" | "danger" | "default" => {
+  const getStatusConfig = () => {
     switch (status) {
       case "connected":
-        return "success";
+        return { color: "success" as const, text: "Systems Normal", icon: <LuGlobe className="w-3.5 h-3.5" /> };
       case "connecting":
-        return "warning";
+        return { color: "warning" as const, text: "Connecting...", icon: <LuRefreshCw className="w-3.5 h-3.5 animate-spin" /> };
       case "error":
       case "disconnected":
-        return "danger";
+        return { color: "danger" as const, text: "Connection Error", icon: <LuInfo className="w-3.5 h-3.5" /> };
       default:
-        return "default";
+        return { color: "default" as const, text: "Unknown Status", icon: null };
     }
   };
 
-  const getStatusText = (): string => {
-    switch (status) {
-      case "connected":
-        return "System Online";
-      case "connecting":
-        return "Connecting...";
-      case "error":
-        return "Connection Error";
-      case "disconnected":
-        return "Disconnected";
-      default:
-        return "Unknown Status";
-    }
-  };
-
+  const config = getStatusConfig();
   const helperDownloadUrl = "https://github.com/H1B0B0/Kick-Viewerbot/releases/latest";
   const isError = status === "error" || status === "disconnected";
-  const color = getStatusColor();
+
+  const dotColorClass = {
+    success: "bg-success",
+    warning: "bg-warning",
+    danger: "bg-danger",
+    default: "bg-default-400"
+  }[config.color] || "bg-default-400";
 
   return (
-    <Popover placement="bottom" showArrow={true} isOpen={isOpen} onOpenChange={(open) => setIsOpen(open)}>
+    <Popover placement="bottom" showArrow isOpen={isOpen} onOpenChange={setIsOpen} backdrop="transparent">
       <PopoverTrigger>
-        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100/50 dark:bg-zinc-900/50 border border-black/5 dark:border-white/5 hover:bg-zinc-200/50 dark:hover:bg-zinc-800/50 transition-colors group cursor-pointer focus:outline-none">
-          <div className="relative flex items-center justify-center w-2.5 h-2.5">
-            <div className={`absolute w-full h-full rounded-full opacity-75 animate-ping bg-${color === 'success' ? 'green-500' : color === 'warning' ? 'yellow-500' : 'red-500'}`}></div>
-            <div className={`relative w-2 h-2 rounded-full bg-${color === 'success' ? 'green-500' : color === 'warning' ? 'yellow-500' : 'red-500'}`}></div>
-          </div>
-          <span className={`text-xs font-medium ${color === 'success' ? 'text-green-600 dark:text-green-500' : 'text-zinc-500 dark:text-zinc-400'} group-hover:text-foreground transition-colors`}>
-            {status === 'connected' ? 'Systems Normal' : getStatusText()}
-          </span>
+        <button className="focus:outline-none active:scale-95 transition-transform">
+          <Chip
+            variant="flat"
+            color={config.color}
+            startContent={config.icon}
+            className="h-8 pl-1 pr-2 font-black uppercase tracking-widest text-[10px] cursor-pointer hover:bg-opacity-80"
+          >
+            {config.text}
+          </Chip>
         </button>
       </PopoverTrigger>
-      <PopoverContent className="p-4 bg-popover border border-border rounded-xl max-w-xs shadow-2xl">
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 border-b border-border pb-3">
-            <div className={`w-2 h-2 rounded-full bg-${color === 'success' ? 'green-500' : color === 'warning' ? 'yellow-500' : 'red-500'}`}></div>
+      <PopoverContent className="p-4 w-[280px]">
+        <div className="space-y-4 w-full">
+          <div className="flex items-center gap-3">
+            <div className={cn("w-2.5 h-2.5 rounded-full", dotColorClass)}></div>
             <div className="flex-1">
-              <h4 className="text-sm font-bold text-foreground leading-none mb-1">{getStatusText()}</h4>
-              <p className="text-xs text-muted-foreground">{currentUrl || "No connection"}</p>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-default-500">{config.text}</h4>
             </div>
           </div>
 
           {isError && (
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">
-                Local service is not reachable. Ensure the helper is running.
+            <div className="space-y-4 pt-2">
+              <p className="text-xs text-default-500 font-medium leading-relaxed">
+                The helper backend at this URL is unreachable. Please ensure the instance is active and accessible.
               </p>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   size="sm"
                   variant="flat"
-                  className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                  startContent={<LuDownload className="w-3.5 h-3.5" />}
+                  className="font-black"
                   onPress={() => window.open(helperDownloadUrl, '_blank')}
                 >
                   Download
@@ -93,6 +86,8 @@ export function WebSocketStatus({
                   <Button
                     size="sm"
                     color="primary"
+                    startContent={<LuRefreshCw className="w-3.5 h-3.5" />}
+                    className="font-black"
                     onPress={() => {
                       onRetry();
                       setIsOpen(false);

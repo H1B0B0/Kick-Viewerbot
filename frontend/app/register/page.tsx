@@ -1,5 +1,5 @@
 "use client";
-import { toast, ToastContainer } from "react-toastify";
+import { toast } from "react-toastify";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Form } from "@heroui/form";
 import { Input } from "@heroui/input";
@@ -135,7 +135,6 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center">
-      <ToastContainer />
       <Card className="space-y-8 p-8 w-96 md:w-[500px]">
         <CardHeader className="flex flex-col space-y-5">
           <h2 className="text-3xl font-extrabold text-center bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
@@ -273,8 +272,8 @@ export default function RegisterPage() {
               {/* Patreon Register Button */}
               <Button
                 onPress={() =>
-                  (window.location.href =
-                    "https://api.velbots.shop/payments/patreon/redirect")
+                (window.location.href =
+                  "https://api.velbots.shop/payments/patreon/redirect")
                 }
                 className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-default-300 text-sm font-medium rounded-lg bg-[#FF424D] hover:bg-[#E8384C] text-white transition-colors duration-200 shadow-sm hover:shadow-md"
               >

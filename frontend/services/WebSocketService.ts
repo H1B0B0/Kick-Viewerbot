@@ -18,6 +18,9 @@ export interface BotConfig {
   stabilityMode?: boolean;
   proxyFile?: File;
   subscriptionStatus?: boolean;
+  enableChat?: boolean;
+  chatAuthToken?: string;
+  messagesPerMinute?: number;
 }
 
 export interface BotStats {
@@ -45,20 +48,67 @@ interface Callbacks {
   onBotStopped?: (data: any) => void;
   onBotError?: (error: string) => void;
   onStatusChange?: (status: ConnectionStatus) => void;
+  onKickChatStatus?: (status: any) => void;
+  onKickChatStarted?: (data: any) => void;
+  onKickChatStopped?: (data: any) => void;
+  onKickChatError?: (error: string) => void;
 }
 
-class WebSocketService {
+export default class WebSocketService {
   private socket: Socket | null = null;
   private status: ConnectionStatus = "disconnected";
   private callbacks: Callbacks = {};
 
-  // URLs possibles pour le service local (générées depuis la config partagée)
-  private urls = generateConnectionUrls();
-
+  // URLs possibles pour le service local
+  private urls: string[] = [];
   private currentUrl = "";
 
-  constructor(callbacks: Callbacks = {}) {
+  /**
+   * Pinger une URL pour voir si un backend répond
+   */
+  static async ping(url: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const socket = io(url, {
+        transports: ["websocket"],
+        reconnection: false,
+        timeout: 1000,
+      });
+
+      socket.on("connect", () => {
+        socket.disconnect();
+        resolve(true);
+      });
+
+      socket.on("connect_error", () => {
+        socket.close();
+        resolve(false);
+      });
+
+      // Force timeout
+      setTimeout(() => {
+        socket.close();
+        resolve(false);
+      }, 1500);
+    });
+  }
+
+  /**
+   * Découvrir tous les backends actifs sur les ports configurés
+   */
+  static async discover(): Promise<string[]> {
+    const potentialUrls = generateConnectionUrls();
+    const results = await Promise.all(
+      potentialUrls.map(async (url) => {
+        const active = await WebSocketService.ping(url);
+        return active ? url : null;
+      })
+    );
+    return results.filter((url): url is string => url !== null);
+  }
+
+  constructor(callbacks: Callbacks = {}, customUrls?: string[]) {
     this.callbacks = callbacks;
+    this.urls = customUrls && customUrls.length > 0 ? customUrls : generateConnectionUrls();
   }
 
   /**
@@ -142,20 +192,30 @@ class WebSocketService {
 
     this.socket.on("bot_status_changed", (data) => {
       console.log("Statut bot changé:", data);
+      if (data.status === "error") {
+        this.callbacks.onBotError?.(data.message);
+      }
     });
 
-    this.socket.on("bot_error", (error) => {
-      console.error("Erreur bot:", error);
-      this.callbacks.onBotError?.(error.error || "Erreur inconnue");
+    this.socket.on("kick_chat_status_response", (status) => {
+      this.callbacks.onKickChatStatus?.(status);
+    });
+
+    this.socket.on("kick_chat_started", (data) => {
+      this.callbacks.onKickChatStarted?.(data);
+    });
+
+    this.socket.on("kick_chat_stopped", (data) => {
+      this.callbacks.onKickChatStopped?.(data);
+    });
+
+    this.socket.on("kick_chat_error", (error) => {
+      this.callbacks.onKickChatError?.(error);
     });
 
     this.socket.on("disconnect", () => {
       this.updateStatus("disconnected");
       this.callbacks.onDisconnect?.();
-    });
-
-    this.socket.on("pong", (data) => {
-      console.log("Pong reçu:", data);
     });
   }
 
@@ -163,60 +223,65 @@ class WebSocketService {
    * Démarrer le bot
    */
   async startBot(config: BotConfig): Promise<void> {
-    if (!this.socket || this.status !== "connected") {
-      throw new Error("Service non connecté");
-    }
+    if (!this.socket) throw new Error("Non connecté");
 
-    const data: Record<string, unknown> = {
-      channelName: config.channelName,
-      threads: config.threads,
-      timeout: config.timeout || 10000,
-      proxyType: config.proxyType || "http",
-      stabilityMode: config.stabilityMode || false,
-      subscriptionStatus: config.subscriptionStatus || "unknown",
-    };
-
-    // Si un fichier proxy est fourni, le convertir en base64
+    // Si on a un fichier de proxy, on doit le lire et l'envoyer
     if (config.proxyFile) {
-      const base64 = await this.fileToBase64(config.proxyFile);
-      data.proxyFileData = base64;
-      data.proxyFileName = config.proxyFile.name;
+      const content = await config.proxyFile.text();
+      this.socket.emit("start_bot", {
+        ...config,
+        proxy_file_content: content,
+        proxyFile: undefined, // Ne pas envoyer l'objet File
+      });
+    } else {
+      this.socket.emit("start_bot", config);
     }
-
-    this.socket.emit("start_bot", data);
   }
 
   /**
    * Arrêter le bot
    */
   stopBot(): void {
-    if (!this.socket || this.status !== "connected") {
-      throw new Error("Service non connecté");
-    }
-
+    if (!this.socket) return;
     this.socket.emit("stop_bot");
+  }
+
+  /**
+   * Démarrer le chat Kick
+   */
+  startKickChat(channelName: string, authTokens?: string[], responseChance?: number, minInterval?: number): void {
+    if (!this.socket) return;
+    this.socket.emit("kick_chat_start", {
+      channel_name: channelName,
+      auth_tokens: authTokens,
+      response_chance: responseChance,
+      min_interval: minInterval,
+    });
+  }
+
+
+  /**
+   * Arrêter le chat Kick
+   */
+  stopKickChat(): void {
+    if (!this.socket) return;
+    this.socket.emit("stop_kick_chat");
+  }
+
+  /**
+   * Demander le statut du chat Kick
+   */
+  getKickChatStatus(): void {
+    if (!this.socket) return;
+    this.socket.emit("get_kick_chat_status");
   }
 
   /**
    * Demander les statistiques
    */
   getStats(): void {
-    if (!this.socket || this.status !== "connected") {
-      return;
-    }
-
+    if (!this.socket) return;
     this.socket.emit("get_stats");
-  }
-
-  /**
-   * Ping le serveur
-   */
-  ping(): void {
-    if (!this.socket || this.status !== "connected") {
-      return;
-    }
-
-    this.socket.emit("ping");
   }
 
   /**
@@ -231,7 +296,15 @@ class WebSocketService {
   }
 
   /**
-   * Obtenir le statut de connexion
+   * Mettre à jour le statut interne
+   */
+  private updateStatus(newStatus: ConnectionStatus) {
+    this.status = newStatus;
+    this.callbacks.onStatusChange?.(newStatus);
+  }
+
+  /**
+   * Obtenir le statut actuel
    */
   getStatus(): ConnectionStatus {
     return this.status;
@@ -245,34 +318,9 @@ class WebSocketService {
   }
 
   /**
-   * Vérifier si connecté
+   * Est-il connecté ?
    */
   isConnected(): boolean {
     return this.status === "connected";
   }
-
-  /**
-   * Mettre à jour le statut
-   */
-  private updateStatus(status: ConnectionStatus) {
-    this.status = status;
-    this.callbacks.onStatusChange?.(status);
-  }
-
-  /**
-   * Convertir un fichier en base64
-   */
-  private fileToBase64(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
 }
-
-export default WebSocketService;

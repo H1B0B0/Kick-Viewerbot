@@ -1,6 +1,7 @@
 "use client";
 import "@/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer } from "react-toastify";
 import ThemeProvider from "../components/ThemeProvider";
 import ThemeSwitcher from "../components/ThemeSwitcher";
 import ApiHealthProvider from "../components/ApiHealthProvider";
@@ -26,32 +27,27 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-green-500/30 selection:text-green-500" suppressHydrationWarning>
+      <body className="min-h-screen bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary overflow-x-hidden" suppressHydrationWarning>
+        <div className="fixed inset-0 bg-grid z-0 pointer-events-none opacity-50"></div>
+        <div className="bg-mesh"></div>
 
         <ThemeProvider>
-          {/* Background Elements - Replaced Spline with CSS Grid/Mesh */}
-          <div className="fixed inset-0 w-full h-full overflow-hidden pointer-events-none z-0">
-            {/* Base Grid */}
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-
-            {/* Radial Gradient Glows */}
-            <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-green-500/5 blur-[120px]"></div>
-            <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-500/5 blur-[120px]"></div>
-          </div>
-
-          <main className="w-full relative z-10 overflow-x-hidden">
+          <main className="w-full relative min-h-screen z-10">
             <ApiHealthProvider>
-              <div className="page-enter-active">{children}</div>
+              <div className="page-enter-active p-4 md:p-6 lg:p-8">{children}</div>
             </ApiHealthProvider>
           </main>
 
           <div className="fixed bottom-4 left-4 z-50 flex gap-2">
             <ThemeSwitcher />
-            {/* Performance Mode toggle removed as 3D is gone */}
           </div>
 
-          <div className="fixed bottom-0 w-full h-24 bg-gradient-to-t from-black to-transparent z-10 pointer-events-none"></div>
           <UpdateProvider />
+          <ToastContainer
+            position="bottom-right"
+            autoClose={3000}
+            theme="colored"
+          />
         </ThemeProvider>
       </body>
     </html>

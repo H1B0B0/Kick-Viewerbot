@@ -1,109 +1,80 @@
 @import "tailwindcss";
-
 @config "../tailwind.config.js";
 
-@layer base {
-  :root {
-    --background: 240 4.8% 95.9%;
-    /* zinc-50/100ish - slightly off-white */
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 142 86% 40%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 142 71% 45%;
-    --radius: 0.5rem;
-  }
+@theme {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+}
 
-  .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 142 86% 40%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 142 71% 45%;
-  }
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --primary: 142 76% 36%;
+  --primary-foreground: 355.7 100% 97.3%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --primary: 142 72% 50%;
+  --primary-foreground: 142 86% 98%;
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   body {
-    @apply bg-background text-foreground transition-colors duration-300 ease-in-out;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary;
   }
 
-  /* Custom Scrollbar - kept as utility not available in pure tailwind by default usually */
+  /* Standard Minimal Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
-    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: transparent;
+    @apply bg-transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-zinc-300 dark:bg-zinc-800 rounded-full transition-colors hover:bg-zinc-400 dark:hover:bg-zinc-700;
-  }
-
-  /* Input Autofill Override */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus,
-  input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px hsl(var(--background)) inset !important;
-    -webkit-text-fill-color: hsl(var(--foreground)) !important;
-    transition: background-color 5000s ease-in-out 0s;
+    @apply bg-default-200 rounded-full hover:bg-default-300 transition-colors;
   }
 }
 
-/* Custom Toastify styles - adapted for light/dark */
-.Toastify__toast-theme--dark {
-  background-color: rgba(9, 9, 11, 0.9) !important;
-  /* zinc-950/90 */
-  backdrop-filter: blur(12px) !important;
-  /* backdrop-blur-md */
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+/* Luxury Tech Background */
+.bg-grid {
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
 }
 
-.Toastify__toast-theme--light {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(0, 0, 0, 0.05) !important;
-  color: black !important;
+.bg-mesh {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 50% -20%, hsl(var(--primary) / 0.15), transparent 70%),
+    radial-gradient(circle at 0% 100%, hsl(var(--primary) / 0.05), transparent 50%);
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: -1;
 }
 
-.Toastify__progress-bar--success {
-  background-color: #22c55e !important;
-  /* green-500 */
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.5) !important;
+/* Page Transitions */
+.page-enter-active {
+  animation: fade-in 0.4s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

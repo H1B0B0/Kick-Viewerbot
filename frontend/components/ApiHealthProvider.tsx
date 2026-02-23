@@ -1,6 +1,6 @@
 "use client";
 import { useApiHealth } from "../hooks/useApiHealth";
-import MaintenancePage from "./MaintenancePage";
+import MaintenancePage from "./MaintenancePage.tsx";
 
 export default function ApiHealthProvider({
   children,

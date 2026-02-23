@@ -6,11 +6,13 @@ import WebSocketService, {
   ConnectionStatus,
 } from "@/services/WebSocketService";
 
-export function useWebSocketBot() {
+export function useWebSocketBot(backendUrl?: string) {
   const [isConnected, setIsConnected] = useState(false);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [stats, setStats] = useState<BotStats | null>(null);
   const [error, setError] = useState<string>("");
+  const [chatStatus, setChatStatus] = useState<any>(null);
+  const [isChatRunning, setIsChatRunning] = useState(false);
   const wsRef = useRef<WebSocketService | null>(null);
 
   useEffect(() => {
@@ -25,22 +27,37 @@ export function useWebSocketBot() {
       onDisconnect: () => {
         setIsConnected(false);
       },
-      onStatsUpdate: (newStats) => {
+      onStatsUpdate: (newStats: BotStats) => {
         setStats(newStats);
       },
-      onBotStarted: (data) => {
+      onBotStarted: (data: any) => {
         ws.getStats();
       },
-      onBotStopped: (data) => {
+      onBotStopped: (data: any) => {
         ws.getStats();
       },
-      onBotError: (errorMsg) => {
+      onBotError: (errorMsg: string) => {
         setError(errorMsg);
       },
-      onStatusChange: (newStatus) => {
+      onStatusChange: (newStatus: ConnectionStatus) => {
         setStatus(newStatus);
       },
-    });
+      onKickChatStatus: (status: any) => {
+        setChatStatus(status);
+        setIsChatRunning(status.enabled || false);
+      },
+      onKickChatStarted: (data: any) => {
+        setIsChatRunning(true);
+        ws.getKickChatStatus();
+      },
+      onKickChatStopped: (data: any) => {
+        setIsChatRunning(false);
+        ws.getKickChatStatus();
+      },
+      onKickChatError: (errorMsg: string) => {
+        setError(errorMsg);
+      },
+    }, backendUrl ? [backendUrl] : undefined);
 
     wsRef.current = ws;
 
@@ -59,7 +76,7 @@ export function useWebSocketBot() {
       clearInterval(statsInterval);
       ws.disconnect();
     };
-  }, []);
+  }, [backendUrl]);
 
   const startBot = useCallback(async (config: BotConfig) => {
     if (!wsRef.current) {
@@ -87,6 +104,27 @@ export function useWebSocketBot() {
     }
   }, []);
 
+  const startKickChat = useCallback((channelName: string, authTokens?: string[], responseChance?: number, minInterval?: number) => {
+    if (!wsRef.current) {
+      throw new Error("WebSocket service not initialized");
+    }
+    wsRef.current.startKickChat(channelName, authTokens, responseChance, minInterval);
+  }, []);
+
+  const stopKickChat = useCallback(() => {
+    if (!wsRef.current) {
+      throw new Error("WebSocket service not initialized");
+    }
+    wsRef.current.stopKickChat();
+  }, []);
+
+  const getKickChatStatus = useCallback(() => {
+    if (!wsRef.current) {
+      throw new Error("WebSocket service not initialized");
+    }
+    wsRef.current.getKickChatStatus();
+  }, []);
+
   const reconnect = useCallback(async () => {
     if (wsRef.current) {
       await wsRef.current.connect();
@@ -99,7 +137,7 @@ export function useWebSocketBot() {
 
   return {
     // Connection state
-    isConnected,
+    wsConnected: isConnected,
     status,
     error,
     currentUrl: getCurrentUrl(),
@@ -108,9 +146,16 @@ export function useWebSocketBot() {
     stats,
     isRunning: stats?.is_running || false,
 
+    // Chat state
+    chatStatus,
+    isChatRunning,
+
     // Actions
     startBot,
     stopBot,
     reconnect,
+    startKickChat,
+    stopKickChat,
+    getKickChatStatus,
   };
 }
