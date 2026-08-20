@@ -1,0 +1,83 @@
+name: Build and Release (Tauri)
+
+on:
+  push:
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  build-tauri:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            target: "aarch64-apple-darwin"
+          - platform: "macos-13"
+            target: "x86_64-apple-darwin"
+          - platform: "windows-latest"
+            target: "x86_64-pc-windows-msvc"
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: 'x64'
+
+      - name: Build Python Sidecar (macOS)
+        if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-13'
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+          pyinstaller KickViewerBOT-macOS.spec --noconfirm
+          mkdir -p frontend/src-tauri/bin
+          cp dist/KickViewerBOT frontend/src-tauri/bin/backend-${{ matrix.target }}
+
+      - name: Build Python Sidecar (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\activate
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -r requirements.txt
+          pyinstaller KickViewerBOT.spec --noconfirm
+          mkdir -p frontend/src-tauri/bin
+          copy dist\KickViewerBOT.exe frontend\src-tauri\bin\backend-${{ matrix.target }}.exe
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: "frontend"
+          tagName: ${{ github.ref_name }}
+          releaseName: "Kick ViewerBot ${{ github.ref_name }}"
+          releaseBody: "See the assets to download this version and install."
+          releaseDraft: true
+          prerelease: false
