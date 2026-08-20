@@ -32,3 +32,4 @@ echo "Copying to tauri sidecar..."
 cp dist/KickViewerBOT frontend/src-tauri/bin/backend-$TARGET_TRIPLE
 
 echo "Build complete! Sidecar is ready at frontend/src-tauri/bin/backend-$TARGET_TRIPLE"
+chmod +x frontend/src-tauri/bin/backend-$TARGET_TRIPLE
