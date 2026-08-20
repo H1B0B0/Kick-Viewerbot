@@ -1,302 +1,179 @@
 "use client";
 import { toast, ToastContainer } from "react-toastify";
-import { Card, CardHeader, CardBody } from "@heroui/card";
-import { Form } from "@heroui/form";
-import { Input } from "@heroui/input";
-import { Button } from "@heroui/button";
+import "react-toastify/dist/ReactToastify.css";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { register } from "../functions/UserAPI";
 import { RegisterData } from "../types/User";
+import { LayoutDashboard, Mail, Lock, User, MonitorPlay } from "lucide-react";
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    username: "",
-    email: "",
-    twitchUsername: "",
-    password: "",
-    confirmPassword: "",
-  });
-  const [validationError, setValidationError] = useState<{
-    username?: string;
-    password?: string;
-    confirmPassword?: string;
-  }>({});
   const router = useRouter();
-
-  const validatePassword = (password: string): string | null => {
-    if (password.length < 8) {
-      return "Password must be at least 8 characters long";
-    }
-    if (!/[A-Z]/.test(password)) {
-      return "Password must contain at least one uppercase letter";
-    }
-    if (!/[a-z]/.test(password)) {
-      return "Password must contain at least one lowercase letter";
-    }
-    if (!/[0-9]/.test(password)) {
-      return "Password must contain at least one number";
-    }
-    if (!/[!@#$%^&*]/.test(password)) {
-      return "Password must contain at least one special character (!@#$%^&*)";
-    }
-    return null;
-  };
-
-  const validateUsername = (username: string): string | null => {
-    if (username.length < 3 || username.length > 20) {
-      return "Username must be between 3 and 20 characters long";
-    }
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return "Username can only contain letters, numbers, underscores and hyphens";
-    }
-    return null;
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
 
   async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setValidationError({});
-
-    // Validate username
-    const usernameError = validateUsername(formData.username);
-    if (usernameError) {
-      setValidationError((prev) => ({ ...prev, username: usernameError }));
-      return;
-    }
-
-    // Validate password
-    const passwordError = validatePassword(formData.password);
-    if (passwordError) {
-      setValidationError((prev) => ({ ...prev, password: passwordError }));
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setValidationError((prev) => ({
-        ...prev,
-        confirmPassword: "Passwords do not match",
-      }));
-      return;
-    }
-
-    const registerData: RegisterData = {
-      username: formData.username,
-      TwitchUsername: formData.twitchUsername,
-      email: formData.email,
-      password: formData.password,
-    };
-
     try {
       setIsLoading(true);
+      setError(null);
+      const formData = new FormData(e.currentTarget);
+      
+      const password = formData.get("password") as string;
+      const confirmPassword = formData.get("confirmPassword") as string;
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+
+      const registerData: RegisterData = {
+        username: formData.get("username") as string,
+        TwitchUsername: formData.get("twitchUsername") as string,
+        email: formData.get("email") as string,
+        password: password,
+      };
+
       await register(registerData);
-      toast.success("Account created successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      toast.success("Account created successfully!", { theme: "dark" });
       router.push("/login");
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "An error occurred";
-      setError(errorMessage);
-      toast.error(errorMessage, {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+    } catch (err: any) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+      toast.error(err instanceof Error ? err.message : "Error", { theme: "dark" });
     } finally {
       setIsLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <ToastContainer />
-      <Card className="space-y-8 p-8 w-96 md:w-[500px]">
-        <CardHeader className="flex flex-col space-y-5">
-          <h2 className="text-3xl font-extrabold text-center bg-gradient-to-r from-green-500 to-lime-400 bg-clip-text text-transparent">
-            Create Account
-          </h2>
-        </CardHeader>
-        <Form className="mt-8 space-y-6" onSubmit={handleRegister}>
-          <CardBody className="space-y-6">
+    <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-zinc-300 font-sans selection:bg-green-500/30">
+      <ToastContainer position="bottom-right" />
+      
+      <div className="w-full max-w-md">
+        <div className="flex flex-col items-center justify-center mb-8">
+          <div className="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center justify-center mb-4">
+            <LayoutDashboard className="w-6 h-6 text-green-400" />
+          </div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">Create Agent</h2>
+          <p className="text-zinc-500 mt-2 text-sm">Register to deploy your KickViewerBOT</p>
+        </div>
+
+        <div className="bg-black border border-zinc-900 rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-green-500/50" />
+          
+          <form className="space-y-5" onSubmit={handleRegister}>
             {error && (
-              <div className="p-3 text-sm text-red-500 bg-red-100 rounded-lg">
+              <div className="p-3 text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg">
                 {error}
               </div>
             )}
-            <div>
-              <Input
-                type="text"
-                name="username"
-                label="Username"
-                value={formData.username}
-                onChange={handleChange}
-                required
-                minLength={3}
-                maxLength={20}
-                pattern="[a-zA-Z0-9_-]+"
-                title="Username can only contain letters, numbers, underscores and hyphens"
-              />
-              {validationError.username && (
-                <p className="mt-1 text-xs text-red-500">
-                  {validationError.username}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                3-20 characters, letters, numbers, underscores and hyphens only
-              </p>
-            </div>
-            <div>
-              <Input
-                type="email"
-                name="email"
-                label="Email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                type="text"
-                name="twitchUsername"
-                label="Kick Username"
-                value={formData.twitchUsername}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div>
-              <Input
-                type="password"
-                name="password"
-                label="Password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                minLength={8}
-                title="Password must be at least 8 characters long, contain uppercase and lowercase letters, numbers and special characters"
-              />
-              {validationError.password && (
-                <p className="mt-1 text-xs text-red-500">
-                  {validationError.password}
-                </p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                Minimum 8 characters, must include uppercase, lowercase, number
-                and special character
-              </p>
-            </div>
-            <div>
-              <Input
-                type="password"
-                name="confirmPassword"
-                label="Confirm Password"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                required
-              />
-              {validationError.confirmPassword && (
-                <p className="mt-1 text-xs text-red-500">
-                  {validationError.confirmPassword}
-                </p>
-              )}
-            </div>
-            <div>
-              <Button
-                type="submit"
-                isLoading={isLoading}
-                spinner={
-                  <svg
-                    className="animate-spin h-5 w-5 text-current"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      fill="currentColor"
-                    />
-                  </svg>
-                }
-                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-colors duration-200"
-              >
-                {isLoading ? "Creating Account..." : "Create Account"}
-              </Button>
-
-              {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-default-200" />
+            
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Username</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User className="h-4 w-4 text-zinc-600" />
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-background text-default-500">
-                    Or continue with
-                  </span>
+                <input 
+                  type="text" name="username" required minLength={3} maxLength={20} pattern="[a-zA-Z0-9_-]+"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 text-white placeholder-zinc-700 transition-all"
+                  placeholder="Agent moniker"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Email</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-4 w-4 text-zinc-600" />
+                </div>
+                <input 
+                  type="email" name="email" required 
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 text-white placeholder-zinc-700 transition-all"
+                  placeholder="contact@example.com"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Kick Username</label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MonitorPlay className="h-4 w-4 text-zinc-600" />
+                </div>
+                <input 
+                  type="text" name="twitchUsername" required 
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 text-white placeholder-zinc-700 transition-all"
+                  placeholder="Your stream handle"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Password</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-zinc-600" />
+                  </div>
+                  <input 
+                    type="password" name="password" required minLength={8}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 text-white placeholder-zinc-700 transition-all"
+                    placeholder="••••••••"
+                  />
                 </div>
               </div>
 
-              {/* Patreon Register Button */}
-              <Button
-                onPress={() =>
-                  (window.location.href =
-                    "https://api.velbots.shop/payments/patreon/redirect")
-                }
-                className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-default-300 text-sm font-medium rounded-lg bg-[#FF424D] hover:bg-[#E8384C] text-white transition-colors duration-200 shadow-sm hover:shadow-md"
-              >
-                <svg
-                  className="w-5 h-5"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
-                </svg>
-                Register with Patreon
-              </Button>
-
-              <div className="mt-4 text-center">
-                <span className="text-sm text-gray-600">
-                  Already have an account?{" "}
-                </span>
-                <Button
-                  variant="ghost"
-                  className="text-sm text-green-600 hover:text-green-800"
-                  onPress={() => router.push("/login")}
-                >
-                  Login now
-                </Button>
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Confirm</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-zinc-600" />
+                  </div>
+                  <input 
+                    type="password" name="confirmPassword" required 
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm focus:outline-none focus:border-green-500/50 focus:ring-1 focus:ring-green-500/50 text-white placeholder-zinc-700 transition-all"
+                    placeholder="••••••••"
+                  />
+                </div>
               </div>
             </div>
-          </CardBody>
-        </Form>
-      </Card>
+
+            <button 
+              type="submit" disabled={isLoading}
+              className="w-full py-3 mt-4 bg-green-500 hover:bg-green-400 text-black font-bold text-sm rounded-lg transition-all shadow-[0_0_15px_rgba(34,197,94,0.2)] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isLoading ? (
+                <span className="w-5 h-5 border-2 border-black/20 border-t-black rounded-full animate-spin"></span>
+              ) : "REGISTER SYSTEM"}
+            </button>
+            
+            <div className="relative py-2 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-zinc-800"></div></div>
+              <span className="relative px-3 bg-black text-xs text-zinc-600 uppercase tracking-widest font-semibold">Or use</span>
+            </div>
+
+            <button 
+              type="button" 
+              onClick={() => window.location.href = "https://api.velbots.shop/payments/patreon/redirect"}
+              className="w-full py-2.5 bg-[#FF424D]/10 hover:bg-[#FF424D]/20 border border-[#FF424D]/30 text-[#FF424D] font-bold text-sm rounded-lg transition-all flex items-center justify-center gap-2"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M15.386.524c-4.764 0-8.64 3.876-8.64 8.64 0 4.75 3.876 8.613 8.64 8.613 4.75 0 8.614-3.864 8.614-8.613C24 4.4 20.136.524 15.386.524M.003 23.537h4.22V.524H.003" />
+              </svg>
+              Patreon Registration
+            </button>
+          </form>
+        </div>
+
+        <div className="mt-6 text-center text-sm">
+          <span className="text-zinc-600">Already authorized? </span>
+          <button onClick={() => router.push("/login")} className="text-green-500 hover:text-green-400 font-semibold transition-colors">
+            Login now
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
