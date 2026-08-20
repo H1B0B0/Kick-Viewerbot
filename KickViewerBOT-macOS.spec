@@ -4,22 +4,7 @@ block_cipher = None
 
 import os
 import sys
-
-# Try to get tls_client dependencies path
-try:
-    import tls_client
-    tls_client_deps = os.path.join(os.path.dirname(tls_client.__file__), 'dependencies')
-    tls_client_binaries = [
-        (os.path.join(tls_client_deps, 'tls-client-32.dll'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-64.dll'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-amd64.so'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-arm64.dylib'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-arm64.so'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-x86.dylib'), 'tls_client/dependencies'),
-        (os.path.join(tls_client_deps, 'tls-client-x86.so'), 'tls_client/dependencies'),
-    ]
-except ImportError:
-    tls_client_binaries = []
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 
 # Use the current Python environment's site-packages (works for venv and CI)
 import site
@@ -27,7 +12,7 @@ site_packages = site.getsitepackages()[0]
 
 # Build data list - only include actual data files, not Python packages
 datas = [
-    ('backend', '.'),
+    ('backend', 'backend'),
 ]
 
 # Add fake_useragent data files if they exist
@@ -35,12 +20,24 @@ fake_useragent_data = os.path.join(site_packages, 'fake_useragent', 'data')
 if os.path.exists(fake_useragent_data):
     datas.append((fake_useragent_data, 'fake_useragent/data'))
 
+# Force include tls_client dependencies as binaries
+tls_client_binaries = []
+tls_client_deps = os.path.join(site_packages, 'tls_client', 'dependencies')
+if os.path.exists(tls_client_deps):
+    for f in os.listdir(tls_client_deps):
+        if f.endswith(('.dll', '.so', '.dylib')):
+            tls_client_binaries.append((os.path.join(tls_client_deps, f), 'tls_client/dependencies'))
+
 a = Analysis(
     ['backend/main.py'],
     pathex=[],
     binaries=tls_client_binaries,
     datas=datas,
     hiddenimports=[
+        'api.viewer_bot',
+        'api.viewer_bot_stability',
+        'services.chat_service',
+        'services.kick_chat_bot',
         # Flask and related
         'flask',
         'flask_cors',
