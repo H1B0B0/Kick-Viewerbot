@@ -1,51 +1,16 @@
 "use client";
 import "@/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
-import ThemeProvider from "../components/ThemeProvider";
-import ThemeSwitcher from "../components/ThemeSwitcher";
-import SplineWithLoader from "../components/SplineWithLoader";
-import AppLoader from "../components/AppLoader";
 import ApiHealthProvider from "../components/ApiHealthProvider";
-import UpdateProvider from "../components/UpdateProvider";
-import { useEffect, useState } from "react";
-import { Button } from "@heroui/button";
+import UpdateBanner from "../components/UpdateBanner";
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [performanceMode, setPerformanceMode] = useState(true);
-  const [isAppLoading, setIsAppLoading] = useState(false);
-
-  useEffect(() => {
-    // Check if the app has already been loaded in this session
-    const hasLoadedBefore = sessionStorage.getItem("appHasLoaded");
-
-    if (!hasLoadedBefore) {
-      // First time loading in this session - show loader
-      setIsAppLoading(true);
-    }
-
-    // Load performance mode preference from localStorage
-    const savedMode = localStorage.getItem("performanceMode");
-    setPerformanceMode(savedMode === "true");
-  }, []);
-
-  const handleLoadComplete = () => {
-    setIsAppLoading(false);
-    // Mark app as loaded for this session
-    sessionStorage.setItem("appHasLoaded", "true");
-  };
-
-  const togglePerformanceMode = () => {
-    const newMode = !performanceMode;
-    setPerformanceMode(newMode);
-    localStorage.setItem("performanceMode", String(newMode));
-  };
-
   return (
-    <html suppressHydrationWarning>
+    <html suppressHydrationWarning lang="en">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -54,82 +19,17 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body className="min-h-screen bg-mesh" suppressHydrationWarning>
-        {/* Global app loader - only shows once per session */}
-        {isAppLoading && <AppLoader onLoadComplete={handleLoadComplete} />}
-
-        <ThemeProvider>
-          {/* Background Elements */}
-          <div className="fixed inset-0 w-full h-full overflow-hidden">
-            {/* Subtle background pattern */}
-            <div className="absolute inset-0 opacity-20">
-              <svg
-                width="100%"
-                height="100%"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <defs>
-                  <pattern
-                    id="smallGrid"
-                    width="20"
-                    height="20"
-                    patternUnits="userSpaceOnUse"
-                  >
-                    <path
-                      d="M 20 0 L 0 0 0 20"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="0.5"
-                      opacity="0.2"
-                    />
-                  </pattern>
-                </defs>
-                <rect width="100%" height="100%" fill="url(#smallGrid)" />
-              </svg>
-            </div>
-
-            {/* Cool background gradient blobs */}
-            <div className="absolute -top-24 -right-24 w-96 h-96 bg-green-400 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-float"></div>
-            <div
-              className="absolute -bottom-24 -left-24 w-96 h-96 bg-blue-400 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-float"
-              style={{ animationDelay: "2s" }}
-            ></div>
-
-            {/* Spline 3D object (when not in performance mode) */}
-            {!performanceMode && (
-              <div className="absolute inset-0">
-                <SplineWithLoader
-                  scene="https://prod.spline.design/0zfiWcHYJLJfg6nt/scene.splinecode"
-                  className="absolute"
-                />
-              </div>
-            )}
-          </div>
-
-          <main className="w-full relative z-10 overflow-x-hidden">
-            <ApiHealthProvider>
-              <div className="page-enter-active">{children}</div>
-            </ApiHealthProvider>
-          </main>
-
-          <div className="fixed bottom-4 left-4 z-50 flex gap-2">
-            <ThemeSwitcher />
-            <Button
-              variant="bordered"
-              onPress={togglePerformanceMode}
-              className="bg-background/80 backdrop-blur-sm shadow-lg"
-            >
-              {performanceMode ? "🚀 Performance" : "✨ Visual"}
-            </Button>
-          </div>
-
-          <div className="fixed bottom-0 w-full h-12 bg-gradient-to-t from-background/80 to-transparent z-10 pointer-events-none"></div>
-          <UpdateProvider />
-        </ThemeProvider>
+      <body className="min-h-screen bg-[#09090b] text-zinc-300 font-sans antialiased flex flex-col" suppressHydrationWarning>
+        <UpdateBanner />
+        <main className="flex-1 w-full relative z-10 overflow-hidden">
+          <ApiHealthProvider>
+            {children}
+          </ApiHealthProvider>
+        </main>
       </body>
     </html>
   );

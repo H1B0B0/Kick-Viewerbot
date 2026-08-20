@@ -17,7 +17,7 @@ export interface BotConfig {
   proxyType?: string;
   stabilityMode?: boolean;
   proxyFile?: File;
-  subscriptionStatus?: boolean;
+  subscriptionStatus?: string;
 }
 
 export interface BotStats {
