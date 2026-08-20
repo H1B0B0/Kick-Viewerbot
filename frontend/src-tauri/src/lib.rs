@@ -7,7 +7,9 @@ pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_shell::init())
     .setup(|app| {
-      let sidecar_command = app.shell().sidecar("backend").unwrap();
+      let sidecar_command = app.shell().sidecar("backend")
+        .unwrap()
+        .args(["--no-browser"]);
       
       let (mut rx, mut _child) = sidecar_command
         .spawn()
@@ -22,6 +24,12 @@ pub fn run() {
           }
         }
       });
+
+      #[cfg(debug_assertions)]
+      {
+        let window = app.get_webview_window("main").unwrap();
+        window.open_devtools();
+      }
 
       Ok(())
     })
