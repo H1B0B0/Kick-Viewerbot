@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "tauri": "tauri"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
@@ -55,6 +56,7 @@
     "@react-aria/visually-hidden": "3.8.28",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.10.76",
+    "@tauri-apps/api": "^2.11.1",
     "animejs": "^4.2.2",
     "axios": "^1.12.2",
     "chart.js": "^4.5.0",
@@ -77,6 +79,7 @@
     "@next/eslint-plugin-next": "15.3.4",
     "@react-types/shared": "3.32.1",
     "@tailwindcss/postcss": "^4.1.14",
+    "@tauri-apps/cli": "^2.11.4",
     "@types/node": "20.5.7",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
