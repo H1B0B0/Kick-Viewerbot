@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { CardHeader, CardBody } from "@heroui/card";
 import { Checkbox } from "@heroui/checkbox";
 import { Input } from "@heroui/input";
@@ -36,7 +37,14 @@ const ALLOWED_STABILITY_SUBSCRIPTIONS = new Set([
 ]);
 
 export default function ViewerBotInterface() {
-  const { data: profile } = useGetProfile();
+  const { data: profile, error: profileError } = useGetProfile();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (profileError) {
+      router.push("/login");
+    }
+  }, [profileError, router]);
   const { data: subscription, isLoading: isSubscriptionLoading } =
     useGetSubscription();
 
