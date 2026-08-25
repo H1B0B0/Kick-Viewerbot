@@ -17,12 +17,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            os_runner: "macos-13" # macOS Intel
+          - platform: "macos-intel"
+            os_runner: "macos-15-intel"
             target: "x86_64-apple-darwin"
             arch: "x86_64"
           - platform: "macos-arm64"
-            os_runner: [self-hosted, macOS, ARM64] # macOS ARM64
+            os_runner: "macos-15"
             target: "aarch64-apple-darwin"
             arch: "arm64"
           - platform: "windows-latest"
@@ -50,12 +50,17 @@ jobs:
         with:
           python-version: "3.11.9"
 
-      - name: Install dependencies (Online Bootstrap)
-        run: |
-          python -m pip install --require-hashes -r requirements.lock
-          python -m pip install pyinstaller
-          cd frontend && npm ci
-          cargo fetch --locked --manifest-path frontend/src-tauri/Cargo.toml
+      - name: Install locked Python dependencies
+        run: python -m pip install --require-hashes -r requirements.lock
+
+      - name: Install PyInstaller
+        run: python -m pip install pyinstaller
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Fetch Rust dependencies
+        run: cargo fetch --locked --manifest-path frontend/src-tauri/Cargo.toml
 
       - name: Offline Verifications
         env:
