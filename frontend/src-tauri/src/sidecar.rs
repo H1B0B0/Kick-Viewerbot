@@ -64,7 +64,7 @@ pub fn spawn_sidecar(app: &AppHandle) {
     let (mut rx, child) = match sidecar_command.spawn() {
         Ok(res) => res,
         Err(e) => {
-            eprintln!("Failed to spawn backend sidecar: {}", e);
+            eprintln!("Failed to spawn backend sidecar: {e}");
             let _ = app.emit("runtime_status_changed", "unavailable");
             return;
         }
@@ -128,14 +128,14 @@ pub fn spawn_sidecar(app: &AppHandle) {
                             }
                         }
                     } else {
-                        println!("backend: {}", text);
+                        println!("backend: {text}");
                     }
                 }
                 CommandEvent::Stderr(line) => {
                     eprintln!("backend err: {}", String::from_utf8_lossy(&line));
                 }
                 CommandEvent::Terminated(payload) => {
-                    println!("backend terminated: {:?}", payload);
+                    println!("backend terminated: {payload:?}");
                     let mut ep = endpoint_ref.lock().await;
                     *ep = None;
                     let _ = app_clone.emit("runtime_status_changed", "exited");

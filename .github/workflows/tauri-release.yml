@@ -42,7 +42,7 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup default 1.84.1
+          rustup default 1.88.0
           rustup target add ${{ matrix.target }}
 
       - name: Setup Python

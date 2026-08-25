@@ -27,3 +27,12 @@ def test_release_bootstrap_keeps_commands_at_repository_root() -> None:
     assert "self-hosted" not in workflow
     assert 'os_runner: "macos-15-intel"' in workflow
     assert 'os_runner: "macos-15"' in workflow
+    assert "rustup default 1.88.0" in workflow
+
+
+def test_rust_toolchain_matches_manifest_msrv() -> None:
+    toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
+    manifest = (ROOT / "frontend/src-tauri/Cargo.toml").read_text(encoding="utf-8")
+
+    assert 'channel = "1.88.0"' in toolchain
+    assert 'rust-version = "1.88.0"' in manifest
