@@ -1,6 +1,6 @@
 {
   "name": "kick-viewerbot",
-  "version": "0.1.1-beta.4",
+  "version": "0.1.1-beta.5",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

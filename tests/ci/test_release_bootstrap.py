@@ -28,6 +28,8 @@ def test_release_bootstrap_keeps_commands_at_repository_root() -> None:
     assert 'os_runner: "macos-15-intel"' in workflow
     assert 'os_runner: "macos-15"' in workflow
     assert "rustup default 1.88.0" in workflow
+    assert workflow.index("Build Python Sidecar (Unix)") < workflow.index("Offline Verifications")
+    assert workflow.index("Build Python Sidecar (Windows)") < workflow.index("Offline Verifications")
 
 
 def test_rust_toolchain_matches_manifest_msrv() -> None:

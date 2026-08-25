@@ -2198,7 +2198,7 @@ dependencies = [
 
 [[package]]
 name = "kick-viewerbot"
-version = "0.1.1-beta.4"
+version = "0.1.1-beta.5"
 dependencies = [
  "hex",
  "log",

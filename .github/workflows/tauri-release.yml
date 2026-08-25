@@ -62,20 +62,6 @@ jobs:
       - name: Fetch Rust dependencies
         run: cargo fetch --locked --manifest-path frontend/src-tauri/Cargo.toml
 
-      - name: Offline Verifications
-        env:
-          PIP_NO_INDEX: "1"
-          npm_config_offline: "true"
-          CARGO_NET_OFFLINE: "true"
-        run: |
-          python -m pytest -q tests/backend
-          cd frontend
-          npm run typecheck
-          npm run lint:check
-          npm run test:unit --if-present
-          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
-          cargo test --manifest-path src-tauri/Cargo.toml --locked
-
       - name: Build Python Sidecar (Unix)
         if: runner.os == 'macOS'
         run: |
@@ -89,6 +75,20 @@ jobs:
           pyinstaller KickViewerBOT.spec --noconfirm
           mkdir -p frontend/src-tauri/bin
           copy dist\KickViewerBOT.exe frontend\src-tauri\bin\backend-${{ matrix.target }}.exe
+
+      - name: Offline Verifications
+        env:
+          PIP_NO_INDEX: "1"
+          npm_config_offline: "true"
+          CARGO_NET_OFFLINE: "true"
+        run: |
+          python -m pytest -q tests/backend
+          cd frontend
+          npm run typecheck
+          npm run lint:check
+          npm run test:unit --if-present
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
 
       - name: Build Tauri App for Pull Request
         if: github.event_name == 'pull_request'
