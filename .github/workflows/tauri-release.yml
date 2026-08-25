@@ -85,6 +85,7 @@ jobs:
           CARGO_NET_OFFLINE: "true"
         run: |
           python -m pytest -q tests/backend
+          python scripts/ci/verify_versions.py --tauri frontend/src-tauri/tauri.conf.json --package frontend/package.json --cargo frontend/src-tauri/Cargo.toml --python pyproject.toml
           cd frontend
           npm run typecheck
           npm run lint:check

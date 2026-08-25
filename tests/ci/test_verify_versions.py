@@ -59,6 +59,25 @@ def test_accepts_versions_when_all_manifests_match(
     assert result.stdout.strip() == "Version metadata aligned: 0.1.0"
 
 
+def test_accepts_numeric_desktop_prerelease_with_python_dev_version(
+    matching_manifests: ManifestPaths,
+) -> None:
+    matching_manifests.tauri.write_text(json.dumps({"version": "0.1.2-1"}), encoding="utf-8")
+    matching_manifests.package.write_text(json.dumps({"version": "0.1.2-1"}), encoding="utf-8")
+    matching_manifests.cargo.write_text('[package]\nversion = "0.1.2-1"\n', encoding="utf-8")
+    matching_manifests.python.write_text('[project]\nversion = "0.1.2.dev1"\n', encoding="utf-8")
+
+    result = subprocess.run(
+        matching_manifests.command(),
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert result.stdout.strip() == "Version metadata aligned: 0.1.2-1"
+
+
 def test_rejects_version_when_one_manifest_drifts(
     matching_manifests: ManifestPaths,
 ) -> None:

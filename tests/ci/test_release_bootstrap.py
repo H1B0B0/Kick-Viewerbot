@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 
@@ -38,6 +39,9 @@ def test_release_bootstrap_keeps_commands_at_repository_root() -> None:
     assert "New-Item -ItemType Directory -Force" in windows_sidecar
     assert "Copy-Item -Force" in windows_sidecar
 
+    offline_verifications = workflow.split("Offline Verifications", maxsplit=1)[1]
+    assert '          CARGO_NET_OFFLINE: "true"' in offline_verifications
+
 
 def test_rust_toolchain_matches_manifest_msrv() -> None:
     toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
@@ -45,3 +49,13 @@ def test_rust_toolchain_matches_manifest_msrv() -> None:
 
     assert 'channel = "1.88.0"' in toolchain
     assert 'rust-version = "1.88.0"' in manifest
+
+
+def test_tauri_prerelease_is_msi_compatible() -> None:
+    config = json.loads(
+        (ROOT / "frontend/src-tauri/tauri.conf.json").read_text(encoding="utf-8")
+    )
+    prerelease = config["version"].partition("-")[2]
+
+    assert prerelease.isdigit()
+    assert int(prerelease) <= 65535

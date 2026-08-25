@@ -102,6 +102,13 @@ def load_metadata(paths: ManifestPaths) -> VersionMetadata:
     )
 
 
+def python_equivalent(desktop_version: str) -> str:
+    release, separator, prerelease = desktop_version.partition("-")
+    if separator and prerelease.isdigit():
+        return f"{release}.dev{prerelease}"
+    return desktop_version
+
+
 def parse_args() -> ManifestPaths:
     parser = argparse.ArgumentParser(
         description="Verify that Tauri, frontend, Cargo, and Python versions match.",
@@ -126,7 +133,8 @@ def main() -> int:
         print(f"Unable to read version metadata: {error}", file=sys.stderr)
         return 2
 
-    if len(set(metadata.values())) != 1:
+    desktop_versions = (metadata.tauri, metadata.package, metadata.cargo)
+    if len(set(desktop_versions)) != 1 or metadata.python != python_equivalent(metadata.tauri):
         print(f"Version metadata mismatch: {metadata.describe()}", file=sys.stderr)
         return 1
 

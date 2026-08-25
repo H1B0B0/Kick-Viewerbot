@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use tauri::Emitter;
+#[cfg(debug_assertions)]
 use tauri::Manager;
 use tokio::sync::Mutex;
 
