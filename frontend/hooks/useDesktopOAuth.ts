@@ -33,6 +33,7 @@ export function useDesktopOAuth() {
             const success = await handleOAuthCallback(url, capabilities);
             if (success) {
               await mutate(); // Refresh user profile
+              window.location.href = "/"; // Force redirection to dashboard
               break;
             }
           }
