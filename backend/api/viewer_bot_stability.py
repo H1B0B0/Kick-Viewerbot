@@ -30,7 +30,6 @@ logging.getLogger("urllib3").setLevel(logging.ERROR)
 console = Console()
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Session creating for request
 ua = UserAgent()
@@ -77,15 +76,12 @@ class ViewerBot_Stability:
         self.active_threads = 0
         self.active_connections = 0  # Track number of active WebSocket connections
         self.active_connections_lock = threading.Lock()  # Thread-safe lock for connection counter
-        self.should_stop = False
+        self.should_stop = threading.Event()
+        self.state_lock = threading.Lock()
         self.timeout = timeout
         self.type_of_proxy = type_of_proxy
-        self.proxies = []  # Add this to store proxies only once
-        self.request_per_second = 0  # Add counter for requests per second
-        self.requests_in_current_second = 0
-        self.last_request_time = time.time()
         self.status = {
-            'state': 'initialized',  # Current state of the bot
+            'code': 'initialized',  # Current state of the bot
             'message': 'Bot initialized',  # Status message
             'proxy_count': 0,  # Number of proxies currently loaded
             'proxy_loading_progress': 0,  # Progress when loading proxies (0-100)
@@ -372,7 +368,7 @@ class ViewerBot_Stability:
 
     def update_status(self, state, message, proxy_count=None, proxy_loading_progress=None, startup_progress=None):
         self.status.update({
-            'state': state,
+            'code': state,
             'message': message,
             **(({'proxy_count': proxy_count} if proxy_count is not None else {})),
             **(({'proxy_loading_progress': proxy_loading_progress} if proxy_loading_progress is not None else {})),
@@ -395,7 +391,7 @@ class ViewerBot_Stability:
                 except FileNotFoundError:
                     self.update_status('error', 'Proxy file not found')
                     logging.error(f"Proxy file {self.proxy_file} not found.")
-                    sys.exit(1)
+                    raise FileNotFoundError(f"Proxy file {self.proxy_file} not found")
             else:
                 try:
                     self.update_status('loading_proxies', 'Fetching proxies from API...')
@@ -588,14 +584,15 @@ class ViewerBot_Stability:
     def stop(self):
         console.print("[bold red]Bot has been stopped[/bold red]")
         self.update_status('stopping', 'Stopping bot...')
-        self.should_stop = True
+        self.should_stop.set()
         
         for thread in self.processes:
             if thread.is_alive():
                 thread.join(timeout=1)
         
         # Vider la liste des threads
-        self.processes.clear()
+        with self.state_lock:
+            self.processes.clear()
         self.active_threads = 0
         self.all_proxies = []
         self.update_status('stopped', 'Bot has been stopped')
@@ -607,7 +604,8 @@ class ViewerBot_Stability:
 
     def send_websocket_view(self, proxy_data):
         """Send view using WebSocket connection with proper authentication"""
-        self.active_threads += 1
+        with self.state_lock:
+            self.active_threads += 1
         try:
             # Get channel ID if not already cached
             if not self.channel_id:
@@ -632,7 +630,8 @@ class ViewerBot_Stability:
         except Exception as e:
             logging.error(f"Error in send_websocket_view: {e}")
         finally:
-            self.active_threads -= 1
+            with self.state_lock:
+                self.active_threads -= 1
             self.thread_semaphore.release()
 
     async def _websocket_worker(self, proxy_data):
@@ -642,7 +641,7 @@ class ViewerBot_Stability:
         
         logging.info(f"🚀 [{connection_id}] WebSocket worker started")
         
-        while not self.should_stop and retry_count < self.max_retry_attempts:
+        while not self.should_stop.is_set() and retry_count < self.max_retry_attempts:
             try:
                 # Get a FRESH token for THIS connection (critical for proxy rotation)
                 logging.info(f"[{connection_id}] Getting WebSocket token...")
@@ -718,7 +717,7 @@ class ViewerBot_Stability:
                         last_handshake_time = time.time()
                         last_user_event_time = time.time()
                         
-                        while not self.should_stop:
+                        while not self.should_stop.is_set():
                             current_time = time.time()
                             
                             # Send channel_handshake every 15 seconds
@@ -755,7 +754,8 @@ class ViewerBot_Stability:
                             ping_count += 1
                             ping_msg = {"type": "ping"}
                             await websocket.send(json.dumps(ping_msg))
-                            self.request_count += 1
+                            with self.state_lock:
+                                self.request_count += 1
                             
                             # Log every 10 pings to reduce spam
                             if ping_count % 10 == 0:
@@ -802,7 +802,7 @@ class ViewerBot_Stability:
                         logging.info(f"📉 [{connection_id}] Connection closed. Active connections: {self.active_connections}")
                     
             except websockets.exceptions.ConnectionClosed as e:
-                if not self.should_stop:
+                if not self.should_stop.is_set():
                     retry_count += 1
                     backoff_delay = self.connection_retry_delay * (self.backoff_multiplier ** (retry_count - 1))
                     logging.debug(f"WebSocket [{connection_id}] connection closed (attempt {retry_count}/{self.max_retry_attempts}), reconnecting in {backoff_delay}s...")
@@ -833,12 +833,6 @@ class ViewerBot_Stability:
                     logging.warning(f"WebSocket [{connection_id}] forbidden (HTTP 403) - token invalid or proxy blocked, getting new token and retrying in {backoff_delay}s (attempt {retry_count}/{self.max_retry_attempts})")
                     await asyncio.sleep(backoff_delay)
                     
-                    # Force refresh token by clearing cache
-                    with self.token_lock:
-                        self.token_cache = None
-                        self.token_cache_time = 0
-                    
-                    # Get fresh token
                     token = self.get_websocket_token()
                     if not token:
                         logging.error(f"Failed to get fresh token after 403 [{connection_id}]")
@@ -847,7 +841,7 @@ class ViewerBot_Stability:
                     logging.error(f"WebSocket [{connection_id}] invalid status code: {e.status_code}")
                     break
             except Exception as e:
-                if not self.should_stop:
+                if not self.should_stop.is_set():
                     retry_count += 1
                     backoff_delay = self.connection_retry_delay * (self.backoff_multiplier ** (retry_count - 1))
                     
@@ -918,7 +912,7 @@ class ViewerBot_Stability:
         if not test_token:
             self.update_status('error', '❌ Failed to get WebSocket token. Check CLIENT_TOKEN or network connection.')
             logging.error("Cannot proceed without valid WebSocket token")
-            self.should_stop = True
+            self.should_stop.set()
             return
         else:
             logging.info(f"✓ Successfully obtained WebSocket token")
@@ -949,7 +943,7 @@ class ViewerBot_Stability:
         
         if not proxies:
             self.update_status('error', 'No proxies available. Stopping bot.')
-            self.should_stop = True
+            self.should_stop.set()
             return
 
         # Preload stream URL to avoid rate limiting (still useful for backup)
@@ -960,7 +954,8 @@ class ViewerBot_Stability:
             stream_url = ""  # Set empty string as fallback
         
         # Initialize all_proxies with the preloaded URL
-        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies]
+        with self.state_lock:
+                            self.all_proxies = tuple([{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies])
         
         self.processes = []
         
@@ -970,7 +965,8 @@ class ViewerBot_Stability:
             if self.thread_semaphore.acquire(blocking=False):
                 if len(self.all_proxies) > 0:
                     threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
-                    self.processes.append(threaded)
+                    with self.state_lock:
+                        self.processes.append(threaded)
                     threaded.daemon = True
                     threaded.start()
                 else:
@@ -981,7 +977,7 @@ class ViewerBot_Stability:
                           startup_progress=100)
         
         # Main monitoring loop
-        while not self.should_stop:
+        while not self.should_stop.is_set():
             current_time = time.time()
             elapsed_seconds = (datetime.datetime.now() - start).total_seconds()
 
@@ -1004,7 +1000,8 @@ class ViewerBot_Stability:
                         if self.thread_semaphore.acquire(blocking=False):
                             if len(self.all_proxies) > 0:
                                 threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
-                                self.processes.append(threaded)
+                                with self.state_lock:
+                                    self.processes.append(threaded)
                                 threaded.daemon = True
                                 threaded.start()
                             else:

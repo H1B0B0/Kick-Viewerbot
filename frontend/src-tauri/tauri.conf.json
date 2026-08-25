@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "kick-viewerbot",
-  "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "productName": "Kick ViewerBot",
+  "version": "0.1.1-beta.1",
+  "identifier": "com.velbots.kickviewerbot",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* https://api.velbots.shop; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     }
   },
   "bundle": {
@@ -38,6 +38,22 @@
     },
     "externalBin": [
       "bin/backend"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "velbots"
+        ]
+      }
+    },
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk3Nzk4RkI2RjBBQTgwNEYKUldSUGdLcnd0bzk1bDBvZHl5dzNtaFlBUUdFSWJrWVBNdHpYY3BLclQzSVBuUEowSUpqQXdOOXgK",
+      "endpoints": [
+        "https://github.com/H1B0B0/Kick-Viewerbot/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

@@ -1,0 +1,45 @@
+{
+  "fixture_version": 1,
+  "cases": [
+    {
+      "kind": "server_event",
+      "event": "stats_update",
+      "payload": {
+        "protocol_version": 1,
+        "sequence": 5,
+        "timestamp_ms": 1787462400100,
+        "generation_id": "11111111-1111-4111-8111-111111111111",
+        "state": "running",
+        "restart_allowed": false,
+        "channel_name": "example_channel",
+        "mode": "standard",
+        "metrics": {
+          "active_threads": 24,
+          "active_connections": null,
+          "request_count": 312,
+          "total_proxies": 100,
+          "alive_proxies": 87,
+          "cpu_percent": 18.5,
+          "memory_percent": 42.25,
+          "network_up_mib_s": 1.75,
+          "network_down_mib_s": 3.5
+        },
+        "config": {
+          "channel_name": "example_channel",
+          "threads": 24,
+          "timeout_ms": 10000,
+          "proxy_type": "http",
+          "stability_mode": false,
+          "subscription_status": "active"
+        },
+        "status": {
+          "code": "running",
+          "message": "Runtime is running",
+          "startup_progress": 100,
+          "proxy_loading_progress": 100
+        },
+        "error": null
+      }
+    }
+  ]
+}

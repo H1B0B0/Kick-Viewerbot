@@ -1,29 +1,29 @@
-use tauri_plugin_shell::ShellExt;
-use tauri_plugin_shell::process::CommandEvent;
+use std::sync::Arc;
+use tauri::Emitter;
 use tauri::Manager;
+use tokio::sync::Mutex;
+
+mod sidecar;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-  tauri::Builder::default()
-    .plugin(tauri_plugin_shell::init())
-    .setup(|app| {
-      let sidecar_command = app.shell().sidecar("backend")
-        .unwrap()
-        .args(["--no-browser"]);
-      
-      let (mut rx, mut _child) = sidecar_command
-        .spawn()
-        .expect("Failed to spawn backend sidecar");
+    tauri::Builder::default()
 
-      tauri::async_runtime::spawn(async move {
-        while let Some(event) = rx.recv().await {
-          if let CommandEvent::Stdout(line) = event {
-            println!("backend: {}", String::from_utf8_lossy(&line));
-          } else if let CommandEvent::Stderr(line) = event {
-            eprintln!("backend error: {}", String::from_utf8_lossy(&line));
-          }
-        }
-      });
+    .plugin(tauri_plugin_single_instance::init(|app, argv, cwd| {
+        println!("a new app instance was opened with {argv:?} and the current working directory is {cwd:?}");
+        let _ = app.emit("single-instance", argv);
+    }))
+    .plugin(tauri_plugin_deep_link::init())
+    .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_process::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .manage(sidecar::SidecarState {
+        endpoint: Arc::new(Mutex::new(None)),
+    })
+    .invoke_handler(tauri::generate_handler![sidecar::get_runtime_endpoint])
+    .setup(|app| {
+      sidecar::spawn_sidecar(app.handle());
 
       #[cfg(debug_assertions)]
       {

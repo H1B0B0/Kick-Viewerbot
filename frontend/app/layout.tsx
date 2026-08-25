@@ -12,17 +12,12 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+        </head>
       <body className="min-h-screen bg-[#09090b] text-zinc-300 font-sans antialiased flex flex-col" suppressHydrationWarning>
         <UpdateBanner />
         <main className="flex-1 w-full relative z-10 overflow-hidden">

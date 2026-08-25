@@ -4,6 +4,10 @@ Serveur simplifié qui utilise uniquement WebSocket pour toutes les communicatio
 """
 from flask import Flask, request
 from flask_cors import CORS
+
+from backend.runtime.models import BotState, RuntimeConfig
+from backend.runtime.manager import BotManager as CoreBotManager
+
 from flask_socketio import SocketIO, emit
 import logging
 import os
@@ -44,12 +48,12 @@ app.config['SECRET_KEY'] = 'kick-viewer-bot-secret'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # CORS - Accept all origins
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": ['tauri://localhost', 'http://tauri.localhost', 'http://localhost:3000']}})
 
 # Initialize SocketIO
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
+    cors_allowed_origins=['tauri://localhost', 'http://tauri.localhost', 'http://localhost:3000'],
     async_mode='gevent',
     logger=False,
     engineio_logger=False,
@@ -59,19 +63,25 @@ socketio = SocketIO(
 # Bot Manager Class
 class BotManager:
     def __init__(self):
-        self.bot = None
-        self.is_running = False
+        def _factory(*args, **kwargs):
+            if not BOT_AVAILABLE:
+                raise RuntimeError("Bot implementation unavailable (mock mode disabled)")
+
+            stability_mode = kwargs.pop('stability_mode', False)
+            bot_class = ViewerBot_Stability if stability_mode else ViewerBot
+            print(f"Using bot class: {bot_class.__name__}")
+
+            return bot_class(*args, **kwargs)
+
+        self.manager = CoreBotManager(_factory)
         self.last_channel = None
         self.last_net_io = psutil.net_io_counters()
         self.last_net_io_time = time.time()
-        self.stability_mode = False
-        self.config = {
-            'threads': 0,
-            'timeout': 10000,
-            'proxy_type': 'http',
-            'stability_mode': False,
-            'subscription_status': 'unknown'
-        }
+        self.config = None
+
+    @property
+    def is_running(self):
+        return self.manager.get_state() in (BotState.STARTING, BotState.RUNNING)
 
     def start_bot(
         self,
@@ -86,15 +96,6 @@ class BotManager:
         if self.is_running:
             return {'success': False, 'error': 'Bot is already running'}
 
-        self.stability_mode = stability_mode
-        self.config = {
-            'threads': threads,
-            'timeout': timeout,
-            'proxy_type': proxy_type,
-            'stability_mode': stability_mode,
-            'subscription_status': subscription_status
-        }
-
         logger.info(f"Starting bot: {channel_name}, threads: {threads}, stability: {stability_mode}")
         print(f"Starting bot: {channel_name}, threads: {threads}, stability: {stability_mode}")
 
@@ -106,43 +107,32 @@ class BotManager:
                 'error': 'Stability mode requires an active subscription.'
             }
 
-        if BOT_AVAILABLE:
-            bot_class = ViewerBot_Stability if stability_mode else ViewerBot
-            print(f"Using bot class: {bot_class.__name__}")
+        cfg = RuntimeConfig(
+            channel_name=channel_name,
+            threads=int(threads),
+            timeout_ms=int(timeout),
+            proxy_type=proxy_type,
+            stability_mode=stability_mode,
+            subscription_status=subscription_status
+        )
+        self.config = cfg
+        self.last_channel = channel_name
 
-            self.bot = bot_class(
-                nb_of_threads=threads,
-                channel_name=channel_name,
-                proxy_file=proxy_file,
-                proxy_imported=bool(proxy_file),
-                timeout=timeout,
-                type_of_proxy=proxy_type
-            )
+        success, err = self.manager.start(cfg)
+        if not success:
+            return {'success': False, 'error': err.message}
 
-            def run_bot():
-                self.is_running = True
-                self.bot.main()
-                self.is_running = False
+        # Auto-ready for now to keep backward compatibility
+        gen = self.manager._generation
+        if gen:
+            self.manager.report_ready(gen.generation_id)
 
-            self.bot_thread = Thread(target=run_bot, daemon=True)
-            self.bot_thread.start()
-            self.last_channel = channel_name
-
-            return {'success': True, 'message': 'Bot started successfully'}
-        else:
-            # Mock mode
-            self.is_running = True
-            self.last_channel = channel_name
-            return {'success': True, 'message': 'Bot started (mock mode)'}
+        return {'success': True, 'message': 'Bot started successfully'}
 
     def stop_bot(self):
-        if not self.is_running:
-            return {'success': False, 'error': 'No bot is running'}
-
-        if self.bot and BOT_AVAILABLE:
-            self.bot.stop()
-
-        self.is_running = False
+        success, err = self.manager.stop(timeout=5.0)
+        if not success:
+            return {'success': False, 'error': err.message if err else 'Unknown error'}
         logger.info("Bot stopped")
         return {'success': True, 'message': 'Bot stopped successfully'}
 
@@ -166,29 +156,33 @@ class BotManager:
                 'network_down': max(bytes_recv / (1024 * 1024), 0)
             }
 
-            # Bot stats
-            # En mode stability, afficher les connexions actives au lieu du nombre de requêtes
-            is_stability = self.config.get('stability_mode', False) if self.config else False
-            active_connections = getattr(self.bot, 'active_connections', 0) if self.bot else 0
-            request_count = getattr(self.bot, 'request_count', 0) if self.bot else 0
+            gen = self.manager._generation
+            bot = gen.bot if gen else None
+
+            is_stability = self.config.stability_mode if self.config else False
+            active_connections = getattr(bot, 'active_connections', 0) if bot else 0
+            request_count = getattr(bot, 'request_count', 0) if bot else 0
+
+            state = self.manager.get_state()
+            is_running = state in (BotState.STARTING, BotState.RUNNING, BotState.STOPPING)
 
             stats = {
-                'is_running': self.is_running,
+                'is_running': is_running,
                 'channel_name': self.last_channel,
-                'active_threads': getattr(self.bot, 'active_threads', 0) if self.bot else 0,
+                'active_threads': getattr(bot, 'active_threads', 0) if bot else 0,
                 'active_connections': active_connections,
-                'total_proxies': len(getattr(self.bot, 'all_proxies', [])) if self.bot else 0,
-                'alive_proxies': getattr(self.bot, 'alive_proxies', 0) if self.bot else 0,
+                'total_proxies': len(getattr(bot, 'all_proxies', [])) if bot else 0,
+                'alive_proxies': getattr(bot, 'alive_proxies', 0) if bot else 0,
                 'request_count': active_connections if is_stability else request_count,
-                'config': self.config,
-                'status': getattr(self.bot, 'status', {
-                    'state': 'stopped' if not self.is_running else 'running',
-                    'message': 'Bot is running' if self.is_running else 'Bot is stopped',
+                'config': self.config.__dict__ if self.config else None,
+                'status': getattr(bot, 'status', {
+                    'code': 'stopped' if not is_running else 'running',
+                    'message': 'Bot is running' if is_running else 'Bot is stopped',
                     'proxy_count': 0,
                     'proxy_loading_progress': 0,
                     'startup_progress': 0
-                }) if self.bot else {
-                    'state': 'stopped',
+                }) if bot else {
+                    'code': 'stopped',
                     'message': 'Bot is stopped',
                     'proxy_count': 0,
                     'proxy_loading_progress': 0,
@@ -204,6 +198,7 @@ class BotManager:
                 'is_running': False,
                 'error': str(e)
             }
+
 
 # Global bot manager
 bot_manager = BotManager()
@@ -362,11 +357,27 @@ socketio.start_background_task(stats_broadcast_task)
 
 @app.route('/health')
 def health_check():
+    import os
+    from backend.runtime.models import BotState
+
+    # args.instance_nonce and actual_port are in main() scope
+    # So we need to store them globally or fetch them dynamically
+    # For now, we will return the dynamic state
+
+    port = getattr(app, 'server_port', 0)
+    nonce = getattr(app, 'instance_nonce', '')
+
+    state = bot_manager.get_state() if hasattr(bot_manager, 'get_state') else "stopped"
+    if hasattr(state, 'value'):
+        state = state.value
+
     return {
-        'status': 'healthy',
-        'bot_running': bot_manager.is_running,
-        'bot_available': BOT_AVAILABLE,
-        'version': '2.0.0'
+        "protocol_version": 1,
+        "instance_nonce": nonce,
+        "port": port,
+        "pid": os.getpid(),
+        "lifecycle_state": state,
+        "ready": True
     }
 
 @app.route('/')
@@ -387,7 +398,7 @@ def find_available_port(preferred_ports, host='0.0.0.0'):
     import socket
 
     logger.info(f"🔍 Searching for available port among: {preferred_ports}")
-    
+
     for port in preferred_ports:
         try:
             # Tester si le port est disponible
@@ -410,82 +421,58 @@ def find_available_port(preferred_ports, host='0.0.0.0'):
     logger.error("❌ NO available port found in the list!")
     return None
 
-if __name__ == '__main__':
+def main():
     import argparse
-    import webbrowser
-    from threading import Timer
+    import json
+    import os
+    import sys
+    from gevent.pywsgi import WSGIServer
+    from geventwebsocket.handler import WebSocketHandler
 
-    # Import shared port configuration
-    sys.path.insert(0, str(Path(__file__).parent.parent))
-    try:
-        from shared_config import AVAILABLE_PORTS, DEFAULT_HOST
-    except ImportError:
-        logger.warning("Could not import shared_config, using defaults")
-        AVAILABLE_PORTS = [8765, 9876, 7890, 6543, 5432, 8081, 8082, 8083]
-        DEFAULT_HOST = '0.0.0.0'
+    parser = argparse.ArgumentParser(description='Kick Viewer Bot Backend')
+    parser.add_argument('--host', type=str, default='127.0.0.1', help='Host to bind to')
+    parser.add_argument('--port', type=int, default=0, help='Port to bind to (0 for random)')
+    parser.add_argument('--dev', action='store_true', help='Development mode')
+    parser.add_argument('--no-browser', action='store_true', help='Disable opening browser on startup')
+    parser.add_argument('--instance-nonce', type=str, default='', help='Tauri instance nonce for readiness')
+    parser.add_argument('--protocol-version', type=int, default=1, help='Protocol version')
+    parser.add_argument('--app-version', type=str, default='0.0.0', help='App version')
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--port', type=int, default=None, help='Port to run on (if not specified, will try from the available list)')
-    parser.add_argument('--host', default=DEFAULT_HOST, help='Host to bind to')
-    parser.add_argument('--no-browser', action='store_true', help='Do not open browser')
-    args = parser.parse_args()
+    args, unknown = parser.parse_known_args()
 
-    # Trouver un port disponible
-    if args.port:
-        selected_port = args.port
-        logger.info(f"📌 Using specified port: {selected_port}")
-    else:
-        logger.info("🔄 No port specified, searching for available port...")
-        selected_port = find_available_port(AVAILABLE_PORTS, args.host)
-        if selected_port is None:
-            logger.error("❌ Could not find any available port from the configured list!")
-            print("\n" + "=" * 70)
-            print("❌ ERROR: No available ports found")
-            print("=" * 70)
-            print(f"Tested ports: {AVAILABLE_PORTS}")
-            print("\n💡 Troubleshooting steps:")
-            print("  1. Close applications using these ports (check Task Manager)")
-            print("  2. Close browser tabs connected to the bot (Chrome/Firefox/Edge)")
-            print("  3. Kill any hung Python processes: taskkill /F /IM python.exe")
-            print("  4. Restart your computer if the issue persists")
-            print("\n🔍 Common causes:")
-            print("  - Previous bot instance still running")
-            print("  - Browser keeping WebSocket connection alive")
-            print("  - Antivirus/Firewall blocking ports")
-            print("  - Another service using the same ports")
-            print("=" * 70 + "\n")
-            sys.exit(1)
-        logger.info(f"Found available port: {selected_port}")
+    if args.dev:
+        logger.info("Development mode enabled")
 
-    print("=" * 60)
-    print("🚀 Kick Viewer Bot - WebSocket Server")
-    print("=" * 60)
-    print(f"📡 WebSocket: ws://{args.host}:{selected_port}/socket.io/")
-    print(f"🌐 HTTP: http://{args.host}:{selected_port}")
-    print(f"✅ Health: http://{args.host}:{selected_port}/health")
-    print("=" * 60)
-    print(f"\n🔌 Port utilisé: {selected_port}")
-    print(f"💡 Le frontend essaiera automatiquement de se connecter à ce port")
-    print("=" * 60)
-
-    # Open browser after 1.5 seconds if not disabled
-    if not args.no_browser:
-        print("\n🌐 Opening browser at https://kick.velbots.shop...")
-        Timer(1.5, lambda: webbrowser.open('https://kick.velbots.shop')).start()
-
-    print("\nPress Ctrl+C to stop\n")
+    socketio.start_background_task(stats_broadcast_task)
 
     try:
-        socketio.run(
-            app,
-            host=args.host,
-            port=selected_port,
-            debug=False,
-            use_reloader=False
-        )
-    except OSError as e:
-        if "Address already in use" in str(e):
-            logger.error(f"Port {selected_port} is already in use!")
-            print(f"❌ Le port {selected_port} est déjà utilisé. Réessayez ou spécifiez un autre port avec --port")
-        else:
-            raise
+        server = WSGIServer((args.host, args.port), app, handler_class=WebSocketHandler)
+        server.start()
+        actual_port = server.server_port
+        app.server_port = actual_port
+        app.instance_nonce = args.instance_nonce
+
+        ready_payload = {
+            "type": "service_ready",
+            "protocol_version": 1,
+            "instance_nonce": args.instance_nonce,
+            "port": actual_port,
+            "pid": os.getpid(),
+            "lifecycle_state": "stopped",
+            "ready": True
+        }
+        print(json.dumps(ready_payload), flush=True)
+
+        if not args.no_browser and actual_port:
+            from threading import Timer
+            import webbrowser
+            Timer(1.5, lambda: webbrowser.open('https://kick.velbots.shop')).start()
+
+        server.serve_forever()
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}")
+        import sys
+        sys.exit(1)
+
+if __name__ == '__main__':
+    main()

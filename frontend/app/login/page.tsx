@@ -2,11 +2,16 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login } from "../functions/UserAPI";
+import { openExternal } from "../functions/openExternal";
+import { useDesktopOAuth } from "../../hooks/useDesktopOAuth";
+import { startDesktopOAuth } from "../../auth/desktopOAuth";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const { capabilities, isProcessing: isOAuthProcessing, error: oauthError } = useDesktopOAuth();
+  const patreonEnabled = capabilities?.patreon?.enabled || false;
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,15 +45,16 @@ export default function LoginPage() {
 
         <form className="space-y-4" onSubmit={handleLogin}>
           {error && <div className="p-3 text-sm text-red-500 bg-red-500/10 rounded-md border border-red-500/20">{error}</div>}
+          {oauthError && <div className="p-3 text-sm text-red-500 bg-red-500/10 rounded-md border border-red-500/20">{oauthError}</div>}
           
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">Username</label>
-            <input type="text" name="username" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors" />
+            <label htmlFor="login-username" className="text-sm font-medium text-zinc-300">Username</label>
+            <input id="login-username" type="text" name="username" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors" />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">Password</label>
-            <input type="password" name="password" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors" />
+            <label htmlFor="login-password" className="text-sm font-medium text-zinc-300">Password</label>
+            <input id="login-password" type="password" name="password" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 focus:ring-1 focus:ring-zinc-500 transition-colors" />
           </div>
 
           <button type="submit" disabled={isLoading} className="w-full py-2 mt-2 bg-white hover:bg-zinc-200 text-black font-medium text-sm rounded-md transition-colors disabled:opacity-50">
@@ -60,13 +66,19 @@ export default function LoginPage() {
             <div className="relative flex justify-center"><span className="bg-[#09090b] px-2 text-xs text-zinc-500">Or continue with</span></div>
           </div>
 
-          <button type="button" onClick={() => window.location.href = "https://api.velbots.shop/payments/patreon/redirect"} className="w-full py-2 bg-[#FF424D] hover:bg-[#E8384C] text-white font-medium text-sm rounded-md transition-colors">
-            Patreon
+          <button
+            type="button"
+            disabled={!patreonEnabled || isOAuthProcessing}
+            onClick={() => void startDesktopOAuth(capabilities!)}
+            className="w-full py-2 bg-[#FF424D] hover:bg-[#E8384C] text-white font-medium text-sm rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            title={patreonEnabled ? "" : "Patreon OAuth is not currently supported by the API"}
+          >
+            {isOAuthProcessing ? "Connecting..." : "Patreon"}
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-zinc-500">
-          Don't have an account? <button onClick={() => router.push("/register")} className="text-white hover:underline">Sign up</button>
+          Don&apos;t have an account? <button onClick={() => router.push("/register")} className="text-white hover:underline">Sign up</button>
         </div>
       </div>
     </div>

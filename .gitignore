@@ -112,6 +112,25 @@ ENV/
 env.bak/
 venv.bak/
 
+# Local signing credentials
+*.key
+*.pem
+*.p12
+*.pfx
+*.mobileprovision
+
+# JavaScript dependencies accidentally installed at repository root
+/node_modules/
+
+# Local code intelligence index
+/.codegraph/
+
+# One-off migration scripts
+/clean_deps.py
+/create_accounts.py
+/fix_*.py
+/patch_*.py
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -136,3 +155,4 @@ backend/certs/velbots.shop.cert
 backend/certs/velbots.shop.key.backup
 backend/certs/velbots.shop.cert.backup
 backend/certs/velbots.shop.key
+.omo/

@@ -1,0 +1,57 @@
+{
+  "fixture_version": 1,
+  "cases": [
+    {
+      "kind": "server_event",
+      "event": "bot_state",
+      "payload": {
+        "protocol_version": 1,
+        "sequence": 1,
+        "timestamp_ms": 1787462400000,
+        "generation_id": "11111111-1111-4111-8111-111111111111",
+        "state": "running",
+        "restart_allowed": false,
+        "error": null
+      }
+    },
+    {
+      "kind": "server_event",
+      "event": "bot_started",
+      "payload": {
+        "protocol_version": 1,
+        "sequence": 2,
+        "timestamp_ms": 1787462400001,
+        "generation_id": "11111111-1111-4111-8111-111111111111",
+        "state": "running",
+        "restart_allowed": false,
+        "error": null
+      }
+    },
+    {
+      "kind": "server_event",
+      "event": "bot_status_changed",
+      "payload": {
+        "protocol_version": 1,
+        "sequence": 3,
+        "timestamp_ms": 1787462400002,
+        "generation_id": "11111111-1111-4111-8111-111111111111",
+        "state": "stopping",
+        "restart_allowed": false,
+        "error": null
+      }
+    },
+    {
+      "kind": "server_event",
+      "event": "bot_stopped",
+      "payload": {
+        "protocol_version": 1,
+        "sequence": 4,
+        "timestamp_ms": 1787462400003,
+        "generation_id": null,
+        "state": "stopped",
+        "restart_allowed": true,
+        "error": null
+      }
+    }
+  ]
+}

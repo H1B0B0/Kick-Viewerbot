@@ -39,7 +39,7 @@ export default function Dashboard() {
   const [config, setConfig] = useState({
     channelName: "",
     threads: 100,
-    timeout: 10000,
+    timeout_ms: 10000,
     proxyType: "all",
     stabilityMode: false,
   });
@@ -55,11 +55,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (wsStats?.config && wsStats.is_running) {
-      const { threads, timeout, proxy_type, stability_mode } = wsStats.config;
+      const { threads, timeout_ms, proxy_type, stability_mode } = wsStats.config;
       setConfig((prev) => ({
         ...prev,
         threads: threads ?? prev.threads,
-        timeout: parseInt(`${timeout}`) || 10000,
+        timeout_ms: parseInt(`${timeout_ms}`) || 10000,
         proxyType: proxy_type ?? prev.proxyType,
         channelName: wsStats.channel_name || prev.channelName,
         stabilityMode: typeof stability_mode === "boolean" ? stability_mode : prev.stabilityMode,
@@ -67,7 +67,7 @@ export default function Dashboard() {
     }
   }, [wsStats?.is_running]); // eslint-disable-line
 
-  const botState = wsStats?.status?.state?.toLowerCase() || "stopped";
+  const botState = wsStats?.status?.code?.toLowerCase() || "stopped";
   const isRunningOrStarting = botState === "running" || botState === "starting";
   const isStopping = botState === "stopping";
   const isLocked = isRunningOrStarting || isStopping;
@@ -82,7 +82,7 @@ export default function Dashboard() {
         channelName: config.channelName,
         threads: config.threads,
         proxyFile: proxyFile || undefined,
-        timeout: config.timeout,
+        timeout_ms: config.timeout_ms,
         proxyType: config.proxyType,
         stabilityMode: config.stabilityMode,
         subscriptionStatus: "active"
@@ -131,8 +131,9 @@ export default function Dashboard() {
             </h2>
             
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">Channel</label>
+              <label htmlFor="channel-name" className="text-sm font-medium text-zinc-300">Channel</label>
               <input 
+                id="channel-name"
                 type="text" 
                 value={config.channelName}
                 onChange={(e) => { setConfig({ ...config, channelName: e.target.value }); setChannelNameModified(true); }}
@@ -144,10 +145,11 @@ export default function Dashboard() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-zinc-300">Threads</label>
+                <label htmlFor="thread-count" className="text-sm font-medium text-zinc-300">Threads</label>
                 <span className="text-xs text-zinc-500">{config.threads}</span>
               </div>
               <input 
+                id="thread-count"
                 type="range" 
                 min="1" max="1000" step="10"
                 value={config.threads}
@@ -164,7 +166,7 @@ export default function Dashboard() {
             </h2>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">Protocol</label>
+              <span className="text-sm font-medium text-zinc-300">Protocol</span>
               <div className="grid grid-cols-4 gap-1 p-1 bg-zinc-900 border border-zinc-800 rounded-md">
                 {["http", "socks4", "socks5", "all"].map((type) => (
                   <button
@@ -180,7 +182,7 @@ export default function Dashboard() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">Custom Proxies</label>
+              <span className="text-sm font-medium text-zinc-300">Custom Proxies</span>
               <label className={`flex items-center justify-center gap-2 w-full border border-dashed rounded-md py-2.5 text-sm cursor-pointer transition-colors ${proxyFile ? 'border-zinc-500 bg-zinc-800 text-white' : 'border-zinc-800 hover:border-zinc-700 text-zinc-400 bg-zinc-900/30'} ${isLocked ? 'opacity-50 pointer-events-none' : ''}`}>
                 <FileText className="w-4 h-4" />
                 <span className="truncate max-w-[150px]">{proxyFile ? proxyFile.name : "Select .txt file"}</span>
@@ -230,7 +232,7 @@ export default function Dashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-2">
-              <ViewerStatCard value={wsStats?.viewers || 0} />
+              <ViewerStatCard value={wsStats?.active_connections || 0} />
             </div>
             <StatCard title="Active Threads" value={wsStats?.active_threads || 0} total={config.threads} />
             <StatCard title="Proxy Pool" value={wsStats?.alive_proxies || 0} total={wsStats?.total_proxies || 0} />

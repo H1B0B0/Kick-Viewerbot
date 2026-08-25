@@ -30,7 +30,6 @@ logging.getLogger("urllib3").setLevel(logging.ERROR)
 console = Console()
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Session creating for request
 ua = UserAgent()
@@ -75,15 +74,12 @@ class ViewerBot:
         self.channel_url = "https://kick.com/" + self.channel_name
         self.thread_semaphore = Semaphore(int(nb_of_threads))  # Semaphore to control thread count
         self.active_threads = 0
-        self.should_stop = False
+        self.should_stop = threading.Event()
+        self.state_lock = threading.Lock()
         self.timeout = timeout
         self.type_of_proxy = type_of_proxy
-        self.proxies = []  # Add this to store proxies only once
-        self.request_per_second = 0  # Add counter for requests per second
-        self.requests_in_current_second = 0
-        self.last_request_time = time.time()
         self.status = {
-            'state': 'initialized',  # Current state of the bot
+            'code': 'initialized',  # Current state of the bot
             'message': 'Bot initialized',  # Status message
             'proxy_count': 0,  # Number of proxies currently loaded
             'proxy_loading_progress': 0,  # Progress when loading proxies (0-100)
@@ -318,7 +314,7 @@ class ViewerBot:
 
     def update_status(self, state, message, proxy_count=None, proxy_loading_progress=None, startup_progress=None):
         self.status.update({
-            'state': state,
+            'code': state,
             'message': message,
             **(({'proxy_count': proxy_count} if proxy_count is not None else {})),
             **(({'proxy_loading_progress': proxy_loading_progress} if proxy_loading_progress is not None else {})),
@@ -341,7 +337,7 @@ class ViewerBot:
                 except FileNotFoundError:
                     self.update_status('error', 'Proxy file not found')
                     logging.error(f"Proxy file {self.proxy_file} not found.")
-                    sys.exit(1)
+                    raise FileNotFoundError(f"Proxy file {self.proxy_file} not found")
             else:
                 try:
                     self.update_status('loading_proxies', 'Fetching proxies from API...')
@@ -534,14 +530,15 @@ class ViewerBot:
     def stop(self):
         console.print("[bold red]Bot has been stopped[/bold red]")
         self.update_status('stopping', 'Stopping bot...')
-        self.should_stop = True
+        self.should_stop.set()
         
         for thread in self.processes:
             if thread.is_alive():
                 thread.join(timeout=1)
         
         # Vider la liste des threads
-        self.processes.clear()
+        with self.state_lock:
+            self.processes.clear()
         self.active_threads = 0
         self.all_proxies = []
         self.update_status('stopped', 'Bot has been stopped')
@@ -553,7 +550,8 @@ class ViewerBot:
 
     def send_websocket_view(self, proxy_data):
         """Send view using WebSocket connection with proper authentication"""
-        self.active_threads += 1
+        with self.state_lock:
+            self.active_threads += 1
         try:
             # Get WebSocket token for this view
             token = self.get_websocket_token()
@@ -584,7 +582,8 @@ class ViewerBot:
         except Exception as e:
             logging.error(f"Error in send_websocket_view: {e}")
         finally:
-            self.active_threads -= 1
+            with self.state_lock:
+                self.active_threads -= 1
             self.thread_semaphore.release()
 
     async def _websocket_worker(self, token, proxy_data):
@@ -612,13 +611,14 @@ class ViewerBot:
                 
                 # Keep connection alive with pings
                 ping_count = 0
-                while not self.should_stop and ping_count < 10:  # Limit to 10 pings per connection
+                while not self.should_stop.is_set() and ping_count < 10:  # Limit to 10 pings per connection
                     ping_count += 1
                     
                     # Send ping
                     ping_msg = {"type": "ping"}
                     await websocket.send(json.dumps(ping_msg))
-                    self.request_count += 1
+                    with self.state_lock:
+                        self.request_count += 1
                     logging.debug(f"Sent ping #{ping_count} to channel {self.channel_id}")
                     
                     # Wait between pings (12-17 seconds as in the working example)
@@ -694,7 +694,7 @@ class ViewerBot:
         
         if not proxies:
             self.update_status('error', 'No proxies available. Stopping bot.')
-            self.should_stop = True
+            self.should_stop.set()
             return
 
         # Preload stream URL to avoid rate limiting (still useful for backup)
@@ -705,7 +705,8 @@ class ViewerBot:
             stream_url = ""  # Set empty string as fallback
         
         # Initialize all_proxies with the preloaded URL
-        self.all_proxies = [{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies]
+        with self.state_lock:
+                            self.all_proxies = tuple([{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies])
         
         self.processes = []
         
@@ -724,7 +725,8 @@ class ViewerBot:
                 acquired = self.thread_semaphore.acquire()
                 if acquired and len(self.all_proxies) > 0:  # Vérifier à nouveau avant de créer le thread
                     threaded = Thread(target=self.open_url, args=(self.all_proxies[random.randrange(len(self.all_proxies))],))
-                    self.processes.append(threaded)
+                    with self.state_lock:
+                        self.processes.append(threaded)
                     threaded.daemon = True
                     threaded.start()
                 elif acquired:
@@ -740,7 +742,7 @@ class ViewerBot:
                 logging.debug(f"Proxies refreshed: {self.all_proxies}")
                 elapsed_seconds = 0
 
-            if self.should_stop:
+            if self.should_stop.is_set():
                 logging.debug("Stopping main loop")
                 # Relâcher tous les sémaphores restants
                 for _ in range(self.nb_of_threads):

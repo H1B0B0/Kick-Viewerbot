@@ -1,0 +1,144 @@
+{
+  "fixture_version": 1,
+  "cases": [
+    {
+      "kind": "command_request",
+      "command": "start_bot",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "config": {
+          "channel_name": "example_channel",
+          "threads": 24,
+          "timeout_ms": 10000,
+          "proxy_type": "http",
+          "stability_mode": false,
+          "subscription_status": "active"
+        },
+        "proxy_file": null
+      }
+    },
+    {
+      "kind": "command_ack",
+      "command": "start_bot",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "ok": true,
+        "state": "starting",
+        "error": null,
+        "accepted": true,
+        "generation_id": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "kind": "command_request",
+      "command": "stop_bot",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "generation_id": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "kind": "command_ack",
+      "command": "stop_bot",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "ok": true,
+        "state": "stopped",
+        "error": null,
+        "generation_id": "11111111-1111-4111-8111-111111111111",
+        "terminated": true
+      }
+    },
+    {
+      "kind": "command_request",
+      "command": "get_stats",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+      }
+    },
+    {
+      "kind": "command_ack",
+      "command": "get_stats",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "ok": true,
+        "state": "running",
+        "error": null,
+        "stats": {
+          "protocol_version": 1,
+          "sequence": 6,
+          "timestamp_ms": 1787462400300,
+          "generation_id": "11111111-1111-4111-8111-111111111111",
+          "state": "running",
+          "restart_allowed": false,
+          "channel_name": "example_channel",
+          "mode": "stability",
+          "metrics": {
+            "active_threads": 24,
+            "active_connections": 20,
+            "request_count": 312,
+            "total_proxies": 100,
+            "alive_proxies": 87,
+            "cpu_percent": 18.5,
+            "memory_percent": 42.25,
+            "network_up_mib_s": 1.75,
+            "network_down_mib_s": 3.5
+          },
+          "config": {
+            "channel_name": "example_channel",
+            "threads": 24,
+            "timeout_ms": 10000,
+            "proxy_type": "http",
+            "stability_mode": true,
+            "subscription_status": "active"
+          },
+          "status": {
+            "code": "running",
+            "message": "Runtime is running",
+            "startup_progress": 100,
+            "proxy_loading_progress": 100
+          },
+          "error": null
+        }
+      }
+    },
+    {
+      "kind": "command_request",
+      "command": "ping",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "client_timestamp_ms": 1787462400400
+      }
+    },
+    {
+      "kind": "command_ack",
+      "command": "ping",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "ok": true,
+        "state": "running",
+        "error": null,
+        "client_timestamp_ms": 1787462400400,
+        "server_timestamp_ms": 1787462400401
+      }
+    },
+    {
+      "kind": "server_event",
+      "event": "pong",
+      "payload": {
+        "protocol_version": 1,
+        "command_id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "client_timestamp_ms": 1787462400400,
+        "server_timestamp_ms": 1787462400401
+      }
+    }
+  ]
+}

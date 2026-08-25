@@ -48,25 +48,25 @@ export default function RegisterPage() {
           {error && <div className="p-3 text-sm text-red-500 bg-red-500/10 rounded-md border border-red-500/20">{error}</div>}
           
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">Username</label>
-            <input type="text" name="username" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
+            <label htmlFor="register-username" className="text-sm font-medium text-zinc-300">Username</label>
+            <input id="register-username" type="text" name="username" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">Email</label>
-            <input type="email" name="email" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
+            <label htmlFor="register-email" className="text-sm font-medium text-zinc-300">Email</label>
+            <input id="register-email" type="email" name="email" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-300">Target Channel (Kick)</label>
-            <input type="text" name="twitchUsername" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
+            <label htmlFor="register-channel" className="text-sm font-medium text-zinc-300">Target Channel (Kick)</label>
+            <input id="register-channel" type="text" name="twitchUsername" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-zinc-300">Password</label>
-              <input type="password" name="password" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
+              <label htmlFor="register-password" className="text-sm font-medium text-zinc-300">Password</label>
+              <input id="register-password" type="password" name="password" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
             </div>
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-zinc-300">Confirm</label>
-              <input type="password" name="confirmPassword" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
+              <label htmlFor="register-confirm-password" className="text-sm font-medium text-zinc-300">Confirm</label>
+              <input id="register-confirm-password" type="password" name="confirmPassword" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-zinc-500 transition-colors" />
             </div>
           </div>
 

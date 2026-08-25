@@ -1,0 +1,9 @@
+{
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/H1B0B0/Kick-Viewerbot/releases/download/updater-beta/latest.json"
+      ]
+    }
+  }
+}

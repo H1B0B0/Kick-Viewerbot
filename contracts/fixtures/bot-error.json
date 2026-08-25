@@ -1,0 +1,21 @@
+{
+  "fixture_version": 1,
+  "cases": [
+    {
+      "kind": "server_event",
+      "event": "bot_error",
+      "payload": {
+        "protocol_version": 1,
+        "sequence": 6,
+        "timestamp_ms": 1787462400200,
+        "generation_id": "11111111-1111-4111-8111-111111111111",
+        "error": {
+          "code": "worker_failed",
+          "message": "A runtime worker terminated unexpectedly",
+          "retryable": true,
+          "generation_alive": false
+        }
+      }
+    }
+  ]
+}

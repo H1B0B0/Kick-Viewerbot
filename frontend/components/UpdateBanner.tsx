@@ -1,9 +1,9 @@
 "use client";
 import { useUpdateChecker } from "../hooks/useUpdateChecker";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Download } from "lucide-react";
 
 export default function UpdateBanner() {
-  const { updateAvailable, latestVersion, showToast, dismissUpdate } = useUpdateChecker();
+  const { updateAvailable, latestVersion, showToast, dismissUpdate, installUpdate, isInstalling, installProgress } = useUpdateChecker();
 
   if (!updateAvailable || !showToast || !latestVersion) return null;
 
@@ -15,19 +15,23 @@ export default function UpdateBanner() {
           <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
         </span>
         <span className="text-zinc-200">
-          A new update is available ({latestVersion.tag_name})
+          A new update is available ({latestVersion.version})
         </span>
       </div>
       <div className="flex items-center gap-4">
-        <a 
-          href={latestVersion.html_url} 
-          target="_blank" 
-          rel="noreferrer"
-          className="text-white font-medium flex items-center gap-1 hover:underline"
-        >
-          View Release <ArrowRight className="w-3 h-3" />
-        </a>
-        <button onClick={dismissUpdate} className="text-zinc-500 hover:text-zinc-300">
+        {isInstalling ? (
+          <span className="text-zinc-400 text-xs font-medium">
+            Downloading... {Math.round(installProgress * 100)}%
+          </span>
+        ) : (
+          <button
+            onClick={() => void installUpdate()}
+            className="text-white font-medium flex items-center gap-1 hover:underline cursor-pointer"
+          >
+            Install & Relaunch <Download className="w-3 h-3 ml-1" />
+          </button>
+        )}
+        <button onClick={dismissUpdate} disabled={isInstalling} className="text-zinc-500 hover:text-zinc-300 disabled:opacity-50">
           Dismiss
         </button>
       </div>

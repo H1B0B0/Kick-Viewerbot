@@ -2,7 +2,7 @@
  * WebSocket Service - Communication complète via WebSocket
  */
 import { io, Socket } from "socket.io-client";
-import { generateConnectionUrls } from "../config/ports";
+import { getBackendEndpoint } from "../config/ports";
 
 export type ConnectionStatus =
   | "disconnected"
@@ -10,10 +10,27 @@ export type ConnectionStatus =
   | "connected"
   | "error";
 
+
+export interface RuntimeConfig {
+  channel_name: string;
+  threads: number;
+  timeout_ms: number;
+  proxy_type: string;
+  stability_mode: boolean;
+  subscription_status: string;
+}
+
+export interface BotStatus {
+  code: string;
+  message: string;
+  startup_progress: number;
+  proxy_loading_progress: number;
+}
+
 export interface BotConfig {
   channelName: string;
   threads: number;
-  timeout?: number;
+  timeout_ms?: number;
   proxyType?: string;
   stabilityMode?: boolean;
   proxyFile?: File;
@@ -24,11 +41,12 @@ export interface BotStats {
   is_running: boolean;
   channel_name?: string;
   active_threads: number;
+  active_connections: number;
   total_proxies: number;
   alive_proxies: number;
   request_count: number;
-  config: any;
-  status: any;
+  config: RuntimeConfig | null;
+  status: BotStatus;
   system_metrics: {
     cpu: number;
     memory: number;
@@ -52,9 +70,6 @@ class WebSocketService {
   private status: ConnectionStatus = "disconnected";
   private callbacks: Callbacks = {};
 
-  // URLs possibles pour le service local (générées depuis la config partagée)
-  private urls = generateConnectionUrls();
-
   private currentUrl = "";
 
   constructor(callbacks: Callbacks = {}) {
@@ -67,8 +82,10 @@ class WebSocketService {
   async connect(): Promise<boolean> {
     this.updateStatus("connecting");
 
-    for (const url of this.urls) {
-      console.log(`Tentative de connexion à ${url}...`);
+    try {
+      const endpoint = await getBackendEndpoint();
+      const url = endpoint.base_url;
+      console.log(`Connexion au point d'ancrage Tauri: ${url}`);
 
       const success = await this.tryConnect(url);
       if (success) {
@@ -76,6 +93,8 @@ class WebSocketService {
         console.log(`✅ Connecté à ${url}`);
         return true;
       }
+    } catch (e) {
+      console.error("Erreur d'ancrage Tauri:", e);
     }
 
     this.updateStatus("error");
@@ -170,7 +189,7 @@ class WebSocketService {
     const data: Record<string, unknown> = {
       channelName: config.channelName,
       threads: config.threads,
-      timeout: config.timeout || 10000,
+      timeout: config.timeout_ms || 10000,
       proxyType: config.proxyType || "http",
       stabilityMode: config.stabilityMode || false,
       subscriptionStatus: config.subscriptionStatus || "unknown",

@@ -1,67 +1,62 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import axios from "axios";
-
-const GITHUB_API =
-  "https://api.github.com/repos/H1B0B0/Kick-Viewerbot/releases/latest";
-const CURRENT_VERSION = process.env.NEXT_PUBLIC_REACT_APP_VERSION || "0.0.0";
-
-interface GithubRelease {
-  tag_name: string;
-  html_url: string;
-  body: string;
-  assets: {
-    browser_download_url: string;
-    name: string;
-  }[];
-}
+import { checkForDesktopUpdate, installDesktopUpdate, UpdateInfo } from "../services/desktopUpdater";
+import { getVersion } from '@tauri-apps/api/app';
+import { isTauri } from "@tauri-apps/api/core";
 
 export function useUpdateChecker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [latestVersion, setLatestVersion] = useState<GithubRelease | null>(
-    null
-  );
+  const [latestVersion, setLatestVersion] = useState<UpdateInfo | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [installProgress, setInstallProgress] = useState(0);
 
   const dismissUpdate = useCallback(() => {
     setShowToast(false);
   }, []);
 
+  const installUpdate = useCallback(async () => {
+    setIsInstalling(true);
+    try {
+      await installDesktopUpdate((p) => setInstallProgress(p));
+    } catch (e) {
+      console.error("Update failed:", e);
+      setIsInstalling(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const checkForUpdates = async () => {
+    const check = async () => {
+      if (!isTauri()) return;
+
       try {
-        const response = await axios.get<GithubRelease>(GITHUB_API);
-        const latest = response.data;
+        const currentVersion = await getVersion();
+        console.log(`Current app version: ${currentVersion}`);
 
-        console.log("Update checker:", {
-          currentVersion: CURRENT_VERSION,
-          latestVersion: latest.tag_name,
-          latestVersionClean: latest.tag_name.replace("v", ""),
-        });
-
-        const isNewer = latest.tag_name.replace("v", "") > CURRENT_VERSION;
-
-        console.log("Update check result:", {
-          isNewer,
-          willShow: isNewer,
-        });
-
-        if (isNewer) {
+        const update = await checkForDesktopUpdate();
+        if (update) {
           setUpdateAvailable(true);
-          setLatestVersion(latest);
+          setLatestVersion(update);
           setShowToast(true);
-          console.log("Update notification should appear");
         }
       } catch (error) {
-        console.error("Failed to check for updates:", error);
+        console.error("Failed to check for updates via Tauri:", error);
       }
     };
 
-    checkForUpdates();
-    const interval = setInterval(checkForUpdates, 24 * 60 * 60 * 1000);
+    check();
+    const interval = setInterval(check, 24 * 60 * 60 * 1000);
 
     return () => clearInterval(interval);
   }, []);
 
-  return { updateAvailable, latestVersion, showToast, dismissUpdate };
+  return {
+    updateAvailable,
+    latestVersion,
+    showToast,
+    dismissUpdate,
+    installUpdate,
+    isInstalling,
+    installProgress
+  };
 }

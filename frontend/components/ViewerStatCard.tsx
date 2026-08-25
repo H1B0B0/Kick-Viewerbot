@@ -9,7 +9,7 @@ export function ViewerStatCard({ value }: { value: number }) {
 
   return (
     <div className="flex flex-col justify-between p-5 h-full bg-[#09090b] border border-zinc-800 rounded-xl">
-      <h3 className="text-sm font-medium text-zinc-400 mb-2">Live Viewers</h3>
+      <h3 className="text-sm font-medium text-zinc-400 mb-2">Active Connections</h3>
       <div className="space-y-2 mt-auto">
         <div className="flex items-baseline gap-3">
           <span className="text-4xl font-semibold text-white">

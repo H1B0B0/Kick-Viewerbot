@@ -2,6 +2,9 @@
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertCircle, RefreshCcw, ArrowLeft, ExternalLink } from "lucide-react";
+import { openExternal } from "../functions/openExternal";
+import { useDesktopOAuth } from "../../hooks/useDesktopOAuth";
+import { startDesktopOAuth } from "../../auth/desktopOAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +20,8 @@ function ErrorPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const errorMessage = searchParams.get("message") || "An error occurred during authentication";
+  const { capabilities, isProcessing: isOAuthProcessing, error: oauthError } = useDesktopOAuth();
+  const patreonEnabled = capabilities?.patreon?.enabled || false;
 
   return (
     <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-zinc-300 font-sans selection:bg-red-500/30">
@@ -44,11 +49,14 @@ function ErrorPageContent() {
 
         <div className="flex flex-col gap-3">
           <button 
-            onClick={() => window.location.href = "https://api.velbots.shop/payments/patreon/redirect"}
-            className="w-full py-3 bg-[#FF424D]/10 hover:bg-[#FF424D]/20 border border-[#FF424D]/30 text-[#FF424D] font-bold text-sm rounded-lg transition-all flex items-center justify-center gap-2"
+            disabled={!patreonEnabled || isOAuthProcessing}
+            onClick={() => void startDesktopOAuth(capabilities!)}
+            className="w-full py-3 bg-[#FF424D]/10 hover:bg-[#FF424D]/20 border border-[#FF424D]/30 text-[#FF424D] font-bold text-sm rounded-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={patreonEnabled ? "" : "Patreon OAuth is not currently supported by the API"}
           >
-            <RefreshCcw className="w-4 h-4" /> Try Again with Patreon
+            <RefreshCcw className="w-4 h-4" /> {isOAuthProcessing ? "Connecting..." : "Try Again with Patreon"}
           </button>
+          {oauthError && <div className="p-3 text-sm text-red-500 bg-red-500/10 rounded-md border border-red-500/20">{oauthError}</div>}
           
           <button 
             onClick={() => router.push("/login")}

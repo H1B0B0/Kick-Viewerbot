@@ -8,76 +8,144 @@ on:
     branches:
       - "main"
 
+permissions:
+  contents: write
+
 jobs:
-  build-tauri:
+  verify-and-build:
     strategy:
       fail-fast: false
       matrix:
         include:
           - platform: "macos-latest"
-            target: "aarch64-apple-darwin"
-          - platform: "macos-13"
+            os_runner: "macos-13" # macOS Intel
             target: "x86_64-apple-darwin"
+            arch: "x86_64"
+          - platform: "macos-arm64"
+            os_runner: [self-hosted, macOS, ARM64] # macOS ARM64
+            target: "aarch64-apple-darwin"
+            arch: "arm64"
           - platform: "windows-latest"
+            os_runner: "windows-2022" # Windows x86_64
             target: "x86_64-pc-windows-msvc"
+            arch: "x86_64"
 
-    runs-on: ${{ matrix.platform }}
+    runs-on: ${{ matrix.os_runner }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: 20
+          node-version: "20.19.0"
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          architecture: 'x64'
-
-      - name: Build Python Sidecar (macOS)
-        if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-13'
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          python -m pip install --upgrade pip
-          pip install pyinstaller
-          pip install -r requirements.txt
+          rustup default 1.84.1
+          rustup target add ${{ matrix.target }}
+
+      - name: Setup Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11.9"
+
+      - name: Install dependencies (Online Bootstrap)
+        run: |
+          python -m pip install --require-hashes -r requirements.lock
+          python -m pip install pyinstaller
+          cd frontend && npm ci
+          cargo fetch --locked --manifest-path frontend/src-tauri/Cargo.toml
+
+      - name: Offline Verifications
+        env:
+          PIP_NO_INDEX: "1"
+          npm_config_offline: "true"
+          CARGO_NET_OFFLINE: "true"
+        run: |
+          python -m pytest -q tests/backend
+          cd frontend
+          npm run typecheck
+          npm run lint:check
+          npm run test:unit --if-present
+          cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings
+          cargo test --manifest-path src-tauri/Cargo.toml --locked
+
+      - name: Build Python Sidecar (Unix)
+        if: runner.os == 'macOS'
+        run: |
           pyinstaller KickViewerBOT-macOS.spec --noconfirm
           mkdir -p frontend/src-tauri/bin
           cp dist/KickViewerBOT frontend/src-tauri/bin/backend-${{ matrix.target }}
 
       - name: Build Python Sidecar (Windows)
-        if: matrix.platform == 'windows-latest'
+        if: runner.os == 'Windows'
         run: |
-          python -m venv .venv
-          .\.venv\Scripts\activate
-          python -m pip install --upgrade pip
-          pip install pyinstaller
-          pip install -r requirements.txt
           pyinstaller KickViewerBOT.spec --noconfirm
           mkdir -p frontend/src-tauri/bin
           copy dist\KickViewerBOT.exe frontend\src-tauri\bin\backend-${{ matrix.target }}.exe
 
-      - name: Install frontend dependencies
-        working-directory: frontend
-        run: npm install
+      - name: Build Tauri App for Pull Request
+        if: github.event_name == 'pull_request'
+        run: npm --prefix frontend run tauri -- build --target ${{ matrix.target }} --config src-tauri/tauri.pr.conf.json
 
-      - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+      - name: Build and Upload Signed Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          projectPath: "frontend"
+          projectPath: frontend
           tagName: ${{ github.ref_name }}
           releaseName: "Kick ViewerBot ${{ github.ref_name }}"
-          releaseBody: "See the assets to download this version and install."
           releaseDraft: true
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generateReleaseNotes: true
+          uploadUpdaterJson: true
+          uploadUpdaterSignatures: true
+          uploadWorkflowArtifacts: true
+          retryAttempts: 3
+          args: --target ${{ matrix.target }}${{ contains(github.ref_name, '-') && ' --config src-tauri/tauri.beta.conf.json' || '' }}
+
+      - name: Validate Artifacts & Inventory
+        run: python scripts/ci/inventory_artifacts.py
+
+      - name: Packaged Smoke Test
+        env:
+          KICK_VIEWERBOT_TEST_MODE: "1"
+        run: |
+          python scripts/ci/smoke_desktop.py --app "frontend/src-tauri/target/${{ matrix.target }}/release/bundle" --expected-arch ${{ matrix.arch }} --evidence .omo/evidence/final-f3-${{ matrix.target }}.json
+
+  release:
+    needs: verify-and-build
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: production
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Publish Verified GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${GITHUB_REF_NAME}" == *-* ]]; then
+            gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease
+
+            beta_dir="$(mktemp -d)"
+            gh release download "${GITHUB_REF_NAME}" --pattern latest.json --dir "${beta_dir}"
+
+            if ! gh release view updater-beta >/dev/null 2>&1; then
+              gh release create updater-beta \
+                --prerelease \
+                --target "${GITHUB_SHA}" \
+                --title "Kick ViewerBot Beta Updater Channel" \
+                --notes "Mutable updater manifest for beta desktop builds."
+            fi
+
+            gh release upload updater-beta "${beta_dir}/latest.json" --clobber
+          else
+            gh release edit "${GITHUB_REF_NAME}" --draft=false --prerelease=false --latest
+          fi

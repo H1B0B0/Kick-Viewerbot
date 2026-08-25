@@ -1,0 +1,556 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kick-viewerbot.local/contracts/runtime-v1.schema.json",
+  "title": "Kick ViewerBot runtime protocol v1 fixture",
+  "description": "Machine-readable lifecycle, Socket.IO, telemetry, readiness, origin, identity, and version contract.",
+  "type": "object",
+  "required": ["fixture_version", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "fixture_version": { "const": 1 },
+    "cases": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ContractCase" }
+    }
+  },
+  "x-runtime-contract": {
+    "protocol_version": 1,
+    "lifecycle": {
+      "states": ["unavailable", "stopped", "starting", "running", "stopping", "error"],
+      "initial_state": {
+        "runtime_imports_failed": "unavailable",
+        "runtime_imports_succeeded": "stopped"
+      },
+      "transitions": [
+        { "from": "stopped", "to": "starting", "condition": "one_manager_lock" },
+        { "from": "starting", "to": "running", "condition": "bot_preflight_and_worker_pool_ready" },
+        { "from": "starting", "to": "stopping", "condition": "stop_requested" },
+        { "from": "running", "to": "stopping", "condition": "stop_requested" },
+        { "from": "stopping", "to": "stopped", "condition": "generation_thread_and_owned_workers_terminated" },
+        { "from": "starting", "to": "error", "condition": "startup_failure" },
+        { "from": "running", "to": "error", "condition": "worker_failure" },
+        { "from": "stopping", "to": "error", "condition": "shutdown_failure" }
+      ],
+      "restart": {
+        "allowed": [
+          { "state": "stopped" },
+          { "state": "error", "generation_alive": false }
+        ],
+        "rejected": [
+          { "state": "unavailable" },
+          { "state": "error", "generation_alive": true }
+        ]
+      },
+      "stop_when_stopped": "idempotent_success_ack"
+    },
+    "commands": {
+      "names": ["start_bot", "stop_bot", "get_stats", "ping"],
+      "command_id": "client_generated_uuid_unique_for_sidecar_lifetime",
+      "ack_deadline_ms": 5000,
+      "duplicate_command_id": "return_cached_prior_ack_without_repeating_action",
+      "ack_correlation": "uuid_only_no_sequence_consumption"
+    },
+    "events": {
+      "canonical": ["service_ready", "bot_state", "stats_update", "bot_error", "pong"],
+      "compatibility_aliases": {
+        "connected": "service_ready",
+        "bot_started": "bot_state",
+        "bot_stopped": "bot_state",
+        "bot_status_changed": "bot_state"
+      },
+      "compatibility_alias_release_count": 1,
+      "removed_current_events": []
+    },
+    "sequence": {
+      "scope": "sidecar_lifetime",
+      "minimum": 0,
+      "ordering": "unsigned_monotonically_increasing",
+      "stale_rule": "lower_or_equal_rejected_unless_new_validated_instance_nonce",
+      "command_ack_consumes_sequence": false
+    },
+    "readiness": {
+      "protocol_compatibility": "exact_major_1",
+      "pid_rule": "must_equal_spawned_child_pid",
+      "mismatch_rule": "reject_readiness"
+    },
+    "identity": {
+      "product": "Kick ViewerBot",
+      "identifier": "com.velbots.kickviewerbot",
+      "targets": [
+        "aarch64-apple-darwin",
+        "x86_64-apple-darwin",
+        "x86_64-pc-windows-msvc"
+      ],
+      "origins": {
+        "macos_production": "tauri://localhost",
+        "windows_production": "http://tauri.localhost",
+        "browser_development_only": "http://localhost:3000"
+      }
+    },
+    "version_propagation": {
+      "canonical_source": "frontend/src-tauri/tauri.conf.json",
+      "frontend": "Tauri getVersion()",
+      "python": "--app-version",
+      "ci": "verify Cargo/package/Python metadata against canonical Tauri version"
+    },
+    "units": {
+      "timestamp_ms": "unix_epoch_milliseconds",
+      "network_up_mib_s": "MiB/s",
+      "network_down_mib_s": "MiB/s",
+      "percentages": "0..100",
+      "progress": "0..100"
+    }
+  },
+  "$defs": {
+    "Uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+    },
+    "BotState": {
+      "enum": ["unavailable", "stopped", "starting", "running", "stopping", "error"]
+    },
+    "ErrorPayload": {
+      "type": "object",
+      "required": ["code", "message", "retryable", "generation_alive"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "retryable": { "type": "boolean" },
+        "generation_alive": { "type": "boolean" }
+      }
+    },
+    "NullableError": {
+      "oneOf": [
+        { "$ref": "#/$defs/ErrorPayload" },
+        { "type": "null" }
+      ]
+    },
+    "RuntimeConfig": {
+      "type": "object",
+      "required": ["channel_name", "threads", "timeout_ms", "proxy_type", "stability_mode", "subscription_status"],
+      "additionalProperties": false,
+      "properties": {
+        "channel_name": { "type": "string", "minLength": 1, "pattern": "\\S" },
+        "threads": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "timeout_ms": { "type": "integer", "minimum": 1000, "maximum": 60000 },
+        "proxy_type": { "enum": ["http", "socks4", "socks5"] },
+        "stability_mode": { "type": "boolean" },
+        "subscription_status": { "type": "string" }
+      }
+    },
+    "StatusPayload": {
+      "type": "object",
+      "required": ["code", "message", "startup_progress", "proxy_loading_progress"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string" },
+        "startup_progress": { "type": "number", "minimum": 0, "maximum": 100 },
+        "proxy_loading_progress": { "type": "number", "minimum": 0, "maximum": 100 }
+      }
+    },
+    "Metrics": {
+      "type": "object",
+      "required": ["active_threads", "active_connections", "request_count", "total_proxies", "alive_proxies", "cpu_percent", "memory_percent", "network_up_mib_s", "network_down_mib_s"],
+      "additionalProperties": false,
+      "properties": {
+        "active_threads": { "type": "integer", "minimum": 0 },
+        "active_connections": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0 },
+            { "type": "null" }
+          ]
+        },
+        "request_count": { "type": "integer", "minimum": 0 },
+        "total_proxies": { "type": "integer", "minimum": 0 },
+        "alive_proxies": { "type": "integer", "minimum": 0 },
+        "cpu_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "memory_percent": { "type": "number", "minimum": 0, "maximum": 100 },
+        "network_up_mib_s": { "type": "number", "minimum": 0 },
+        "network_down_mib_s": { "type": "number", "minimum": 0 }
+      }
+    },
+    "StatsEnvelope": {
+      "type": "object",
+      "required": ["protocol_version", "sequence", "timestamp_ms", "generation_id", "state", "restart_allowed", "channel_name", "mode", "metrics", "config", "status", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "integer", "minimum": 0 },
+        "generation_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Uuid" },
+            { "type": "null" }
+          ]
+        },
+        "state": { "$ref": "#/$defs/BotState" },
+        "restart_allowed": { "type": "boolean" },
+        "channel_name": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        },
+        "mode": { "enum": ["standard", "stability", null] },
+        "metrics": { "$ref": "#/$defs/Metrics" },
+        "config": {
+          "oneOf": [
+            { "$ref": "#/$defs/RuntimeConfig" },
+            { "type": "null" }
+          ]
+        },
+        "status": { "$ref": "#/$defs/StatusPayload" },
+        "error": { "$ref": "#/$defs/NullableError" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "mode": { "const": "standard" } },
+            "required": ["mode"]
+          },
+          "then": {
+            "properties": {
+              "metrics": {
+                "properties": { "active_connections": { "type": "null" } }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "Readiness": {
+      "type": "object",
+      "required": ["protocol_version", "instance_nonce", "port", "pid", "lifecycle_state", "ready"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "instance_nonce": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "pid": { "type": "integer", "minimum": 1 },
+        "lifecycle_state": { "const": "stopped" },
+        "ready": { "const": true }
+      }
+    },
+    "BotStatePayload": {
+      "type": "object",
+      "required": ["protocol_version", "sequence", "timestamp_ms", "generation_id", "state", "restart_allowed", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "integer", "minimum": 0 },
+        "generation_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Uuid" },
+            { "type": "null" }
+          ]
+        },
+        "state": { "$ref": "#/$defs/BotState" },
+        "restart_allowed": { "type": "boolean" },
+        "error": { "$ref": "#/$defs/NullableError" }
+      }
+    },
+    "BotErrorPayload": {
+      "type": "object",
+      "required": ["protocol_version", "sequence", "timestamp_ms", "generation_id", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "sequence": { "type": "integer", "minimum": 0 },
+        "timestamp_ms": { "type": "integer", "minimum": 0 },
+        "generation_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Uuid" },
+            { "type": "null" }
+          ]
+        },
+        "error": { "$ref": "#/$defs/ErrorPayload" }
+      }
+    },
+    "ProxyFile": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["name", "base64"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "base64": { "type": "string", "minLength": 1 }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "StartRequest": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "config", "proxy_file"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "config": { "$ref": "#/$defs/RuntimeConfig" },
+        "proxy_file": { "$ref": "#/$defs/ProxyFile" }
+      }
+    },
+    "StopRequest": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "generation_id"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "generation_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Uuid" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "GetStatsRequest": {
+      "type": "object",
+      "required": ["protocol_version", "command_id"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" }
+      }
+    },
+    "PingRequest": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "client_timestamp_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "client_timestamp_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "StartAck": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "ok", "state", "error", "accepted", "generation_id"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "ok": { "type": "boolean" },
+        "state": { "$ref": "#/$defs/BotState" },
+        "error": { "$ref": "#/$defs/NullableError" },
+        "accepted": { "type": "boolean" },
+        "generation_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Uuid" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "StopAck": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "ok", "state", "error", "generation_id", "terminated"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "ok": { "type": "boolean" },
+        "state": { "$ref": "#/$defs/BotState" },
+        "error": { "$ref": "#/$defs/NullableError" },
+        "generation_id": {
+          "oneOf": [
+            { "$ref": "#/$defs/Uuid" },
+            { "type": "null" }
+          ]
+        },
+        "terminated": { "type": "boolean" }
+      }
+    },
+    "GetStatsAck": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "ok", "state", "error", "stats"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "ok": { "type": "boolean" },
+        "state": { "$ref": "#/$defs/BotState" },
+        "error": { "$ref": "#/$defs/NullableError" },
+        "stats": { "$ref": "#/$defs/StatsEnvelope" }
+      }
+    },
+    "PingAck": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "ok", "state", "error", "client_timestamp_ms", "server_timestamp_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "ok": { "type": "boolean" },
+        "state": { "$ref": "#/$defs/BotState" },
+        "error": { "$ref": "#/$defs/NullableError" },
+        "client_timestamp_ms": { "type": "number", "minimum": 0 },
+        "server_timestamp_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "PongPayload": {
+      "type": "object",
+      "required": ["protocol_version", "command_id", "client_timestamp_ms", "server_timestamp_ms"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_version": { "const": 1 },
+        "command_id": { "$ref": "#/$defs/Uuid" },
+        "client_timestamp_ms": { "type": "number", "minimum": 0 },
+        "server_timestamp_ms": { "type": "number", "minimum": 0 }
+      }
+    },
+    "ContractCase": {
+      "oneOf": [
+        { "$ref": "#/$defs/StartRequestCase" },
+        { "$ref": "#/$defs/StopRequestCase" },
+        { "$ref": "#/$defs/GetStatsRequestCase" },
+        { "$ref": "#/$defs/PingRequestCase" },
+        { "$ref": "#/$defs/StartAckCase" },
+        { "$ref": "#/$defs/StopAckCase" },
+        { "$ref": "#/$defs/GetStatsAckCase" },
+        { "$ref": "#/$defs/PingAckCase" },
+        { "$ref": "#/$defs/ServiceReadyCase" },
+        { "$ref": "#/$defs/BotStateCase" },
+        { "$ref": "#/$defs/StatsUpdateCase" },
+        { "$ref": "#/$defs/BotErrorCase" },
+        { "$ref": "#/$defs/PongCase" }
+      ]
+    },
+    "StartRequestCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_request" },
+        "command": { "const": "start_bot" },
+        "payload": { "$ref": "#/$defs/StartRequest" }
+      }
+    },
+    "StopRequestCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_request" },
+        "command": { "const": "stop_bot" },
+        "payload": { "$ref": "#/$defs/StopRequest" }
+      }
+    },
+    "GetStatsRequestCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_request" },
+        "command": { "const": "get_stats" },
+        "payload": { "$ref": "#/$defs/GetStatsRequest" }
+      }
+    },
+    "PingRequestCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_request" },
+        "command": { "const": "ping" },
+        "payload": { "$ref": "#/$defs/PingRequest" }
+      }
+    },
+    "StartAckCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_ack" },
+        "command": { "const": "start_bot" },
+        "payload": { "$ref": "#/$defs/StartAck" }
+      }
+    },
+    "StopAckCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_ack" },
+        "command": { "const": "stop_bot" },
+        "payload": { "$ref": "#/$defs/StopAck" }
+      }
+    },
+    "GetStatsAckCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_ack" },
+        "command": { "const": "get_stats" },
+        "payload": { "$ref": "#/$defs/GetStatsAck" }
+      }
+    },
+    "PingAckCase": {
+      "type": "object",
+      "required": ["kind", "command", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "command_ack" },
+        "command": { "const": "ping" },
+        "payload": { "$ref": "#/$defs/PingAck" }
+      }
+    },
+    "ServiceReadyCase": {
+      "type": "object",
+      "required": ["kind", "event", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "server_event" },
+        "event": { "enum": ["service_ready", "connected"] },
+        "payload": { "$ref": "#/$defs/Readiness" }
+      }
+    },
+    "BotStateCase": {
+      "type": "object",
+      "required": ["kind", "event", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "server_event" },
+        "event": { "enum": ["bot_state", "bot_started", "bot_stopped", "bot_status_changed"] },
+        "payload": { "$ref": "#/$defs/BotStatePayload" }
+      }
+    },
+    "StatsUpdateCase": {
+      "type": "object",
+      "required": ["kind", "event", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "server_event" },
+        "event": { "const": "stats_update" },
+        "payload": { "$ref": "#/$defs/StatsEnvelope" }
+      }
+    },
+    "BotErrorCase": {
+      "type": "object",
+      "required": ["kind", "event", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "server_event" },
+        "event": { "const": "bot_error" },
+        "payload": { "$ref": "#/$defs/BotErrorPayload" }
+      }
+    },
+    "PongCase": {
+      "type": "object",
+      "required": ["kind", "event", "payload"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "const": "server_event" },
+        "event": { "const": "pong" },
+        "payload": { "$ref": "#/$defs/PongPayload" }
+      }
+    }
+  }
+}

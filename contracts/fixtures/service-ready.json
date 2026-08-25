@@ -1,0 +1,29 @@
+{
+  "fixture_version": 1,
+  "cases": [
+    {
+      "kind": "server_event",
+      "event": "service_ready",
+      "payload": {
+        "protocol_version": 1,
+        "instance_nonce": "fixture-sidecar-instance-1",
+        "port": 8765,
+        "pid": 4242,
+        "lifecycle_state": "stopped",
+        "ready": true
+      }
+    },
+    {
+      "kind": "server_event",
+      "event": "connected",
+      "payload": {
+        "protocol_version": 1,
+        "instance_nonce": "fixture-sidecar-instance-1",
+        "port": 8765,
+        "pid": 4242,
+        "lifecycle_state": "stopped",
+        "ready": true
+      }
+    }
+  ]
+}
