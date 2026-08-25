@@ -72,9 +72,11 @@ jobs:
       - name: Build Python Sidecar (Windows)
         if: runner.os == 'Windows'
         run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = "Stop"
           pyinstaller KickViewerBOT.spec --noconfirm
-          mkdir -p frontend/src-tauri/bin
-          copy dist\KickViewerBOT.exe frontend\src-tauri\bin\backend-${{ matrix.target }}.exe
+          New-Item -ItemType Directory -Force -Path "frontend/src-tauri/bin" | Out-Null
+          Copy-Item -Force -Path "dist/KickViewerBOT.exe" -Destination "frontend/src-tauri/bin/backend-${{ matrix.target }}.exe"
 
       - name: Offline Verifications
         env:

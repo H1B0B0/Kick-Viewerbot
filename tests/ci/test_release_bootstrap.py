@@ -31,6 +31,13 @@ def test_release_bootstrap_keeps_commands_at_repository_root() -> None:
     assert workflow.index("Build Python Sidecar (Unix)") < workflow.index("Offline Verifications")
     assert workflow.index("Build Python Sidecar (Windows)") < workflow.index("Offline Verifications")
 
+    windows_sidecar = workflow.split("Build Python Sidecar (Windows)", maxsplit=1)[1].split(
+        "Offline Verifications", maxsplit=1
+    )[0]
+    assert "mkdir -p" not in windows_sidecar
+    assert "New-Item -ItemType Directory -Force" in windows_sidecar
+    assert "Copy-Item -Force" in windows_sidecar
+
 
 def test_rust_toolchain_matches_manifest_msrv() -> None:
     toolchain = (ROOT / "rust-toolchain.toml").read_text(encoding="utf-8")
