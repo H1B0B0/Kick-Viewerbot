@@ -3,6 +3,7 @@
   "version": "0.1.2-1",
   "private": true,
   "scripts": {
+    "build:sidecar": "python ../scripts/build_sidecar.py",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",

@@ -8,6 +8,13 @@ export interface UpdateInfo {
   body?: string;
 }
 
+export function shouldCheckForDesktopUpdate(
+  isDesktopRuntime: boolean,
+  environment: string | undefined,
+): boolean {
+  return isDesktopRuntime && environment === "production";
+}
+
 export async function checkForDesktopUpdate(): Promise<UpdateInfo | null> {
   if (!isTauri()) return null;
   try {

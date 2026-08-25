@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">VelBots VB monogram</title>
+  <desc id="description">A white intertwined VB monogram on a near-black rounded-square field.</desc>
+
+  <rect x="64" y="64" width="896" height="896" rx="196" fill="#08090d" />
+
+  <path d="M190 286 H302 L424 590 L552 286 H662 L474 738 H380 Z" fill="#ffffff" />
+
+  <path
+    d="M390 286 H700 C796 286 850 328 850 398 C850 450 822 484 774 504 C842 522 880 568 880 630 C880 708 812 738 700 738 H470 L510 638 H694 C752 638 782 620 782 586 C782 552 752 534 696 534 H520 L560 438 H692 C740 438 764 420 764 388 C764 356 740 340 694 340 H412 Z"
+    fill="#ffffff"
+  />
+</svg>

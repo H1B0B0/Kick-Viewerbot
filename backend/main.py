@@ -30,10 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger("kick_viewer_bot")
 
 # Import bot classes
-sys.path.append(str(Path(__file__).parent / "api"))
 try:
-    from api.viewer_bot import ViewerBot
-    from api.viewer_bot_stability import ViewerBot_Stability
+    from backend.api.viewer_bot import ViewerBot
+    from backend.api.viewer_bot_stability import ViewerBot_Stability
     BOT_AVAILABLE = True
 except ImportError:
     logger.warning("Bot modules not found. Running in mock mode.")

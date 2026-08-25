@@ -34,10 +34,8 @@ a = Analysis(
     binaries=tls_client_binaries,
     datas=datas,
     hiddenimports=[
-        'api.viewer_bot',
-        'api.viewer_bot_stability',
-        'services.chat_service',
-        'services.kick_chat_bot',
+        'backend.api.viewer_bot',
+        'backend.api.viewer_bot_stability',
         # Flask and related
         'flask',
         'flask_cors',

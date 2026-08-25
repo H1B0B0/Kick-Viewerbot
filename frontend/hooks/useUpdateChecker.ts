@@ -1,6 +1,11 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { checkForDesktopUpdate, installDesktopUpdate, UpdateInfo } from "../services/desktopUpdater";
+import {
+  checkForDesktopUpdate,
+  installDesktopUpdate,
+  shouldCheckForDesktopUpdate,
+  UpdateInfo,
+} from "../services/desktopUpdater";
 import { getVersion } from '@tauri-apps/api/app';
 import { isTauri } from "@tauri-apps/api/core";
 
@@ -27,7 +32,7 @@ export function useUpdateChecker() {
 
   useEffect(() => {
     const check = async () => {
-      if (!isTauri()) return;
+      if (!shouldCheckForDesktopUpdate(isTauri(), process.env.NODE_ENV)) return;
 
       try {
         const currentVersion = await getVersion();
