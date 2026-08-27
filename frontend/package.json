@@ -1,6 +1,6 @@
 {
   "name": "kick-viewerbot",
-  "version": "0.1.2-1",
+  "version": "0.1.2-3",
   "private": true,
   "scripts": {
     "build:sidecar": "python ../scripts/build_sidecar.py",

@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Kick ViewerBot",
-  "version": "0.1.2-1",
+  "version": "0.1.2-3",
   "identifier": "com.velbots.kickviewerbot",
   "build": {
     "frontendDist": "../out",

@@ -1,6 +1,6 @@
 [package]
 name = "kick-viewerbot"
-version = "0.1.2-1"
+version = "0.1.2-3"
 description = "Kick ViewerBot desktop application"
 authors = ["VelBots"]
 license = ""
