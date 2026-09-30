@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import {
-  Archive,
-  ArrowRight,
-  LogOut,
-  Radio,
-  ShieldCheck,
-  Sparkles,
-} from "lucide-react";
+import { Archive, ArrowRight, LogOut, Radio, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { CreatorGrowthToolkit } from "../components/CreatorGrowthToolkit";
@@ -73,24 +66,20 @@ export default function Dashboard() {
           })}
         />
 
-        <section className="grid gap-4 rounded-xl border border-zinc-800 bg-zinc-950/40 p-5 md:grid-cols-3">
-          <div className="md:col-span-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-white">
-              <Radio className="h-4 w-4 text-emerald-400" />
+        <section className="flex items-center gap-3 rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
+          <Radio className="h-4 w-4 shrink-0 text-emerald-400" />
+          <div>
+            <div className="text-sm font-medium text-white">
               {t("betaTitle")}
             </div>
             <p className="mt-2 text-sm leading-6 text-zinc-400">
               {t("betaBody")}
             </p>
           </div>
-          <div className="rounded-lg border border-emerald-950 bg-emerald-950/20 p-3 text-xs leading-5 text-emerald-200">
-            <ShieldCheck className="mb-1 h-4 w-4" />
-            {t("betaSafety")}
-          </div>
         </section>
 
         <section className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-5">
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
                 <Archive className="h-4 w-4 text-zinc-400" />
@@ -101,13 +90,10 @@ export default function Dashboard() {
                   {t("migrationMode")}
                 </span>
               </div>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-400">
-                {t("legacyBody")}
-              </p>
             </div>
-            <div className="rounded-lg border border-amber-950 bg-amber-950/20 px-3 py-2 text-xs leading-5 text-amber-200">
-              {t("legacySafety")}
-            </div>
+            <span className="rounded-full border border-amber-900/70 bg-amber-950/20 px-3 py-1 text-xs font-medium text-amber-200">
+              {t("pausedForMigration")}
+            </span>
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-3">
@@ -116,9 +102,6 @@ export default function Dashboard() {
                 {t("workspace")}
               </p>
               <p className="mt-2 text-sm font-medium text-zinc-200">
-                {t("legacyTitle")}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-zinc-500">
                 {t("workspaceBody")}
               </p>
             </article>
@@ -127,9 +110,6 @@ export default function Dashboard() {
                 {t("legacyAutomation")}
               </p>
               <p className="mt-2 text-sm font-medium text-amber-200">
-                {t("pausedForMigration")}
-              </p>
-              <p className="mt-1 text-xs leading-5 text-zinc-500">
                 {t("legacyAutomationBody")}
               </p>
             </article>

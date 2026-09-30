@@ -30,30 +30,26 @@ const en = {
   disconnected: "Disconnected",
   connectionFailed: "Connection failed",
   retry: "Retry",
-  betaTitle: "What this beta tests",
+  betaTitle: "Beta workspace",
   betaBody:
-    "A familiar ViewerBot workspace for orientation, plus live planning, creator-controlled highlight markers, CSV review exports, and announcement drafts. Publishing remains a deliberate action by the creator.",
+    "Live planning · highlight markers · CSV exports · announcement drafts.",
   betaSafety: "Legacy synthetic-engagement controls are paused in this beta.",
-  legacyTitle: "ViewerBot Legacy",
-  migrationMode: "Migration mode",
+  legacyTitle: "ViewerBot",
+  migrationMode: "Legacy",
   legacyBody:
     "The ViewerBot space remains part of V4 so your community has a clear bridge to the new product. The legacy workflow is visible here, but its synthetic-audience and proxy actions are paused.",
   legacySafety:
     "Legacy actions do not contact Kick, Twitch, or YouTube in this beta.",
-  workspace: "Workspace",
-  workspaceBody:
-    "Keep the familiar product name and workflow context while the beta gathers feedback.",
-  legacyAutomation: "Legacy automation",
-  pausedForMigration: "Paused for migration",
-  legacyAutomationBody:
-    "No viewer, thread, or proxy operation can be started from this beta.",
-  nextStep: "Next step",
-  nextStepTitle: "Move the live workflow forward",
-  nextStepBody:
-    "Plan the live, mark strong moments, review the CSV, then publish a real platform-native clip.",
+  workspace: "Legacy workspace",
+  workspaceBody: "Channel context",
+  legacyAutomation: "Runtime",
+  pausedForMigration: "Paused",
+  legacyAutomationBody: "Unavailable in V4 beta.",
+  nextStep: "Creator Growth",
+  nextStepTitle: "Live planning & clips",
+  nextStepBody: "Markers, CSV exports and announcement drafts.",
   clipsTitle: "Clip automation status",
-  clipsBody:
-    "This beta never claims to have created a clip until the connected platform confirms it.",
+  clipsBody: "Clip creation status appears after platform confirmation.",
   kickClip:
     "Marker and review export only. This beta does not use a Kick clip-creation endpoint.",
   twitchClip:
@@ -62,7 +58,7 @@ const en = {
     "Marker and review export only. This beta does not create YouTube clips or uploads.",
   creatorTitle: "Creator Growth Toolkit",
   localOnly: "Local only",
-  creatorBody: "Build real discovery habits alongside your current workflow.",
+  creatorBody: "Live planning, highlights and campaign preparation.",
   objective: "Next live objective",
   objectivePlaceholder:
     "Example: turn 5 first-time chatters into returning viewers",
@@ -85,8 +81,7 @@ const en = {
   resetMarkers: "Start a new marker session and clear current moments?",
   defaultMoment: "Highlight",
   announcementTitle: "Plan your next live announcement",
-  announcementBody:
-    "Prepare a draft for your community, then review and publish it yourself. Works without a connected platform account. This draft is not saved after closing the page.",
+  announcementBody: "Local announcement drafts. Manual publishing.",
   platform: "Platform",
   topic: "Topic / reason to watch",
   dateTime: "Date, time and timezone",
@@ -154,31 +149,28 @@ const messages: Record<Locale, Messages> = {
     disconnected: "Déconnecté",
     connectionFailed: "Connexion impossible",
     retry: "Réessayer",
-    betaTitle: "Ce que teste cette bêta",
+    betaTitle: "Espace bêta",
     betaBody:
-      "Un espace ViewerBot familier pour se repérer, avec la planification de lives, des marqueurs de temps contrôlés par le créateur, des exports CSV et des brouillons d’annonces. La publication reste une décision du créateur.",
+      "Planification de lives · marqueurs de temps · exports CSV · brouillons d’annonces.",
     betaSafety:
       "Les contrôles historiques d’engagement synthétique sont en pause dans cette bêta.",
-    legacyTitle: "ViewerBot historique",
-    migrationMode: "Mode migration",
+    legacyTitle: "ViewerBot",
+    migrationMode: "Historique",
     legacyBody:
       "L’espace ViewerBot reste présent dans la V4 afin d’offrir à votre communauté une transition claire vers le nouveau produit. Le workflow historique est visible, mais les actions d’audience synthétique et de proxy sont en pause.",
     legacySafety:
       "Les actions historiques ne contactent ni Kick, ni Twitch, ni YouTube dans cette bêta.",
-    workspace: "Espace",
-    workspaceBody:
-      "Conservez le nom et le contexte de workflow connus pendant que la bêta recueille les retours.",
-    legacyAutomation: "Automatisation historique",
-    pausedForMigration: "En pause pour la migration",
-    legacyAutomationBody:
-      "Aucune opération de viewers, threads ou proxy ne peut être démarrée depuis cette bêta.",
-    nextStep: "Prochaine étape",
-    nextStepTitle: "Faire progresser le workflow de live",
-    nextStepBody:
-      "Planifiez le live, marquez les meilleurs moments, révisez le CSV puis publiez un vrai clip natif.",
+    workspace: "Espace historique",
+    workspaceBody: "Contexte de chaîne",
+    legacyAutomation: "Runtime",
+    pausedForMigration: "En pause",
+    legacyAutomationBody: "Indisponible dans la bêta V4.",
+    nextStep: "Creator Growth",
+    nextStepTitle: "Planification et clips",
+    nextStepBody: "Marqueurs, exports CSV et brouillons d’annonces.",
     clipsTitle: "État de l’automatisation des clips",
     clipsBody:
-      "Cette bêta n’affirme jamais avoir créé un clip avant confirmation de la plateforme connectée.",
+      "Le statut de création apparaît après confirmation de la plateforme.",
     kickClip:
       "Marqueurs et export de revue uniquement. Cette bêta n’utilise pas d’endpoint de création de clips Kick.",
     twitchClip:
@@ -188,7 +180,7 @@ const messages: Record<Locale, Messages> = {
     creatorTitle: "Boîte à outils de croissance",
     localOnly: "Local uniquement",
     creatorBody:
-      "Développez de vraies habitudes de découverte en parallèle de votre workflow actuel.",
+      "Planification de live, highlights et préparation de campagne.",
     objective: "Objectif du prochain live",
     objectivePlaceholder:
       "Exemple : transformer 5 nouveaux chatteurs en viewers récurrents",
@@ -213,8 +205,7 @@ const messages: Record<Locale, Messages> = {
       "Démarrer une nouvelle session et effacer les marqueurs actuels ?",
     defaultMoment: "Moment fort",
     announcementTitle: "Planifier l’annonce de votre prochain live",
-    announcementBody:
-      "Préparez un brouillon pour votre communauté, puis relisez-le et publiez-le vous-même. Fonctionne sans compte de plateforme connecté. Ce brouillon n’est pas conservé après fermeture de la page.",
+    announcementBody: "Brouillons d’annonces locaux. Publication manuelle.",
     platform: "Plateforme",
     topic: "Sujet / raison de regarder",
     dateTime: "Date, heure et fuseau",
@@ -274,31 +265,27 @@ const messages: Record<Locale, Messages> = {
     disconnected: "Desconectado",
     connectionFailed: "Falha na conexão",
     retry: "Tentar novamente",
-    betaTitle: "O que esta beta testa",
+    betaTitle: "Espaço beta",
     betaBody:
-      "Um espaço ViewerBot familiar para orientação, além de planejamento de lives, marcadores controlados pelo criador, exportações CSV e rascunhos de anúncios. A publicação continua sendo uma decisão do criador.",
+      "Planejamento de lives · marcadores de destaque · exportações CSV · rascunhos de anúncios.",
     betaSafety:
       "Os controles legados de engajamento sintético estão pausados nesta beta.",
-    legacyTitle: "ViewerBot legado",
-    migrationMode: "Modo de migração",
+    legacyTitle: "ViewerBot",
+    migrationMode: "Legado",
     legacyBody:
       "O espaço ViewerBot continua na V4 para dar à sua comunidade uma ponte clara para o novo produto. O fluxo legado está visível, mas as ações de audiência sintética e proxy estão pausadas.",
     legacySafety:
       "As ações legadas não contatam Kick, Twitch ou YouTube nesta beta.",
-    workspace: "Espaço",
-    workspaceBody:
-      "Mantenha o nome e o contexto de trabalho conhecidos enquanto a beta coleta feedback.",
-    legacyAutomation: "Automação legada",
-    pausedForMigration: "Pausada para migração",
-    legacyAutomationBody:
-      "Nenhuma operação de viewers, threads ou proxy pode ser iniciada nesta beta.",
-    nextStep: "Próximo passo",
-    nextStepTitle: "Avance o fluxo da live",
-    nextStepBody:
-      "Planeje a live, marque momentos fortes, revise o CSV e publique um clipe nativo real.",
+    workspace: "Espaço legado",
+    workspaceBody: "Contexto do canal",
+    legacyAutomation: "Runtime",
+    pausedForMigration: "Pausada",
+    legacyAutomationBody: "Indisponível na beta V4.",
+    nextStep: "Creator Growth",
+    nextStepTitle: "Planejamento e clipes",
+    nextStepBody: "Marcadores, exportações CSV e rascunhos de anúncios.",
     clipsTitle: "Status da automação de clipes",
-    clipsBody:
-      "Esta beta nunca afirma ter criado um clipe até a plataforma conectada confirmar.",
+    clipsBody: "O status de criação aparece após a confirmação da plataforma.",
     kickClip:
       "Somente marcadores e exportação para revisão. Esta beta não usa um endpoint de criação de clipes Kick.",
     twitchClip:
@@ -307,7 +294,7 @@ const messages: Record<Locale, Messages> = {
       "Somente marcadores e exportação para revisão. Esta beta não cria clipes ou uploads do YouTube.",
     creatorTitle: "Kit de crescimento do criador",
     localOnly: "Somente local",
-    creatorBody: "Crie hábitos reais de descoberta junto com seu fluxo atual.",
+    creatorBody: "Planejamento de lives, destaques e preparação de campanha.",
     objective: "Objetivo da próxima live",
     objectivePlaceholder:
       "Exemplo: transformar 5 novos participantes do chat em espectadores recorrentes",
@@ -330,8 +317,7 @@ const messages: Record<Locale, Messages> = {
     resetMarkers: "Iniciar uma nova sessão e limpar os momentos atuais?",
     defaultMoment: "Destaque",
     announcementTitle: "Planeje o anúncio da sua próxima live",
-    announcementBody:
-      "Prepare um rascunho para sua comunidade, depois revise e publique você mesmo. Funciona sem uma conta de plataforma conectada. Este rascunho não é salvo após fechar a página.",
+    announcementBody: "Rascunhos de anúncios locais. Publicação manual.",
     platform: "Plataforma",
     topic: "Tema / motivo para assistir",
     dateTime: "Data, hora e fuso",
@@ -391,31 +377,28 @@ const messages: Record<Locale, Messages> = {
     disconnected: "Desconectado",
     connectionFailed: "Error de conexión",
     retry: "Reintentar",
-    betaTitle: "Qué prueba esta beta",
+    betaTitle: "Espacio beta",
     betaBody:
-      "Un espacio ViewerBot conocido para orientarse, además de planificación de directos, marcadores controlados por el creador, exportaciones CSV y borradores de anuncios. La publicación sigue siendo una decisión del creador.",
+      "Planificación de directos · marcadores destacados · exportaciones CSV · borradores de anuncios.",
     betaSafety:
       "Los controles heredados de interacción sintética están pausados en esta beta.",
-    legacyTitle: "ViewerBot heredado",
-    migrationMode: "Modo de migración",
+    legacyTitle: "ViewerBot",
+    migrationMode: "Heredado",
     legacyBody:
       "El espacio ViewerBot sigue en V4 para dar a tu comunidad un puente claro hacia el nuevo producto. El flujo heredado es visible, pero las acciones de audiencia sintética y proxy están pausadas.",
     legacySafety:
       "Las acciones heredadas no contactan Kick, Twitch ni YouTube en esta beta.",
-    workspace: "Espacio",
-    workspaceBody:
-      "Mantén el nombre y el contexto de trabajo conocidos mientras la beta recopila comentarios.",
-    legacyAutomation: "Automatización heredada",
-    pausedForMigration: "Pausada para la migración",
-    legacyAutomationBody:
-      "No se puede iniciar ninguna operación de viewers, hilos o proxy desde esta beta.",
-    nextStep: "Siguiente paso",
-    nextStepTitle: "Avanza el flujo del directo",
-    nextStepBody:
-      "Planifica el directo, marca buenos momentos, revisa el CSV y publica un clip nativo real.",
+    workspace: "Espacio heredado",
+    workspaceBody: "Contexto del canal",
+    legacyAutomation: "Runtime",
+    pausedForMigration: "Pausada",
+    legacyAutomationBody: "No disponible en la beta V4.",
+    nextStep: "Creator Growth",
+    nextStepTitle: "Planificación y clips",
+    nextStepBody: "Marcadores, exportaciones CSV y borradores de anuncios.",
     clipsTitle: "Estado de la automatización de clips",
     clipsBody:
-      "Esta beta nunca afirma haber creado un clip hasta que la plataforma conectada lo confirme.",
+      "El estado de creación aparece tras la confirmación de la plataforma.",
     kickClip:
       "Solo marcadores y exportación para revisión. Esta beta no usa un endpoint de creación de clips de Kick.",
     twitchClip:
@@ -425,7 +408,7 @@ const messages: Record<Locale, Messages> = {
     creatorTitle: "Kit de crecimiento para creadores",
     localOnly: "Solo local",
     creatorBody:
-      "Crea hábitos reales de descubrimiento junto a tu flujo actual.",
+      "Planificación de directos, destacados y preparación de campañas.",
     objective: "Objetivo del próximo directo",
     objectivePlaceholder:
       "Ejemplo: convertir 5 nuevos chatters en espectadores recurrentes",
@@ -448,8 +431,7 @@ const messages: Record<Locale, Messages> = {
     resetMarkers: "¿Iniciar una nueva sesión y borrar los momentos actuales?",
     defaultMoment: "Momento destacado",
     announcementTitle: "Planifica el anuncio de tu próximo directo",
-    announcementBody:
-      "Prepara un borrador para tu comunidad, después revísalo y publícalo tú mismo. Funciona sin una cuenta de plataforma conectada. Este borrador no se guarda al cerrar la página.",
+    announcementBody: "Borradores de anuncios locales. Publicación manual.",
     platform: "Plataforma",
     topic: "Tema / motivo para ver",
     dateTime: "Fecha, hora y zona horaria",
@@ -509,31 +491,27 @@ const messages: Record<Locale, Messages> = {
     disconnected: "Getrennt",
     connectionFailed: "Verbindung fehlgeschlagen",
     retry: "Erneut versuchen",
-    betaTitle: "Was diese Beta testet",
+    betaTitle: "Beta-Arbeitsbereich",
     betaBody:
-      "Ein vertrauter ViewerBot-Bereich zur Orientierung sowie Live-Planung, vom Creator gesteuerte Highlight-Markierungen, CSV-Exporte und Ankündigungsentwürfe. Die Veröffentlichung bleibt eine bewusste Entscheidung des Creators.",
+      "Live-Planung · Highlight-Markierungen · CSV-Exporte · Ankündigungsentwürfe.",
     betaSafety:
       "Historische Controls für synthetisches Engagement sind in dieser Beta pausiert.",
-    legacyTitle: "ViewerBot Altbestand",
-    migrationMode: "Migrationsmodus",
+    legacyTitle: "ViewerBot",
+    migrationMode: "Altbestand",
     legacyBody:
       "Der ViewerBot-Bereich bleibt Teil von V4, damit deine Community eine klare Brücke zum neuen Produkt hat. Der alte Workflow ist sichtbar, aber synthetische Zuschauer- und Proxy-Aktionen sind pausiert.",
     legacySafety:
       "Alte Aktionen kontaktieren in dieser Beta weder Kick noch Twitch oder YouTube.",
-    workspace: "Arbeitsbereich",
-    workspaceBody:
-      "Behalte den vertrauten Produktnamen und Workflow-Kontext, während die Beta Feedback sammelt.",
-    legacyAutomation: "Alte Automatisierung",
-    pausedForMigration: "Für Migration pausiert",
-    legacyAutomationBody:
-      "In dieser Beta kann keine Viewer-, Thread- oder Proxy-Operation gestartet werden.",
-    nextStep: "Nächster Schritt",
-    nextStepTitle: "Den Live-Workflow voranbringen",
-    nextStepBody:
-      "Plane den Live, markiere starke Momente, prüfe die CSV und veröffentliche einen echten plattformeigenen Clip.",
+    workspace: "Alter Arbeitsbereich",
+    workspaceBody: "Kanal-Kontext",
+    legacyAutomation: "Runtime",
+    pausedForMigration: "Pausiert",
+    legacyAutomationBody: "In V4 Beta nicht verfügbar.",
+    nextStep: "Creator Growth",
+    nextStepTitle: "Live-Planung und Clips",
+    nextStepBody: "Markierungen, CSV-Exporte und Ankündigungsentwürfe.",
     clipsTitle: "Status der Clip-Automatisierung",
-    clipsBody:
-      "Diese Beta behauptet nie, einen Clip erstellt zu haben, bevor die verbundene Plattform dies bestätigt.",
+    clipsBody: "Der Erstellungsstatus erscheint nach Plattformbestätigung.",
     kickClip:
       "Nur Markierungen und Prüfexport. Diese Beta nutzt keinen Kick-Endpunkt zum Erstellen von Clips.",
     twitchClip:
@@ -542,8 +520,7 @@ const messages: Record<Locale, Messages> = {
       "Nur Markierungen und Prüfexport. Diese Beta erstellt keine YouTube-Clips oder Uploads.",
     creatorTitle: "Creator-Growth-Toolkit",
     localOnly: "Nur lokal",
-    creatorBody:
-      "Entwickle echte Discovery-Gewohnheiten neben deinem aktuellen Workflow.",
+    creatorBody: "Live-Planung, Highlights und Kampagnenvorbereitung.",
     objective: "Ziel für den nächsten Live",
     objectivePlaceholder:
       "Beispiel: 5 neue Chat-Teilnehmer zu wiederkehrenden Zuschauern machen",
@@ -567,8 +544,7 @@ const messages: Record<Locale, Messages> = {
     resetMarkers: "Eine neue Sitzung starten und aktuelle Momente löschen?",
     defaultMoment: "Highlight",
     announcementTitle: "Ankündigung für deinen nächsten Live planen",
-    announcementBody:
-      "Bereite einen Entwurf für deine Community vor, prüfe ihn und veröffentliche ihn selbst. Funktioniert ohne verbundenes Plattformkonto. Dieser Entwurf wird nach dem Schließen der Seite nicht gespeichert.",
+    announcementBody: "Lokale Ankündigungsentwürfe. Manuelle Veröffentlichung.",
     platform: "Plattform",
     topic: "Thema / Grund zum Zuschauen",
     dateTime: "Datum, Uhrzeit und Zeitzone",
