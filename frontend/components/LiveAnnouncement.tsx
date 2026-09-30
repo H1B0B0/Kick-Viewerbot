@@ -6,8 +6,10 @@ import {
   LIVE_PLATFORMS,
   type LivePlatform,
 } from "../services/liveAnnouncement";
+import { useLocale } from "../i18n/LocaleProvider";
 
 export function LiveAnnouncement() {
+  const { t } = useLocale();
   const [platform, setPlatform] = useState<LivePlatform>("Kick");
   const [topic, setTopic] = useState("");
   const [when, setWhen] = useState("");
@@ -20,15 +22,11 @@ export function LiveAnnouncement() {
   return (
     <div className="space-y-3 rounded-lg border border-zinc-800 p-4">
       <h4 className="text-sm font-medium text-white">
-        Plan your next live announcement
+        {t("announcementTitle")}
       </h4>
-      <p className="text-xs text-zinc-500">
-        Prepare a draft for your community, then review and publish it yourself.
-        Works without a connected platform account. This draft is not saved
-        after closing the page.
-      </p>
+      <p className="text-xs text-zinc-500">{t("announcementBody")}</p>
       <label className="block text-xs text-zinc-400">
-        Platform
+        {t("platform")}
         <select
           className={fieldClass}
           value={platform}
@@ -44,7 +42,7 @@ export function LiveAnnouncement() {
         </select>
       </label>
       <label className="block text-xs text-zinc-400">
-        Topic / reason to watch
+        {t("topic")}
         <input
           className={fieldClass}
           maxLength={200}
@@ -57,11 +55,11 @@ export function LiveAnnouncement() {
         />
       </label>
       <label className="block text-xs text-zinc-400">
-        Date, time and timezone
+        {t("dateTime")}
         <input
           className={fieldClass}
           maxLength={120}
-          placeholder="25 September, 20:00 Europe/Paris"
+          placeholder={t("dateTimePlaceholder")}
           value={when}
           onChange={(event) => {
             setWhen(event.target.value);
@@ -71,7 +69,7 @@ export function LiveAnnouncement() {
         />
       </label>
       <label className="block text-xs text-zinc-400">
-        Channel or live URL
+        {t("channelUrl")}
         <input
           className={fieldClass}
           type="url"
@@ -89,24 +87,31 @@ export function LiveAnnouncement() {
         type="button"
         onClick={() => {
           try {
-            setDraft(buildAnnouncement(platform, topic, when, link));
+            setDraft(
+              buildAnnouncement(platform, topic, when, link, {
+                missingDetails: t("missingDetails"),
+                invalidUrl: t("invalidUrl"),
+                platformUrl: (target) => t("platformUrl", { platform: target }),
+                liveLine: (target, scheduledAt) =>
+                  t("liveLine", { platform: target, when: scheduledAt }),
+                callToAction: t("callToAction"),
+              }),
+            );
             setFeedback("");
           } catch (error) {
             setDraft("");
             setFeedback(
-              error instanceof Error
-                ? error.message
-                : "Unable to prepare draft.",
+              error instanceof Error ? error.message : t("prepareError"),
             );
           }
         }}
       >
-        Prepare draft
+        {t("prepareDraft")}
       </button>
       {draft && (
         <>
           <label className="block text-xs text-zinc-400">
-            Review and edit before sharing
+            {t("reviewDraft")}
             <textarea
               className={fieldClass}
               rows={6}
@@ -124,17 +129,13 @@ export function LiveAnnouncement() {
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(draft);
-                setFeedback(
-                  "Copied. You can now publish it in your community.",
-                );
+                setFeedback(t("copied"));
               } catch {
-                setFeedback(
-                  "Copy unavailable. Select and copy the draft manually.",
-                );
+                setFeedback(t("copyUnavailable"));
               }
             }}
           >
-            Copy reviewed draft
+            {t("copyDraft")}
           </button>
         </>
       )}

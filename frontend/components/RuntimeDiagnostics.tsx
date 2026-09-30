@@ -1,23 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "../i18n/LocaleProvider";
 import { analyzeRuntimeLogs } from "../services/runtimeDiagnostics";
 
 export function RuntimeDiagnostics() {
+  const { t } = useLocale();
   const [logs, setLogs] = useState("");
   const [report, setReport] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
 
   return (
     <details className="rounded-xl border border-zinc-800 p-4 text-sm text-zinc-300">
-      <summary className="cursor-pointer">Local diagnostics</summary>
-      <p className="my-3 text-zinc-500">
-        Paste an error excerpt. Analysis stays on this device and is not saved.
-        The report contains known findings only, without raw logs or
-        credentials.
-      </p>
+      <summary className="cursor-pointer">{t("diagnostics")}</summary>
+      <p className="my-3 text-zinc-500">{t("diagnosticsBody")}</p>
       <textarea
-        aria-label="Backend error excerpt"
+        aria-label={t("backendExcerpt")}
         className="w-full rounded bg-zinc-900 p-3"
         maxLength={50000}
         rows={5}
@@ -34,7 +32,7 @@ export function RuntimeDiagnostics() {
           disabled={!logs.trim()}
           onClick={() => setReport(analyzeRuntimeLogs(logs).join("\n\n"))}
         >
-          Analyze logs
+          {t("analyze")}
         </button>
         <button
           type="button"
@@ -44,7 +42,7 @@ export function RuntimeDiagnostics() {
             setCopyStatus("");
           }}
         >
-          Clear excerpt
+          {t("clear")}
         </button>
         {report && (
           <button
@@ -52,15 +50,13 @@ export function RuntimeDiagnostics() {
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(report);
-                setCopyStatus("Report copied.");
+                setCopyStatus(t("reportCopied"));
               } catch {
-                setCopyStatus(
-                  "Copy unavailable. Select the report text below.",
-                );
+                setCopyStatus(t("reportCopyUnavailable"));
               }
             }}
           >
-            Copy safe report
+            {t("copyReport")}
           </button>
         )}
       </div>

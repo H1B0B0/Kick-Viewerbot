@@ -1,24 +1,34 @@
 import type { BotStatus, ConnectionStatus } from "./WebSocketService";
 
+export interface RuntimeStatusCopy {
+  launching: string;
+  unavailable: string;
+  waiting: string;
+}
+
+const ENGLISH_RUNTIME_COPY: RuntimeStatusCopy = {
+  launching: "Launching local service…",
+  unavailable: "Local service unavailable. Displayed metrics may be outdated.",
+  waiting: "Local service connected. Waiting for status.",
+};
+
 export function displayRuntimeStatus(
   connection: ConnectionStatus,
   status?: BotStatus,
   activeConnections = 0,
+  copy: RuntimeStatusCopy = ENGLISH_RUNTIME_COPY,
 ): Pick<BotStatus, "code" | "message" | "startup_progress"> {
   if (connection !== "connected") {
     return {
       code: connection === "connecting" ? "starting" : "error",
-      message:
-        connection === "connecting"
-          ? "Launching local service…"
-          : "Local service unavailable. Displayed metrics may be outdated.",
+      message: connection === "connecting" ? copy.launching : copy.unavailable,
       startup_progress: 0,
     };
   }
   if (!status)
     return {
       code: "standby",
-      message: "Local service connected. Waiting for status.",
+      message: copy.waiting,
       startup_progress: 0,
     };
   if (status.code === "running" && activeConnections <= 0) {

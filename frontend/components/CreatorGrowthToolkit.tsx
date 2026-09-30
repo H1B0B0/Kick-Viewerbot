@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { openExternal } from "../app/functions/openExternal";
+import { useLocale } from "../i18n/LocaleProvider";
 import { LiveAnnouncement } from "./LiveAnnouncement";
 
 const STORAGE_KEY = "velbots.creator-growth-toolkit.v1";
@@ -20,26 +21,26 @@ const STORAGE_KEY = "velbots.creator-growth-toolkit.v1";
 const CHECKLIST = [
   {
     id: "goal",
-    label: "Set one measurable goal for this live",
-    phase: "Before",
+    labelKey: "checkGoal",
+    phaseKey: "before",
   },
   {
     id: "announce",
-    label: "Announce the live to your real community",
-    phase: "Before",
+    labelKey: "checkAnnounce",
+    phaseKey: "before",
   },
-  { id: "segment", label: "Plan one moment worth clipping", phase: "Before" },
+  { id: "segment", labelKey: "checkSegment", phaseKey: "before" },
   {
     id: "clips",
-    label: "Review and export your strongest moments",
-    phase: "After",
+    labelKey: "checkClips",
+    phaseKey: "after",
   },
   {
     id: "publish",
-    label: "Publish one platform-native short clip",
-    phase: "After",
+    labelKey: "checkPublish",
+    phaseKey: "after",
   },
-  { id: "review", label: "Review official platform analytics", phase: "After" },
+  { id: "review", labelKey: "checkReview", phaseKey: "after" },
 ] as const;
 
 interface Moment {
@@ -84,6 +85,7 @@ function escapeCsv(value: string): string {
 }
 
 export function CreatorGrowthToolkit() {
+  const { t } = useLocale();
   const [toolkit, setToolkit] = useState<ToolkitState>(EMPTY_STATE);
   const [momentNote, setMomentNote] = useState("");
   const [hydrated, setHydrated] = useState(false);
@@ -135,7 +137,7 @@ export function CreatorGrowthToolkit() {
           id: window.crypto.randomUUID(),
           elapsedSeconds,
           createdAt: new Date(now).toISOString(),
-          note: momentNote.trim() || "Highlight",
+          note: momentNote.trim() || t("defaultMoment"),
         },
       ],
     }));
@@ -143,10 +145,7 @@ export function CreatorGrowthToolkit() {
   };
 
   const resetSession = () => {
-    if (
-      toolkit.moments.length > 0 &&
-      !window.confirm("Start a new marker session and clear current moments?")
-    ) {
+    if (toolkit.moments.length > 0 && !window.confirm(t("resetMarkers"))) {
       return;
     }
 
@@ -183,15 +182,13 @@ export function CreatorGrowthToolkit() {
           <div className="flex items-center gap-2">
             <Target className="w-4 h-4 text-emerald-400" />
             <h3 className="text-sm font-semibold text-white">
-              Creator Growth Toolkit
+              {t("creatorTitle")}
             </h3>
             <span className="rounded-full border border-zinc-700 px-2 py-0.5 text-[10px] uppercase tracking-wider text-zinc-500">
-              Local only
+              {t("localOnly")}
             </span>
           </div>
-          <p className="mt-1 text-sm text-zinc-500">
-            Build real discovery habits alongside your current workflow.
-          </p>
+          <p className="mt-1 text-sm text-zinc-500">{t("creatorBody")}</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -217,13 +214,13 @@ export function CreatorGrowthToolkit() {
               className="text-xs font-medium uppercase tracking-wider text-zinc-500"
               htmlFor="growth-goal"
             >
-              Next live objective
+              {t("objective")}
             </label>
             <input
               className="mt-2 w-full rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none transition-colors placeholder:text-zinc-600 focus:border-zinc-600"
               id="growth-goal"
               maxLength={160}
-              placeholder="Example: turn 5 first-time chatters into returning viewers"
+              placeholder={t("objectivePlaceholder")}
               value={toolkit.goal}
               onChange={(event) =>
                 setToolkit((current) => ({
@@ -237,7 +234,7 @@ export function CreatorGrowthToolkit() {
           <div>
             <div className="mb-2 flex items-center justify-between text-xs">
               <span className="font-medium uppercase tracking-wider text-zinc-500">
-                Growth loop
+                {t("growthLoop")}
               </span>
               <span className="text-zinc-400">{progress}%</span>
             </div>
@@ -270,10 +267,10 @@ export function CreatorGrowthToolkit() {
                           : "text-sm text-zinc-300"
                       }
                     >
-                      {item.label}
+                      {t(item.labelKey)}
                     </span>
                     <span className="ml-auto text-[10px] uppercase tracking-wider text-zinc-600">
-                      {item.phase}
+                      {t(item.phaseKey)}
                     </span>
                   </button>
                 );
@@ -286,15 +283,15 @@ export function CreatorGrowthToolkit() {
           <div className="flex items-start justify-between gap-3">
             <div>
               <h4 className="text-sm font-medium text-white">
-                Highlight markers
+                {t("highlights")}
               </h4>
               <p className="mt-1 text-xs text-zinc-500">
-                Mark timestamps now, edit the real clips later.
+                {t("highlightsBody")}
               </p>
             </div>
             <button
               className="rounded-md p-2 text-zinc-500 transition-colors hover:bg-zinc-900 hover:text-white"
-              title="Start a new marker session"
+              title={t("newMarkerSession")}
               type="button"
               onClick={resetSession}
             >
@@ -306,7 +303,7 @@ export function CreatorGrowthToolkit() {
             <input
               className="min-w-0 flex-1 rounded-md border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none placeholder:text-zinc-600 focus:border-zinc-600"
               maxLength={120}
-              placeholder="What just happened?"
+              placeholder={t("momentPlaceholder")}
               value={momentNote}
               onChange={(event) => setMomentNote(event.target.value)}
               onKeyDown={(event) => {
@@ -319,14 +316,14 @@ export function CreatorGrowthToolkit() {
               onClick={markMoment}
             >
               <BookmarkPlus className="w-4 h-4" />
-              Mark
+              {t("mark")}
             </button>
           </div>
 
           <div className="max-h-52 space-y-2 overflow-y-auto pr-1">
             {toolkit.moments.length === 0 ? (
               <div className="rounded-md border border-dashed border-zinc-800 px-4 py-8 text-center text-xs text-zinc-600">
-                No moments marked in this session.
+                {t("noMoments")}
               </div>
             ) : (
               toolkit.moments.map((moment) => (
@@ -367,7 +364,7 @@ export function CreatorGrowthToolkit() {
             onClick={exportMoments}
           >
             <Download className="w-3.5 h-3.5" />
-            Export markers as CSV
+            {t("exportCsv")}
           </button>
         </div>
       </div>

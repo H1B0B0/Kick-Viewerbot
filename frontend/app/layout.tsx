@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import "react-toastify/dist/ReactToastify.css";
 import ApiHealthProvider from "../components/ApiHealthProvider";
 import UpdateBanner from "../components/UpdateBanner";
+import { LanguageSelector, LocaleProvider } from "../i18n/LocaleProvider";
 
 export default function RootLayout({
   children,
@@ -17,14 +18,20 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        </head>
-      <body className="min-h-screen bg-[#09090b] text-zinc-300 font-sans antialiased flex flex-col" suppressHydrationWarning>
-        <UpdateBanner />
-        <main className="flex-1 w-full relative z-10 overflow-hidden">
-          <ApiHealthProvider>
-            {children}
-          </ApiHealthProvider>
-        </main>
+      </head>
+      <body
+        className="min-h-screen bg-[#09090b] text-zinc-300 font-sans antialiased flex flex-col"
+        suppressHydrationWarning
+      >
+        <LocaleProvider>
+          <UpdateBanner />
+          <main className="flex-1 w-full relative z-10 overflow-hidden">
+            <ApiHealthProvider>{children}</ApiHealthProvider>
+          </main>
+          <div className="fixed bottom-4 right-4 z-50">
+            <LanguageSelector />
+          </div>
+        </LocaleProvider>
       </body>
     </html>
   );

@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { login } from "../functions/UserAPI";
+import { useLocale } from "../../i18n/LocaleProvider";
 import { useDesktopOAuth } from "../../hooks/useDesktopOAuth";
 import { startDesktopOAuth } from "../../auth/desktopOAuth";
 
 export default function LoginPage() {
+  const { t } = useLocale();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -28,7 +30,7 @@ export default function LoginPage() {
       setError(
         patreonError instanceof Error
           ? patreonError.message
-          : "Unable to start Patreon login",
+          : t("genericError"),
       );
     }
   }
@@ -45,11 +47,11 @@ export default function LoginPage() {
       await login({ username, password });
       router.push("/");
     } catch (err: any) {
-      let errorMessage = "An unexpected error occurred";
+      let errorMessage = t("genericError");
 
       if (err instanceof Error) {
         errorMessage = err.message.includes("401")
-          ? "Invalid username or password"
+          ? t("genericError")
           : err.message;
       }
       setError(errorMessage);
@@ -63,11 +65,9 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <h2 className="text-2xl font-semibold text-white tracking-tight">
-            Sign in
+            {t("signIn")}
           </h2>
-          <p className="text-zinc-400 mt-1 text-sm">
-            Enter your credentials to access the dashboard
-          </p>
+          <p className="text-zinc-400 mt-1 text-sm">{t("signInBody")}</p>
         </div>
 
         <form className="space-y-4" onSubmit={handleLogin}>
@@ -87,7 +87,7 @@ export default function LoginPage() {
               className="text-sm font-medium text-zinc-300"
               htmlFor="login-username"
             >
-              Username
+              {t("username")}
             </label>
             <input
               required
@@ -103,7 +103,7 @@ export default function LoginPage() {
               className="text-sm font-medium text-zinc-300"
               htmlFor="login-password"
             >
-              Password
+              {t("password")}
             </label>
             <input
               required
@@ -119,7 +119,7 @@ export default function LoginPage() {
             disabled={isLoading}
             type="submit"
           >
-            {isLoading ? "Signing in..." : "Sign In"}
+            {isLoading ? t("signingIn") : t("signIn")}
           </button>
 
           <div className="relative py-4">
@@ -128,7 +128,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center">
               <span className="bg-[#09090b] px-2 text-xs text-zinc-500">
-                Or continue with
+                {t("continueWith")}
               </span>
             </div>
           </div>
@@ -151,12 +151,12 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm text-zinc-500">
-          Don&apos;t have an account?{" "}
+          {t("noAccount")}{" "}
           <button
             className="text-white hover:underline"
             onClick={() => router.push("/register")}
           >
-            Sign up
+            {t("signUp")}
           </button>
         </div>
       </div>

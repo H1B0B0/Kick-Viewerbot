@@ -12,7 +12,8 @@ describe("clip capabilities", () => {
 
   it("states the required Twitch permission accurately", () => {
     expect(
-      CLIP_CAPABILITIES.find((item) => item.platform === "Twitch")?.description,
+      CLIP_CAPABILITIES.find((item) => item.platform === "Twitch")
+        ?.requiredScope,
     ).toContain("clips:edit");
   });
 });
