@@ -11,5 +11,5 @@ def test_localhost_is_allowed():
     try:
         # Just proving it doesn't raise the RuntimeError from our fixture
         s.connect(("127.0.0.1", 65535)) # Will raise ConnectionRefusedError, but not our RuntimeError
-    except ConnectionRefusedError:
+    except (ConnectionRefusedError, PermissionError):
         pass

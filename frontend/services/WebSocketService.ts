@@ -2,14 +2,19 @@
  * WebSocket Service - Communication complète via WebSocket
  */
 import { io, Socket } from "socket.io-client";
+
 import { getBackendEndpoint } from "../config/ports";
+
+// A cold PyInstaller sidecar can take several seconds to extract before it
+// publishes its runtime endpoint, especially on the first signed app launch.
+const BACKEND_ENDPOINT_RETRY_ATTEMPTS = 120;
+const BACKEND_ENDPOINT_RETRY_DELAY_MS = 250;
 
 export type ConnectionStatus =
   | "disconnected"
   | "connecting"
   | "connected"
   | "error";
-
 
 export interface RuntimeConfig {
   channel_name: string;
@@ -83,14 +88,17 @@ class WebSocketService {
     this.updateStatus("connecting");
 
     try {
-      const endpoint = await getBackendEndpoint();
+      const endpoint = await this.waitForBackendEndpoint();
       const url = endpoint.base_url;
+
       console.log(`Connexion au point d'ancrage Tauri: ${url}`);
 
       const success = await this.tryConnect(url);
       if (success) {
         this.currentUrl = url;
+
         console.log(`✅ Connecté à ${url}`);
+
         return true;
       }
     } catch (e) {
@@ -99,7 +107,32 @@ class WebSocketService {
 
     this.updateStatus("error");
     this.callbacks.onBotError?.("Impossible de se connecter au service local");
+
     return false;
+  }
+
+  private async waitForBackendEndpoint() {
+    let lastError: unknown;
+
+    for (
+      let attempt = 0;
+      attempt < BACKEND_ENDPOINT_RETRY_ATTEMPTS;
+      attempt += 1
+    ) {
+      try {
+        return await getBackendEndpoint();
+      } catch (error) {
+        lastError = error;
+
+        if (attempt < BACKEND_ENDPOINT_RETRY_ATTEMPTS - 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, BACKEND_ENDPOINT_RETRY_DELAY_MS),
+          );
+        }
+      }
+    }
+
+    throw lastError;
   }
 
   /**

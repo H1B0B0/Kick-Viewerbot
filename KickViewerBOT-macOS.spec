@@ -78,6 +78,7 @@ a = Analysis(
         # TLS Client
         'tls_client',
         'tls_client.dependencies',
+        'typing_extensions',
         # UI
         'rich',
         'rich.console',

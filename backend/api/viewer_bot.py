@@ -88,8 +88,13 @@ class ViewerBot:
         self.stream_url_cache = None
         self.stream_url_last_updated = 0
         self.stream_url_lock = threading.Lock()
-        self.stream_url_cache_duration = 0.5  # Cache stream URL for 0.2 seconds
+        self.stream_url_cache_duration = 30
         self.channel_id = None  # Store channel ID for WebSocket connections
+        # Shared WebSocket token cache (thread-safe)
+        self.ws_token = None
+        self.ws_token_time = 0
+        self.ws_token_lock = threading.Lock()
+        self.ws_token_ttl = 55  # Token valid for ~55 seconds (refresh before expiry)
         logging.debug(f"Type of proxy: {self.type_of_proxy}")
         logging.debug(f"Timeout: {self.timeout}")
         logging.debug(f"Proxy imported: {self.proxy_imported}")
@@ -130,7 +135,7 @@ class ViewerBot:
                         logging.debug(f"v2 API with tls_client failed: {response.status_code}")
                 except Exception as e:
                     logging.debug(f"tls_client v2 API failed: {e}")
-            
+
             # Method 2: Try v1 API with requests (fallback)
             try:
                 headers = {
@@ -139,7 +144,7 @@ class ViewerBot:
                     'Accept-Language': 'en-US,en;q=0.9',
                     'Referer': f'https://kick.com/{self.channel_name}',
                 }
-                response = requests.get(f'https://kick.com/api/v1/channels/{self.channel_name}', 
+                response = requests.get(f'https://kick.com/api/v1/channels/{self.channel_name}',
                                       headers=headers, timeout=10)
                 if response.status_code == 200:
                     data = response.json()
@@ -148,7 +153,7 @@ class ViewerBot:
                     return self.channel_id
             except Exception as e:
                 logging.debug(f"v1 API failed: {e}")
-            
+
             # Method 3: Try scraping the channel page directly
             try:
                 headers = {
@@ -160,7 +165,7 @@ class ViewerBot:
                     'Connection': 'keep-alive',
                     'Upgrade-Insecure-Requests': '1',
                 }
-                response = requests.get(f'https://kick.com/{self.channel_name}', 
+                response = requests.get(f'https://kick.com/{self.channel_name}',
                                       headers=headers, timeout=15, allow_redirects=True)
                 if response.status_code == 200:
                     import re
@@ -171,137 +176,160 @@ class ViewerBot:
                         r'channelId["\']:\s*(\d+)',
                         r'channel.*?id["\']:\s*(\d+)'
                     ]
-                    
+
                     for pattern in patterns:
                         match = re.search(pattern, response.text, re.IGNORECASE)
                         if match:
                             self.channel_id = int(match.group(1))
                             logging.debug(f"Retrieved channel ID from page scraping: {self.channel_id}")
                             return self.channel_id
-                            
+
                     logging.warning("Could not find channel ID in page content")
             except Exception as e:
                 logging.debug(f"Page scraping failed: {e}")
-            
+
             logging.error(f"All methods failed to get channel ID for: {self.channel_name}")
             return None
-            
+
         except Exception as e:
             logging.error(f"Error getting channel ID: {e}")
             return None
 
     def get_websocket_token(self):
-        """Get WebSocket authentication token using tls_client if available"""
-        try:
-            # Method 1: Use tls_client (like working example)
-            if HAS_TLS_CLIENT:
-                try:
-                    s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
-                    s.headers.update({
-                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-                        'Accept-Language': 'en-US,en;q=0.9',
-                        'Connection': 'keep-alive',
-                        'Sec-Fetch-Dest': 'document',
-                        'Sec-Fetch-Mode': 'navigate',
-                        'Sec-Fetch-Site': 'none',
-                        'Sec-Fetch-User': '?1',
-                        'Upgrade-Insecure-Requests': '1',
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                        'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                        'sec-ch-ua-mobile': '?0',
-                        'sec-ch-ua-platform': '"Windows"',
-                    })
-                    
-                    # Visit main page first to get session
-                    session_resp = s.get("https://kick.com")
-                    logging.debug(f"TLS client session request status: {session_resp.status_code}")
-                    
-                    # Add client token and get WebSocket token
-                    s.headers["X-CLIENT-TOKEN"] = CLIENT_TOKEN
-                    response = s.get('https://websockets.kick.com/viewer/v1/token')
-                    
-                    logging.debug(f"TLS client token endpoint status: {response.status_code}")
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        token = data.get("data", {}).get("token")
-                        if token:
-                            logging.debug(f"Retrieved WebSocket token with tls_client: {token[:20]}...")
-                            return token
-                    else:
-                        logging.debug(f"TLS client token request failed: {response.status_code}")
-                        
-                except Exception as e:
-                    logging.debug(f"tls_client token retrieval failed: {e}")
-            
-            # Method 2: Fallback to requests method
-            session = requests.Session()
-            
-            # Step 1: First visit Kick.com to get session cookies
-            initial_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Upgrade-Insecure-Requests': '1',
-                'Sec-Fetch-Dest': 'document',
-                'Sec-Fetch-Mode': 'navigate',
-                'Sec-Fetch-Site': 'none',
-                'Sec-Fetch-User': '?1',
-            }
-            
-            session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
-            logging.debug(f"Initial session request status: {session_resp.status_code}")
-            
-            # Step 2: Get WebSocket token with client token
-            token_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'application/json, text/plain, */*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Accept-Encoding': 'gzip, deflate, br',
-                'Referer': 'https://kick.com/',
-                'Origin': 'https://kick.com',
-                'DNT': '1',
-                'Connection': 'keep-alive',
-                'Sec-Fetch-Dest': 'empty',
-                'Sec-Fetch-Mode': 'cors',
-                'Sec-Fetch-Site': 'same-origin',
-                'X-CLIENT-TOKEN': CLIENT_TOKEN,
-                'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-                'sec-ch-ua-mobile': '?0',
-                'sec-ch-ua-platform': '"Windows"',
-            }
-            
-            # Try multiple endpoints for WebSocket token
-            token_endpoints = [
-                'https://websockets.kick.com/viewer/v1/token',
-                'https://kick.com/api/websocket/token',
-                'https://kick.com/api/v1/websocket/token'
-            ]
-            
-            for endpoint in token_endpoints:
-                try:
-                    response = session.get(endpoint, headers=token_headers, timeout=10)
-                    logging.debug(f"Token endpoint {endpoint} status: {response.status_code}")
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        token = data.get("data", {}).get("token") or data.get("token")
-                        if token:
-                            logging.debug(f"Retrieved WebSocket token from {endpoint}: {token[:20]}..." if token else "No token")
-                            return token
-                except Exception as e:
-                    logging.debug(f"Token endpoint {endpoint} failed: {e}")
-                    continue
-            
-            logging.error("Failed to get WebSocket token from all endpoints")
-            return None
-            
-        except Exception as e:
-            logging.error(f"Error getting WebSocket token: {e}")
-            return None
+        """Get WebSocket authentication token using shared cache"""
+        with self.ws_token_lock:
+            if self.ws_token and (time.time() - self.ws_token_time) < self.ws_token_ttl:
+                return self.ws_token
+
+        token = self._fetch_websocket_token()
+        if token:
+            with self.ws_token_lock:
+                self.ws_token = token
+                self.ws_token_time = time.time()
+        return token
+
+    def _fetch_websocket_token(self):
+        max_retries = 3
+        base_delay = 3
+
+        for attempt in range(max_retries):
+            try:
+                if HAS_TLS_CLIENT:
+                    try:
+                        s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
+                        s.headers.update({
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'Connection': 'keep-alive',
+                            'Sec-Fetch-Dest': 'document',
+                            'Sec-Fetch-Mode': 'navigate',
+                            'Sec-Fetch-Site': 'none',
+                            'Sec-Fetch-User': '?1',
+                            'Upgrade-Insecure-Requests': '1',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                            'sec-ch-ua-mobile': '?0',
+                            'sec-ch-ua-platform': '"Windows"',
+                        })
+
+                        session_resp = s.get("https://kick.com")
+                        logging.debug(f"TLS client session request status: {session_resp.status_code}")
+
+                        s.headers["X-CLIENT-TOKEN"] = CLIENT_TOKEN
+                        response = s.get('https://websockets.kick.com/viewer/v1/token')
+
+                        logging.debug(f"TLS client token endpoint status: {response.status_code}")
+
+                        if response.status_code == 200:
+                            data = response.json()
+                            token = data.get("data", {}).get("token")
+                            if token:
+                                logging.debug(f"Retrieved WebSocket token with tls_client: {token[:20]}...")
+                                return token
+                        elif response.status_code == 429:
+                            delay = base_delay * (2 ** attempt) + random.uniform(0, 2)
+                            logging.warning(f"Token endpoint rate limited (429), retry in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                            time.sleep(delay)
+                            with self.ws_token_lock:
+                                self.ws_token = None
+                            continue
+                        else:
+                            logging.debug(f"TLS client token request failed: {response.status_code}")
+
+                    except Exception as e:
+                        logging.debug(f"tls_client token retrieval failed: {e}")
+
+                session = requests.Session()
+
+                initial_headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                    'Sec-Fetch-Dest': 'document',
+                    'Sec-Fetch-Mode': 'navigate',
+                    'Sec-Fetch-Site': 'none',
+                    'Sec-Fetch-User': '?1',
+                }
+
+                session_resp = session.get("https://kick.com", headers=initial_headers, timeout=15)
+                logging.debug(f"Initial session request status: {session_resp.status_code}")
+
+                token_headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Accept-Encoding': 'gzip, deflate, br',
+                    'Referer': 'https://kick.com/',
+                    'Origin': 'https://kick.com',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Sec-Fetch-Dest': 'empty',
+                    'Sec-Fetch-Mode': 'cors',
+                    'Sec-Fetch-Site': 'same-origin',
+                    'X-CLIENT-TOKEN': CLIENT_TOKEN,
+                    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                    'sec-ch-ua-mobile': '?0',
+                    'sec-ch-ua-platform': '"Windows"',
+                }
+
+                token_endpoints = [
+                    'https://websockets.kick.com/viewer/v1/token',
+                    'https://kick.com/api/websocket/token',
+                    'https://kick.com/api/v1/websocket/token'
+                ]
+
+                for endpoint in token_endpoints:
+                    try:
+                        response = session.get(endpoint, headers=token_headers, timeout=10)
+                        logging.debug(f"Token endpoint {endpoint} status: {response.status_code}")
+
+                        if response.status_code == 200:
+                            data = response.json()
+                            token = data.get("data", {}).get("token") or data.get("token")
+                            if token:
+                                logging.debug(f"Retrieved WebSocket token from {endpoint}: {token[:20]}..." if token else "No token")
+                                return token
+                        elif response.status_code == 429:
+                            delay = base_delay * (2 ** attempt) + random.uniform(0, 2)
+                            logging.warning(f"Token endpoint rate limited (429), retry in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                            time.sleep(delay)
+                            with self.ws_token_lock:
+                                self.ws_token = None
+                            break  # Retry outer loop
+                    except Exception as e:
+                        logging.debug(f"Token endpoint {endpoint} failed: {e}")
+                        continue
+
+                logging.error("Failed to get WebSocket token from all endpoints")
+                return None
+
+            except Exception as e:
+                logging.error(f"Error getting WebSocket token: {e}")
+                return None
 
     def extract_channel_name(self, input_str):
         """Extrait le nom de la chaîne d'une URL Kick ou retourne le nom directement"""
@@ -324,7 +352,7 @@ class ViewerBot:
 
     def get_proxies(self):
         self.update_status('loading_proxies', 'Starting proxy collection...')
-        
+
         if not self.proxyrefreshed:
             if self.proxy_file:
                 try:
@@ -341,10 +369,10 @@ class ViewerBot:
             else:
                 try:
                     self.update_status('loading_proxies', 'Fetching proxies from API...')
-                    
+
                     # Debug: Print current proxy type
                     logging.debug(f"Fetching proxies with type: {self.type_of_proxy}")
-                    
+
                     url = "https://api.proxyscrape.com/v4/free-proxy-list/get"
                     params = {
                         'request': 'display_proxies',
@@ -353,31 +381,31 @@ class ViewerBot:
                         'protocol': self.type_of_proxy,
                         'timeout': self.timeout
                     }
-                    
+
                     headers = {
                         'User-Agent': ua.random
                     }
-                    
+
                     # Debug: Log request details
                     logging.debug(f"Request URL: {url}")
                     logging.debug(f"Request params: {params}")
-                    
+
                     response = requests.get(url, params=params, headers=headers, timeout=10)
-                    
+
                     # Debug: Log response details
                     logging.debug(f"Response status code: {response.status_code}")
                     logging.debug(f"Response headers: {response.headers}")
-                    
+
                     if response.status_code == 200:
                         # Debug: Log first few lines of response
                         logging.debug(f"First 100 chars of response: {response.text[:100]}")
-                        
+
                         lines = [line.strip() for line in response.text.splitlines() if line.strip()]
                         proxies = []
-                        
+
                         # Debug: Log number of lines found
                         logging.debug(f"Found {len(lines)} proxy lines")
-                        
+
                         for idx, line in enumerate(lines):
                             try:
                                 if '://' in line:
@@ -386,11 +414,11 @@ class ViewerBot:
                                 else:
                                     # Add default http:// if no protocol specified
                                     proxy_data = self.extract_ip_port(f"http://{line}")
-                                
+
                                 # Filter by proxy type if specified
                                 if self.type_of_proxy == 'all' or proxy_data[0] == self.type_of_proxy:
                                     proxies.append(proxy_data)
-                                
+
                                 # Update progress
                                 progress = int((idx + 1) / len(lines) * 100)
                                 if progress % 10 == 0:
@@ -402,7 +430,7 @@ class ViewerBot:
                             except Exception as e:
                                 logging.error(f"Error processing proxy line '{line}': {e}")
                                 continue
-                        
+
                         if proxies:
                             self.proxyrefreshed = True
                             self.update_status(
@@ -414,11 +442,11 @@ class ViewerBot:
                             # Debug: Log first few proxies
                             logging.debug(f"First 5 proxies: {proxies[:5]}")
                             return proxies
-                        
+
                         logging.error("No valid proxies found in response")
                     else:
                         logging.error(f"API request failed with status code: {response.status_code}")
-                    
+
                     # Si aucun proxy n'est trouvé, essayer une source de secours
                     backup_response = requests.get(
                         'https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt'
@@ -438,10 +466,10 @@ class ViewerBot:
                                 proxy_loading_progress=100
                             )
                             return proxies
-                    
+
                     self.update_status('error', 'Failed to fetch proxies from both sources')
                     return []
-                        
+
                 except Exception as e:
                     error_msg = f"Error fetching proxies: {str(e)}"
                     logging.error(error_msg)
@@ -452,7 +480,7 @@ class ViewerBot:
         try:
             protocol = self.type_of_proxy
             credentials = ""
-            
+
             if '://' in proxy:
                 # Format http://user:pass@host:port or socks5://user:pass@host:port
                 parts = proxy.split('://')
@@ -461,61 +489,61 @@ class ViewerBot:
             else:
                 # Format IP:PORT or user:pass@host:port without protocol
                 proxy_part = proxy
-            
+
             if '@' in proxy_part:
                 credentials_part, host_part = proxy_part.split('@', 1)
                 credentials = credentials_part
             else:
                 host_part = proxy_part
-                
+
             if ':' in host_part:
                 host, port = host_part.split(':', 1)
                 port = port.split('/')[0]
             else:
                 host = host_part
                 port = '80'
-                
+
             if credentials:
                 proxy_address = f"{host}:{port}:{credentials}"
             else:
                 proxy_address = f"{host}:{port}"
-                
+
             # logging.debug(f"Parsed proxy: protocol={protocol}, proxy_address={proxy_address}")
             return (protocol, proxy_address)
         except Exception as e:
             logging.error(f"Error parsing proxy {proxy}: {e}")
             return (self.type_of_proxy, proxy)  # Fallback to raw format
-    
+
     def get_url(self):
         """Get stream URL with caching to prevent rate limiting"""
         current_time = time.time()
-        
+
         # Use a lock to prevent multiple threads from fetching the URL simultaneously
         with self.stream_url_lock:
             # If URL is cached and not expired, return it
-            if (self.stream_url_cache and 
+            if (self.stream_url_cache and
                 current_time - self.stream_url_last_updated < self.stream_url_cache_duration):
                 logging.debug("Using cached stream URL")
                 return self.stream_url_cache
-            
+
             # Otherwise, fetch a new URL
             url = ""
             try:
                 streams = session.streams(self.channel_url)
                 if streams:
                     priorities = ['audio_only', '160p', '360p', '480p', '720p', '1080p', 'best', 'worst']
-                    
+
                     for quality in priorities:
                         if quality in streams:
                             url = streams[quality].url
                             logging.debug(f"Found stream quality: {quality}")
                             break
-                    
+
                     if not url and streams:
                         quality = next(iter(streams))
                         url = streams[quality].url
                         logging.debug(f"Using first available quality: {quality}")
-                    
+
                     # Cache the URL
                     self.stream_url_cache = url
                     self.stream_url_last_updated = current_time
@@ -524,18 +552,18 @@ class ViewerBot:
                     logging.warning("No streams available for the channel")
             except Exception as e:
                 logging.error(f"Error getting stream URL: {e}")
-            
+
             return url
 
     def stop(self):
         console.print("[bold red]Bot has been stopped[/bold red]")
         self.update_status('stopping', 'Stopping bot...')
         self.should_stop.set()
-        
+
         for thread in self.processes:
             if thread.is_alive():
                 thread.join(timeout=1)
-        
+
         # Vider la liste des threads
         with self.state_lock:
             self.processes.clear()
@@ -558,14 +586,14 @@ class ViewerBot:
             if not token:
                 logging.error("Failed to get WebSocket token")
                 return
-            
+
             # Get channel ID if not already cached
             if not self.channel_id:
                 self.channel_id = self.get_channel_id()
                 if not self.channel_id:
                     logging.error("Failed to get channel ID")
                     return
-            
+
             # Run the async WebSocket connection in a new event loop
             try:
                 loop = asyncio.new_event_loop()
@@ -578,7 +606,7 @@ class ViewerBot:
                     loop.close()
                 except Exception:
                     pass
-                    
+
         except Exception as e:
             logging.error(f"Error in send_websocket_view: {e}")
         finally:
@@ -588,68 +616,82 @@ class ViewerBot:
 
     async def _websocket_worker(self, token, proxy_data):
         """Async WebSocket worker that maintains connection and sends views"""
-        try:
-            proxy_type, proxy_address = proxy_data['proxy']
-            proxies = self.configure_proxies(proxy_type, proxy_address)
-            
-            # Configure WebSocket connection with proxy if available
-            ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
-            
-            # Connect to WebSocket
-            async with websockets.connect(ws_url) as websocket:
-                logging.debug(f"WebSocket connected for channel {self.channel_id}")
-                
-                # Send initial handshake
-                handshake_msg = {
-                    "type": "channel_handshake",
-                    "data": {
-                        "message": {"channelId": self.channel_id}
+        max_retries = 5
+        base_delay = 5
+
+        for attempt in range(max_retries):
+            if self.should_stop.is_set():
+                break
+
+            try:
+                proxy_type, proxy_address = proxy_data['proxy']
+                proxies = self.configure_proxies(proxy_type, proxy_address)
+
+                ws_url = f"wss://websockets.kick.com/viewer/v1/connect?token={token}"
+
+                async with websockets.connect(ws_url) as websocket:
+                    logging.debug(f"WebSocket connected for channel {self.channel_id}")
+
+                    handshake_msg = {
+                        "type": "channel_handshake",
+                        "data": {
+                            "message": {"channelId": self.channel_id}
+                        }
                     }
-                }
-                await websocket.send(json.dumps(handshake_msg))
-                logging.debug(f"Sent handshake for channel {self.channel_id}")
-                
-                # Keep connection alive with pings
-                ping_count = 0
-                while not self.should_stop.is_set() and ping_count < 10:  # Limit to 10 pings per connection
-                    ping_count += 1
-                    
-                    # Send ping
-                    ping_msg = {"type": "ping"}
-                    await websocket.send(json.dumps(ping_msg))
-                    with self.state_lock:
-                        self.request_count += 1
-                    logging.debug(f"Sent ping #{ping_count} to channel {self.channel_id}")
-                    
-                    # Wait between pings (12-17 seconds as in the working example)
-                    sleep_time = 12 + random.randint(1, 5)
-                    await asyncio.sleep(sleep_time)
-                
-                logging.debug(f"WebSocket worker completed for channel {self.channel_id}")
-                
-        except websockets.exceptions.ConnectionClosed:
-            logging.debug("WebSocket connection closed")
-        except Exception as e:
-            logging.error(f"WebSocket error: {e}")
-            traceback.print_exc()
+                    await websocket.send(json.dumps(handshake_msg))
+                    logging.debug(f"Sent handshake for channel {self.channel_id}")
+
+                    ping_count = 0
+                    while not self.should_stop.is_set() and ping_count < 10:
+                        ping_count += 1
+
+                        ping_msg = {"type": "ping"}
+                        await websocket.send(json.dumps(ping_msg))
+                        with self.state_lock:
+                            self.request_count += 1
+                        logging.debug(f"Sent ping #{ping_count} to channel {self.channel_id}")
+
+                        sleep_time = 12 + random.randint(1, 5)
+                        await asyncio.sleep(sleep_time)
+
+                    logging.debug(f"WebSocket worker completed for channel {self.channel_id}")
+                    return
+
+            except websockets.exceptions.InvalidStatus as e:
+                status = getattr(getattr(e, 'response', None), 'status_code', 0)
+                if status == 429:
+                    delay = base_delay * (2 ** attempt) + random.uniform(0, 3)
+                    logging.warning(f"Rate limited (429), retry in {delay:.1f}s (attempt {attempt + 1}/{max_retries})")
+                    await asyncio.sleep(delay)
+                    with self.ws_token_lock:
+                        self.ws_token = None
+                else:
+                    logging.error(f"WebSocket rejected with status {e.status_code}")
+                    return
+            except websockets.exceptions.ConnectionClosed:
+                logging.debug("WebSocket connection closed")
+                return
+            except Exception as e:
+                logging.error(f"WebSocket error: {e}")
+                return
 
     def configure_proxies(self, proxy_type, proxy_address):
         try:
             parts = proxy_address.split(':')
-            
+
             if len(parts) < 2:
                 logging.error(f"Invalid proxy format: {proxy_address}")
                 return {}
-                
+
             host = parts[0]
             port = parts[1]
-            
+
             if len(parts) >= 3:
                 credentials = ':'.join(parts[2:])
                 credentials += '@'
             else:
                 credentials = ""
-            
+
             if proxy_type.lower() in ["socks4", "socks5"]:
                 return {
                     "http": f"{proxy_type}://{credentials}{host}:{port}",
@@ -667,7 +709,7 @@ class ViewerBot:
     def main(self):
         self.update_status('starting', 'Starting bot...', startup_progress=0)
         start = datetime.datetime.now()
-        
+
         # Initialize channel ID first
         self.update_status('starting', 'Getting channel information...', startup_progress=10)
         self.channel_id = self.get_channel_id()
@@ -675,7 +717,7 @@ class ViewerBot:
             # Use fallback mode - try to continue with WebSocket-only approach
             logging.warning(f"Could not get channel ID for {self.channel_name}, trying fallback mode...")
             self.update_status('starting', 'Channel ID unavailable, using fallback mode...', startup_progress=15)
-            
+
             # Try some common test IDs or generate a fallback
             fallback_ids = {
                 'grndpagaming': '123456',  # Common test channels with fallback IDs
@@ -684,14 +726,14 @@ class ViewerBot:
                 'adinross': '456789',
                 'pokimane': '567890'
             }
-            
+
             self.channel_id = fallback_ids.get(self.channel_name.lower(), '999999')
             logging.info(f"Using fallback channel ID: {self.channel_id} for {self.channel_name}")
             self.update_status('starting', f'Using fallback mode (ID: {self.channel_id})...', startup_progress=20)
-        
+
         proxies = self.get_proxies()
         logging.debug(f"Proxies: {proxies}")
-        
+
         if not proxies:
             self.update_status('error', 'No proxies available. Stopping bot.')
             self.should_stop.set()
@@ -703,17 +745,17 @@ class ViewerBot:
         if not stream_url:
             self.update_status('warning', 'Could not get initial stream URL, will use WebSocket only')
             stream_url = ""  # Set empty string as fallback
-        
+
         # Initialize all_proxies with the preloaded URL
         with self.state_lock:
                             self.all_proxies = tuple([{'proxy': p, 'time': time.time(), 'url': stream_url} for p in proxies])
-        
+
         self.processes = []
-        
-        self.update_status('running', 'Bot is now running with WebSocket connections', 
-                          proxy_count=len(self.all_proxies), 
+
+        self.update_status('running', 'Bot is now running with WebSocket connections',
+                          proxy_count=len(self.all_proxies),
                           startup_progress=100)
-        
+
         while True:
             if len(self.all_proxies) == 0:
                 console.print("[bold red]No proxies available. Stopping bot.[/bold red]")

@@ -1,6 +1,8 @@
-import axios from "axios";
-import { RegisterData, LoginData } from "../types/User";
 import useSWR from "swr";
+
+import { RegisterData, LoginData } from "../types/User";
+
+import { customAxios } from "./customFetch";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "https://api.velbots.shop";
@@ -13,8 +15,8 @@ export interface SubscriptionStatus {
 }
 
 export interface ProfileUser {
-  id?: string; // MongoDB ID returned by the API (check API response)
-  _id?: string; // Alternative MongoDB ID field (check API response)
+  id?: string;
+  _id?: string;
   username: string;
   email?: string;
   TwitchUsername?: string;
@@ -23,8 +25,7 @@ export interface ProfileUser {
   subscriptionEndsAt?: string;
   isBanned?: boolean;
   hwid?: string;
-  patreonId?: string; // Set when Patreon account is linked
-  // Note: patreonAccessToken and patreonRefreshToken are NEVER exposed to frontend for security
+  patreonId?: string;
   [key: string]: unknown;
 }
 
@@ -34,7 +35,8 @@ export interface ProfileResponse {
 
 const fetcher = async <T>(url: string): Promise<T> => {
   try {
-    const response = await axios.get<T>(url, { withCredentials: true });
+    const response = await customAxios<T>({ method: "GET", url });
+
     return response.data;
   } catch (error) {
     throw error;
@@ -44,13 +46,12 @@ const fetcher = async <T>(url: string): Promise<T> => {
 // Auth APIs
 export async function register(userData: RegisterData) {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/auth/register`,
-      userData,
-      {
-        withCredentials: true,
-      }
-    );
+    const response = await customAxios({
+      method: "POST",
+      url: `${API_BASE_URL}/auth/register`,
+      data: userData,
+    });
+
     return response.data;
   } catch (error) {
     throw error;
@@ -59,13 +60,13 @@ export async function register(userData: RegisterData) {
 
 export async function login(loginData: LoginData) {
   try {
-    const response = await axios.post(`${API_BASE_URL}/auth/login`, loginData, {
-      withCredentials: true,
+    const response = await customAxios({
+      method: "POST",
+      url: `${API_BASE_URL}/auth/login`,
+      data: loginData,
       headers: {
         "Content-Type": "application/json",
       },
-      xsrfCookieName: "csrf_access_token",
-      xsrfHeaderName: "X-CSRF-TOKEN",
     });
 
     return response.data;
@@ -76,13 +77,12 @@ export async function login(loginData: LoginData) {
 
 export async function logout() {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/auth/logout`,
-      {},
-      {
-        withCredentials: true,
-      }
-    );
+    const response = await customAxios({
+      method: "POST",
+      url: `${API_BASE_URL}/auth/logout`,
+      data: {},
+    });
+
     return response.data;
   } catch (error) {
     throw error;
@@ -96,7 +96,7 @@ export function useGetProfile() {
     (url: string) => fetcher<ProfileResponse>(url),
     {
       revalidateOnFocus: false,
-    }
+    },
   );
 }
 
@@ -106,17 +106,18 @@ export function useGetSubscription() {
     (url) => fetcher<SubscriptionStatus>(url),
     {
       revalidateOnFocus: false,
-    }
+    },
   );
 }
 
 export async function registerHWID(hwid: string) {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/users/hwid`,
-      { hwid },
-      { withCredentials: true }
-    );
+    const response = await customAxios({
+      method: "POST",
+      url: `${API_BASE_URL}/users/hwid`,
+      data: { hwid },
+    });
+
     return response.data;
   } catch (error) {
     throw error;
@@ -125,11 +126,12 @@ export async function registerHWID(hwid: string) {
 
 export async function banUser(userId: string) {
   try {
-    const response = await axios.put(
-      `${API_BASE_URL}/users/ban`,
-      { userId },
-      { withCredentials: true }
-    );
+    const response = await customAxios({
+      method: "PUT",
+      url: `${API_BASE_URL}/users/ban`,
+      data: { userId },
+    });
+
     return response.data;
   } catch (error) {
     throw error;
@@ -138,11 +140,12 @@ export async function banUser(userId: string) {
 
 export async function refreshPatreonStatus() {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/users/refresh-patreon`,
-      {},
-      { withCredentials: true }
-    );
+    const response = await customAxios({
+      method: "POST",
+      url: `${API_BASE_URL}/users/refresh-patreon`,
+      data: {},
+    });
+
     return response.data;
   } catch (error) {
     throw error;
@@ -152,44 +155,14 @@ export async function refreshPatreonStatus() {
 // Payment APIs
 export async function createCheckoutSession(duration: number) {
   try {
-    const response = await axios.post(
-      `${API_BASE_URL}/payments/create-checkout`,
-      { duration },
-      { withCredentials: true }
-    );
+    const response = await customAxios({
+      method: "POST",
+      url: `${API_BASE_URL}/payments/create-checkout`,
+      data: { duration },
+    });
+
     return response.data;
   } catch (error) {
     throw error;
   }
 }
-
-// Usage des hooks SWR
-/*
-function ProfileComponent() {
-  const { data: profile, error } = useGetProfile();
-  
-  if (error) return <div>Error loading profile</div>;
-  if (!profile) return <div>Loading...</div>;
-  
-  return <div>Welcome {profile.username}</div>;
-}
-
-// Usage des fonctions async
-async function handleLogin() {
-  try {
-    const data = await login("username", "password");
-    // Redirection ou mise à jour du state
-  } catch (error) {
-    // Gestion des erreurs
-  }
-}
-
-async function handleHWIDRegistration(hwid: string) {
-  try {
-    await registerHWID(hwid);
-    // Mise à jour du state ou notification
-  } catch (error) {
-    // Gestion des erreurs
-  }
-}
-*/

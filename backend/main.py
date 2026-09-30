@@ -44,6 +44,16 @@ ALLOWED_STABILITY_SUBSCRIPTIONS = {'active', 'premium', 'lifetime'}
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'kick-viewer-bot-secret'
+app.creator_growth_beta = False
+app.service_version = '0.0.0'
+
+
+def creator_growth_beta_enabled():
+    return bool(getattr(app, 'creator_growth_beta', False))
+
+
+def legacy_synthetic_controls_allowed():
+    return not creator_growth_beta_enabled()
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # CORS - Accept all origins
@@ -136,6 +146,31 @@ class BotManager:
         return {'success': True, 'message': 'Bot stopped successfully'}
 
     def get_stats(self):
+        if creator_growth_beta_enabled():
+            return {
+                'is_running': False,
+                'channel_name': None,
+                'active_threads': 0,
+                'active_connections': 0,
+                'total_proxies': 0,
+                'alive_proxies': 0,
+                'request_count': 0,
+                'config': None,
+                'status': {
+                    'code': 'standby',
+                    'message': 'Creator Growth Beta workspace ready',
+                    'proxy_count': 0,
+                    'proxy_loading_progress': 0,
+                    'startup_progress': 0,
+                },
+                'system_metrics': {
+                    'cpu': 0,
+                    'memory': 0,
+                    'network_up': 0,
+                    'network_down': 0,
+                },
+            }
+
         try:
             # System metrics
             current_net_io = psutil.net_io_counters()
@@ -215,10 +250,10 @@ def handle_connect():
     print(f"\n🔌 [WEBSOCKET] Client connecté: {request.sid}")
     logger.info(f"Client connected: {request.sid}")
     emit('connected', {
-        'message': 'Connected to Kick Viewer Bot',
+        'message': 'Connected to VelBots Creator Growth local service',
         'status': 'ok',
-        'version': '2.0.0',
-        'bot_available': BOT_AVAILABLE
+        'version': app.service_version,
+        'creator_growth_beta': creator_growth_beta_enabled(),
     })
     print(f"✅ [WEBSOCKET] Message 'connected' envoyé au client {request.sid}\n")
 
@@ -230,6 +265,11 @@ def handle_disconnect():
 @socketio.on('start_bot')
 def handle_start_bot(data):
     """Start the bot via WebSocket"""
+    if not legacy_synthetic_controls_allowed():
+        logger.warning("Blocked legacy synthetic-engagement start request in Creator Growth Beta")
+        emit('bot_error', {'error': 'Legacy synthetic-engagement controls are disabled in Creator Growth Beta.'})
+        return
+
     print(f"\n🚀 [START_BOT] Demande reçue du client {request.sid}")
 
     try:
@@ -299,6 +339,10 @@ def handle_start_bot(data):
 @socketio.on('stop_bot')
 def handle_stop_bot():
     """Stop the bot via WebSocket"""
+    if not legacy_synthetic_controls_allowed():
+        emit('bot_error', {'error': 'Legacy synthetic-engagement controls are disabled in Creator Growth Beta.'})
+        return
+
     print(f"\n⏹️  [STOP_BOT] Demande reçue du client {request.sid}")
     try:
         result = bot_manager.stop_bot()
@@ -376,14 +420,15 @@ def health_check():
         "port": port,
         "pid": os.getpid(),
         "lifecycle_state": state,
+        "version": app.service_version,
         "ready": True
     }
 
 @app.route('/')
 def index():
     return {
-        'service': 'Kick Viewer Bot - WebSocket Server',
-        'version': '2.0.0',
+        'service': 'VelBots Creator Growth local service',
+        'version': app.service_version,
         'websocket': 'ws://localhost:8080/socket.io/',
         'status': 'online'
     }
@@ -436,11 +481,15 @@ def main():
     parser.add_argument('--instance-nonce', type=str, default='', help='Tauri instance nonce for readiness')
     parser.add_argument('--protocol-version', type=int, default=1, help='Protocol version')
     parser.add_argument('--app-version', type=str, default='0.0.0', help='App version')
+    parser.add_argument('--creator-growth-beta', action='store_true', help='Disable legacy synthetic-engagement controls')
 
     args, unknown = parser.parse_known_args()
 
     if args.dev:
         logger.info("Development mode enabled")
+
+    app.creator_growth_beta = args.creator_growth_beta
+    app.service_version = args.app_version
 
     socketio.start_background_task(stats_broadcast_task)
 
@@ -457,7 +506,7 @@ def main():
             "instance_nonce": args.instance_nonce,
             "port": actual_port,
             "pid": os.getpid(),
-            "lifecycle_state": "stopped",
+            "lifecycle_state": "creator_growth_beta" if args.creator_growth_beta else "stopped",
             "ready": True
         }
         print(json.dumps(ready_payload), flush=True)

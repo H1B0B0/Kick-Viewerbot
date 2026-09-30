@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { onOpenUrl } from "@tauri-apps/plugin-deep-link";
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
+
 import {
   fetchCapabilities,
   handleOAuthCallback,
@@ -8,6 +10,7 @@ import {
 import { useGetProfile } from "../app/functions/UserAPI";
 
 export function useDesktopOAuth() {
+  const isDesktop = isTauri();
   const [capabilities, setCapabilities] = useState<AuthCapabilities | null>(
     null,
   );
@@ -16,41 +19,72 @@ export function useDesktopOAuth() {
   const { mutate } = useGetProfile();
 
   useEffect(() => {
-    fetchCapabilities().then(setCapabilities).catch(console.error);
+    void fetchCapabilities().then(setCapabilities);
   }, []);
 
   useEffect(() => {
-    if (!capabilities?.patreon.enabled) return;
+    if (!isDesktop || !capabilities?.patreon.enabled) return;
 
     let unlisten: (() => void) | undefined;
+    let active = true;
+    const handledUrls = new Set<string>();
+
+    const processUrls = async (urls: string[]) => {
+      if (!active) return;
+
+      setIsProcessing(true);
+      setError(null);
+
+      try {
+        for (const url of urls) {
+          if (handledUrls.has(url)) continue;
+          handledUrls.add(url);
+
+          const success = await handleOAuthCallback(url, capabilities);
+
+          if (success) {
+            await mutate();
+            window.location.assign("/");
+
+            return;
+          }
+        }
+      } catch (oauthError) {
+        if (active) {
+          setError(
+            oauthError instanceof Error
+              ? oauthError.message
+              : "Failed to authenticate with Patreon",
+          );
+        }
+      } finally {
+        if (active) setIsProcessing(false);
+      }
+    };
 
     const setupDeepLink = async () => {
-      unlisten = await onOpenUrl(async (urls) => {
-        setIsProcessing(true);
-        setError(null);
-        try {
-          for (const url of urls) {
-            const success = await handleOAuthCallback(url, capabilities);
-            if (success) {
-              await mutate(); // Refresh user profile
-              window.location.href = "/"; // Force redirection to dashboard
-              break;
-            }
-          }
-        } catch (e: any) {
-          setError(e.message || "Failed to authenticate");
-        } finally {
-          setIsProcessing(false);
-        }
-      });
+      unlisten = await onOpenUrl(processUrls);
+
+      const currentUrls = await getCurrent();
+
+      if (currentUrls) await processUrls(currentUrls);
     };
 
-    setupDeepLink();
+    void setupDeepLink().catch((setupError) => {
+      if (active) {
+        setError(
+          setupError instanceof Error
+            ? setupError.message
+            : "Unable to initialize Patreon login",
+        );
+      }
+    });
 
     return () => {
+      active = false;
       if (unlisten) unlisten();
     };
-  }, [capabilities, mutate]);
+  }, [capabilities, isDesktop, mutate]);
 
-  return { capabilities, isProcessing, error };
+  return { capabilities, isDesktop, isProcessing, error };
 }

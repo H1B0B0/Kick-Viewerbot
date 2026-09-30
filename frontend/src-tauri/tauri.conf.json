@@ -1,12 +1,12 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Kick ViewerBot",
-  "version": "0.1.2-3",
+  "version": "4.0.0-1",
   "identifier": "com.velbots.kickviewerbot",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
-    "beforeDevCommand": "npm run build:sidecar && npm run dev",
+    "beforeDevCommand": "npm run dev:sidecar && npm run dev",
     "beforeBuildCommand": "npm run build"
   },
   "app": {

@@ -6,6 +6,7 @@ import pytest
 from scripts.build_sidecar import (
     UnsupportedPlatformError,
     create_build_plan,
+    reuse_existing_sidecar,
 )
 
 
@@ -39,14 +40,40 @@ def test_rejects_unsupported_sidecar_platform() -> None:
         create_build_plan(ROOT, 'Linux', 'x86_64-unknown-linux-gnu')
 
 
-def test_tauri_dev_rebuilds_sidecar_before_next() -> None:
+def test_tauri_dev_reuses_a_target_specific_sidecar_before_next() -> None:
     package = json.loads((ROOT / 'frontend/package.json').read_text(encoding='utf-8'))
     tauri = json.loads(
         (ROOT / 'frontend/src-tauri/tauri.conf.json').read_text(encoding='utf-8'),
     )
 
     assert package['scripts']['build:sidecar'] == 'python ../scripts/build_sidecar.py'
-    assert tauri['build']['beforeDevCommand'] == 'npm run build:sidecar && npm run dev'
+    assert package['scripts']['dev:sidecar'] == (
+        'python ../scripts/build_sidecar.py --reuse-existing'
+    )
+    assert tauri['build']['beforeDevCommand'] == 'npm run dev:sidecar && npm run dev'
+
+
+def test_reuses_existing_sidecar_without_pyinstaller(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    destination = (
+        tmp_path
+        / 'frontend/src-tauri/bin/backend-aarch64-apple-darwin'
+    )
+    destination.parent.mkdir(parents=True)
+    destination.write_bytes(b'existing-sidecar')
+    monkeypatch.setattr('scripts.build_sidecar.platform.system', lambda: 'Darwin')
+    monkeypatch.setattr(
+        'scripts.build_sidecar.host_target_triple',
+        lambda: 'aarch64-apple-darwin',
+    )
+
+    plan = reuse_existing_sidecar(tmp_path)
+
+    assert plan is not None
+    assert plan.destination == destination
+    assert destination.read_bytes() == b'existing-sidecar'
 
 
 def test_pyinstaller_uses_package_qualified_bot_imports() -> None:

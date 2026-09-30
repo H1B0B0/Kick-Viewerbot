@@ -1,9 +1,10 @@
 {
   "name": "kick-viewerbot",
-  "version": "0.1.2-3",
+  "version": "4.0.0-1",
   "private": true,
   "scripts": {
     "build:sidecar": "python ../scripts/build_sidecar.py",
+    "dev:sidecar": "python ../scripts/build_sidecar.py --reuse-existing",
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
@@ -20,6 +21,8 @@
     "@react-aria/visually-hidden": "3.8.28",
     "@tauri-apps/api": "^2.11.1",
     "@tauri-apps/plugin-deep-link": "^2.4.9",
+    "@tauri-apps/plugin-fs": "^2.5.2",
+    "@tauri-apps/plugin-http": "^2.6.0",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-shell": "^2.3.5",

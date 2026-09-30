@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "core:event:default",
@@ -14,10 +12,57 @@
       "allow": [
         {
           "url": "https://www.patreon.com/*"
+        },
+        {
+          "url": "https://www.patreon.com/*",
+          "app": "Google Chrome"
+        },
+        {
+          "url": "https://www.patreon.com/*",
+          "app": "chrome"
+        },
+        {
+          "url": "https://www.patreon.com/*",
+          "app": "google-chrome"
+        },
+        {
+          "url": "https://kick.com/*"
+        },
+        {
+          "url": "https://dashboard.twitch.tv/*"
+        },
+        {
+          "url": "https://studio.youtube.com/*"
         }
       ]
     },
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "http:default",
+    {
+      "identifier": "http:allow-fetch",
+      "allow": [
+        {
+          "url": "https://api.velbots.shop/**"
+        }
+      ]
+    },
+    "fs:default",
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [{ "path": "$APPLOCALDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "$APPLOCALDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-remove",
+      "allow": [{ "path": "$APPLOCALDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-mkdir",
+      "allow": [{ "path": "$APPLOCALDATA/**" }]
+    }
   ]
 }

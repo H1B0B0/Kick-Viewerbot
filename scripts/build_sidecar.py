@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import platform
 import shutil
 import stat
@@ -100,7 +101,35 @@ def build_sidecar(root: Path = PROJECT_ROOT) -> BuildPlan:
     return plan
 
 
+def reuse_existing_sidecar(root: Path = PROJECT_ROOT) -> BuildPlan | None:
+    plan = create_build_plan(root, platform.system(), host_target_triple())
+
+    if not plan.destination.is_file():
+        return None
+
+    if platform.system() != 'Windows':
+        executable_bits = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+        current_mode = plan.destination.stat().st_mode
+        if (current_mode & executable_bits) != executable_bits:
+            plan.destination.chmod(current_mode | executable_bits)
+    return plan
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description='Prepare the Tauri Python sidecar.')
+    parser.add_argument(
+        '--reuse-existing',
+        action='store_true',
+        help='Reuse an existing target-specific sidecar, otherwise build it.',
+    )
+    args = parser.parse_args()
+
+    if args.reuse_existing:
+        existing = reuse_existing_sidecar()
+        if existing is not None:
+            print(f'Reusing sidecar: {existing.destination}')
+            return 0
+
     plan = build_sidecar()
     print(f'Sidecar ready: {plan.destination}')
     return 0

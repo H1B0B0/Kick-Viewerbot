@@ -8,7 +8,7 @@ import WebSocketService, {
 
 export function useWebSocketBot() {
   const [isConnected, setIsConnected] = useState(false);
-  const [status, setStatus] = useState<ConnectionStatus>("disconnected");
+  const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [stats, setStats] = useState<BotStats | null>(null);
   const [error, setError] = useState<string>("");
   const wsRef = useRef<WebSocketService | null>(null);

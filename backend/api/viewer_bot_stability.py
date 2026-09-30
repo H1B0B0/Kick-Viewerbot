@@ -91,13 +91,17 @@ class ViewerBot_Stability:
         self.stream_url_last_updated = 0
         self.stream_url_lock = threading.Lock()
         self.stream_url_cache_duration = 30  # Cache stream URL for 30 seconds (reduced API calls)
-        self.channel_id = None  # Store channel ID for WebSocket connections
-        self.livestream_id = None  # Store livestream ID for tracking events
-        self.connection_retry_delay = 5  # Seconds to wait before reconnecting
-        self.min_active_connections = int(nb_of_threads * 0.9)  # Maintain at least 90% of connections
-        self.connection_delay = 0.5  # Delay between connection attempts (seconds)
-        self.max_retry_attempts = 3  # Maximum retry attempts before giving up
-        self.backoff_multiplier = 2  # Exponential backoff multiplier
+        self.channel_id = None
+        self.livestream_id = None
+        self.connection_retry_delay = 5
+        self.min_active_connections = int(nb_of_threads * 0.9)
+        self.connection_delay = 0.5
+        self.max_retry_attempts = 3
+        self.backoff_multiplier = 2
+        self.ws_token = None
+        self.ws_token_time = 0
+        self.ws_token_lock = threading.Lock()
+        self.ws_token_ttl = 55
         
         # Warn if thread count is too high
         if nb_of_threads > 50:
@@ -212,9 +216,20 @@ class ViewerBot_Stability:
             return None
 
     def get_websocket_token(self):
-        """Get WebSocket authentication token using tls_client if available"""
+        """Get WebSocket authentication token using shared cache"""
+        with self.ws_token_lock:
+            if self.ws_token and (time.time() - self.ws_token_time) < self.ws_token_ttl:
+                return self.ws_token
+
+        token = self._fetch_websocket_token()
+        if token:
+            with self.ws_token_lock:
+                self.ws_token = token
+                self.ws_token_time = time.time()
+        return token
+
+    def _fetch_websocket_token(self):
         try:
-            # Method 1: Use tls_client (like working example)
             if HAS_TLS_CLIENT:
                 try:
                     s = tls_client.Session(client_identifier="chrome_120", random_tls_extension_order=True)
