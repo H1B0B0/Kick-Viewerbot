@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Kick ViewerBot",
-  "version": "4.0.0-4",
+  "productName": "VelBots Creator Studio",
+  "version": "4.0.0-6",
   "identifier": "com.velbots.kickviewerbot",
   "build": {
     "frontendDist": "../out",
@@ -12,15 +12,17 @@
   "app": {
     "windows": [
       {
-        "title": "Kick ViewerBot",
-        "width": 800,
-        "height": 600,
+        "title": "VelBots",
+        "width": 1100,
+        "height": 800,
+        "minWidth": 760,
+        "minHeight": 560,
         "resizable": true,
         "fullscreen": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* https://api.velbots.shop; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: http://127.0.0.1:*; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* ws://127.0.0.1:* https://api.velbots.shop; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
     }
   },
   "bundle": {
@@ -36,17 +38,13 @@
     "android": {
       "debugApplicationIdSuffix": ".debug"
     },
-    "externalBin": [
-      "bin/backend"
-    ],
+    "externalBin": ["bin/backend"],
     "createUpdaterArtifacts": true
   },
   "plugins": {
     "deep-link": {
       "desktop": {
-        "schemes": [
-          "velbots"
-        ]
+        "schemes": ["velbots"]
       }
     },
     "updater": {

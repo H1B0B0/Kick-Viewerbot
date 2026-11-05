@@ -33,6 +33,18 @@
         },
         {
           "url": "https://studio.youtube.com/*"
+        },
+        {
+          "url": "https://www.twitch.tv/*"
+        },
+        {
+          "url": "https://clips.twitch.tv/*"
+        },
+        {
+          "url": "https://accounts.google.com/*"
+        },
+        {
+          "url": "https://www.youtube.com/*"
         }
       ]
     },

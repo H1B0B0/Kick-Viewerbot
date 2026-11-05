@@ -1,7 +1,7 @@
 [package]
 name = "kick-viewerbot"
-version = "4.0.0-4"
-description = "Kick ViewerBot desktop application"
+version = "4.0.0-6"
+description = "VelBots Creator Studio desktop application"
 authors = ["VelBots"]
 license = ""
 repository = ""
@@ -35,3 +35,4 @@ tauri-plugin-updater = "2.10.1"
 tauri-plugin-process = "2.3.1"
 tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }
 tauri-plugin-fs = "2"
+tauri-plugin-dialog = "=2.7.3"

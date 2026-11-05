@@ -23,8 +23,6 @@ export interface ProfileUser {
   subscription?: string;
   isSubscribed?: boolean;
   subscriptionEndsAt?: string;
-  isBanned?: boolean;
-  hwid?: string;
   patreonId?: string;
   [key: string]: unknown;
 }
@@ -108,34 +106,6 @@ export function useGetSubscription() {
       revalidateOnFocus: false,
     },
   );
-}
-
-export async function registerHWID(hwid: string) {
-  try {
-    const response = await customAxios({
-      method: "POST",
-      url: `${API_BASE_URL}/users/hwid`,
-      data: { hwid },
-    });
-
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function banUser(userId: string) {
-  try {
-    const response = await customAxios({
-      method: "PUT",
-      url: `${API_BASE_URL}/users/ban`,
-      data: { userId },
-    });
-
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
 }
 
 export async function refreshPatreonStatus() {

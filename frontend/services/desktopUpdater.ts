@@ -19,6 +19,7 @@ export async function checkForDesktopUpdate(): Promise<UpdateInfo | null> {
   if (!isTauri()) return null;
   try {
     const update = await check();
+
     if (update) {
       return {
         version: update.version,
@@ -29,6 +30,7 @@ export async function checkForDesktopUpdate(): Promise<UpdateInfo | null> {
   } catch (e) {
     console.error("Failed to check for updates:", e);
   }
+
   return null;
 }
 
@@ -38,6 +40,7 @@ export async function installDesktopUpdate(
   if (!isTauri()) return;
 
   const update = await check();
+
   if (!update) return;
 
   let downloaded = 0;

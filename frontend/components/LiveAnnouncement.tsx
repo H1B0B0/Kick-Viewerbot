@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import {
   buildAnnouncement,
   LIVE_PLATFORMS,
@@ -72,8 +73,8 @@ export function LiveAnnouncement() {
         {t("channelUrl")}
         <input
           className={fieldClass}
-          type="url"
           maxLength={2000}
+          type="url"
           value={link}
           onChange={(event) => {
             setLink(event.target.value);
@@ -114,8 +115,8 @@ export function LiveAnnouncement() {
             {t("reviewDraft")}
             <textarea
               className={fieldClass}
-              rows={6}
               maxLength={5000}
+              rows={6}
               value={draft}
               onChange={(event) => {
                 setDraft(event.target.value);
@@ -139,7 +140,7 @@ export function LiveAnnouncement() {
           </button>
         </>
       )}
-      <p role="status" className="text-xs text-zinc-400">
+      <p className="text-xs text-zinc-400" role="status">
         {feedback}
       </p>
     </div>

@@ -5,11 +5,9 @@ export interface User {
   email: string;
   password: string;
   role: string;
-  hwid: string;
   subscription: string;
   isSubscribed: boolean;
   subscriptionEndsAt?: string;
-  isBanned: boolean;
   patreonId?: string;
   createdAt: Date;
   updatedAt: Date;

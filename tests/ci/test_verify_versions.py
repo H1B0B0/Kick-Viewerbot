@@ -9,6 +9,9 @@ from pathlib import Path
 import pytest
 
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
 @dataclass(frozen=True, slots=True)
 class ManifestPaths:
     tauri: Path
@@ -19,7 +22,7 @@ class ManifestPaths:
     def command(self) -> list[str]:
         return [
             sys.executable,
-            "scripts/ci/verify_versions.py",
+            str(ROOT / "scripts/ci/verify_versions.py"),
             "--tauri",
             str(self.tauri),
             "--package",

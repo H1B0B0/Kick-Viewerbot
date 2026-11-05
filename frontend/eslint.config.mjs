@@ -34,7 +34,7 @@ export default defineConfig([globalIgnores([
     "**/.DS_Store",
     "**/node_modules",
     "**/coverage",
-    "**/.next",
+    "**/.next*",
     "**/build",
     "!**/.commitlintrc.cjs",
     "!**/.lintstagedrc.cjs",

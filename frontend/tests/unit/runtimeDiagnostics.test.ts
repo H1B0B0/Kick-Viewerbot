@@ -4,32 +4,34 @@ import {
   displayRuntimeStatus,
 } from "../../services/runtimeDiagnostics";
 
-describe("runtime diagnostics", () => {
-  it("does not present disconnected cached metrics as healthy", () => {
+describe("creator studio runtime diagnostics", () => {
+  it("does not present disconnected cached state as healthy", () => {
     expect(displayRuntimeStatus("disconnected").code).toBe("error");
     expect(displayRuntimeStatus("connecting").code).toBe("starting");
   });
-  it("does not equate process running with a successful connection", () => {
+
+  it("warns when the local sidecar is connected but the FFmpeg encoder is unavailable", () => {
     expect(
       displayRuntimeStatus(
         "connected",
         {
-          code: "running",
-          message: "running",
-          startup_progress: 100,
-          proxy_loading_progress: 100,
+          code: "ready",
+          message: "ready",
+          encoder_ready: false,
         },
-        0,
+        false,
       ).code,
     ).toBe("warning");
   });
-  it("identifies the secondary exception without exposing raw data", () => {
+
+  it("identifies creator studio issues without exposing raw secrets or URLs", () => {
     const report = analyzeRuntimeLogs(
-      "secret=abc123 https://private.example\nInvalidStatus object has no attribute status_code\nFailed to get WebSocket token\nBot is now running",
+      "token=secret_abc123 https://private.example\nencoder_unavailable\noauth_state_invalid\nRead-only file system",
     ).join("\n");
-    expect(report).toContain("secondary exception");
-    expect(report).toContain("Running does not confirm");
-    expect(report).not.toContain("abc123");
+    expect(report).toContain("FFmpeg video encoder");
+    expect(report).toContain("OAuth authorization");
+    expect(report).toContain("recording or workspace directory");
+    expect(report).not.toContain("secret_abc123");
     expect(report).not.toContain("private.example");
   });
 });

@@ -76,15 +76,23 @@ def test_reuses_existing_sidecar_without_pyinstaller(
     assert destination.read_bytes() == b'existing-sidecar'
 
 
-def test_pyinstaller_uses_package_qualified_bot_imports() -> None:
+def test_pyinstaller_uses_package_qualified_creator_imports() -> None:
     # Given: PyInstaller analyzes the backend from the repository root.
     main_source = (ROOT / 'backend/main.py').read_text(encoding='utf-8')
     macos_spec = (ROOT / 'KickViewerBOT-macOS.spec').read_text(encoding='utf-8')
+    win_spec = (ROOT / 'KickViewerBOT.spec').read_text(encoding='utf-8')
 
     # When: package imports and hidden imports are inspected.
-    # Then: both surfaces use the import path available to the bundled app.
-    assert 'from backend.api.viewer_bot import ViewerBot' in main_source
-    assert 'from backend.api.viewer_bot_stability import ViewerBot_Stability' in main_source
+    # Then: both surfaces use the Creator Studio import paths and exclude legacy viewer_bot.
+    assert 'from backend.creator.service import CreatorService, create_blueprint' in main_source
+    assert 'viewer_bot' not in main_source
     assert 'sys.path.append' not in main_source
-    assert "'api.viewer_bot'" not in macos_spec
-    assert "'api.viewer_bot_stability'" not in macos_spec
+    for spec in (macos_spec, win_spec):
+        assert "'backend.creator.service'" in spec
+        assert "'backend.creator.automation'" in spec
+        assert "'backend.creator.store'" in spec
+        assert "'backend.creator.server_log'" in spec
+        assert 'viewer_bot' not in spec
+        assert 'tls_client' not in spec
+        assert 'fake_useragent' not in spec
+        assert 'streamlink' not in spec

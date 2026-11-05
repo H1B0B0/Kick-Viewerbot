@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import { useLocale } from "../i18n/LocaleProvider";
 import { analyzeRuntimeLogs } from "../services/runtimeDiagnostics";
 
@@ -28,8 +29,8 @@ export function RuntimeDiagnostics() {
       />
       <div className="my-3 flex gap-4">
         <button
-          type="button"
           disabled={!logs.trim()}
+          type="button"
           onClick={() => setReport(analyzeRuntimeLogs(logs).join("\n\n"))}
         >
           {t("analyze")}
@@ -61,7 +62,7 @@ export function RuntimeDiagnostics() {
         )}
       </div>
       <p role="status">{copyStatus}</p>
-      <p className="whitespace-pre-wrap" aria-live="polite">
+      <p aria-live="polite" className="whitespace-pre-wrap">
         {report}
       </p>
     </details>

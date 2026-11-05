@@ -3,39 +3,27 @@
 block_cipher = None
 
 import os
-import sys
-from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_data_files
 
-# Use the current Python environment's site-packages (works for venv and CI)
-import site
-site_packages = site.getsitepackages()[0]
-
-# Build data list - only include actual data files, not Python packages
-datas = [
-    ('backend', 'backend'),
-]
-
-# Add fake_useragent data files if they exist
-fake_useragent_data = os.path.join(site_packages, 'fake_useragent', 'data')
-if os.path.exists(fake_useragent_data):
-    datas.append((fake_useragent_data, 'fake_useragent/data'))
-
-# Force include tls_client dependencies as binaries
-tls_client_binaries = []
-tls_client_deps = os.path.join(site_packages, 'tls_client', 'dependencies')
-if os.path.exists(tls_client_deps):
-    for f in os.listdir(tls_client_deps):
-        if f.endswith(('.dll', '.so', '.dylib')):
-            tls_client_binaries.append((os.path.join(tls_client_deps, f), 'tls_client/dependencies'))
+datas = collect_data_files('imageio_ffmpeg')
+# Never copy backend/.env or a user's local recordings into a distributed binary.
+if os.path.isfile('creator-oauth.json'):
+    datas.append(('creator-oauth.json', '.'))
 
 a = Analysis(
     ['backend/main.py'],
     pathex=[],
-    binaries=tls_client_binaries,
+    binaries=[],
     datas=datas,
     hiddenimports=[
-        'backend.api.viewer_bot',
-        'backend.api.viewer_bot_stability',
+        'backend.creator.service',
+        'backend.creator.accounts',
+        'backend.creator.media',
+        'backend.creator.automation',
+        'backend.creator.store',
+        'backend.creator.server_log',
+        'imageio_ffmpeg',
+        'keyring.backends.macOS',
         # Flask and related
         'flask',
         'flask_cors',
@@ -71,13 +59,6 @@ a = Analysis(
         'websockets.legacy',
         'websockets.legacy.client',
         'websockets.legacy.server',
-        # Streaming
-        'streamlink',
-        'streamlink.plugins',
-        'fake_useragent',
-        # TLS Client
-        'tls_client',
-        'tls_client.dependencies',
         'typing_extensions',
         # UI
         'rich',
@@ -100,7 +81,6 @@ a = Analysis(
     noarchive=False,
 )
 
-# Collect all submodules and data
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(

@@ -14,14 +14,14 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head>
         <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
+          href="https://fonts.gstatic.com"
+          rel="preconnect"
         />
       </head>
       <body
-        className="min-h-screen bg-[#09090b] text-zinc-300 font-sans antialiased flex flex-col"
         suppressHydrationWarning
+        className="min-h-screen bg-[#09090b] text-zinc-300 font-sans antialiased flex flex-col"
       >
         <LocaleProvider>
           <UpdateBanner />

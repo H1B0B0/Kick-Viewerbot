@@ -12,7 +12,7 @@ export function typewriterEffect(
     duration: number;
     delay: number;
     ease: string;
-  }> = {}
+  }> = {},
 ) {
   if (!isBrowser || !animate) {
     return { pause: () => {} };
@@ -27,7 +27,7 @@ export function typewriterEffect(
       (char) =>
         `<span class="char" style="opacity: 0;">${
           char === " " ? "&nbsp;" : char
-        }</span>`
+        }</span>`,
     )
     .join("");
 
@@ -42,6 +42,7 @@ export function typewriterEffect(
     });
   } catch (error) {
     console.warn("Typewriter animation failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -52,7 +53,7 @@ export function glitchReveal(
   options: Partial<{
     duration: number;
     intensity: number;
-  }> = {}
+  }> = {},
 ) {
   if (!isBrowser || !animate) {
     return { pause: () => {} };
@@ -66,13 +67,7 @@ export function glitchReveal(
     // Multiple glitch passes
     for (let i = 0; i < 3; i++) {
       tl.add(element, {
-        translateX: [
-          -intensity,
-          intensity,
-          -intensity / 2,
-          intensity / 2,
-          0,
-        ],
+        translateX: [-intensity, intensity, -intensity / 2, intensity / 2, 0],
         duration: duration / 6,
         ease: "linear",
       });
@@ -84,12 +79,13 @@ export function glitchReveal(
         opacity: [0, 1],
         duration: duration / 3,
       },
-      0
+      0,
     );
 
     return tl;
   } catch (error) {
     console.warn("Glitch reveal failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -101,7 +97,7 @@ export function bounceReveal(
     delay: number;
     distance: number;
     duration: number;
-  }> = {}
+  }> = {},
 ) {
   if (!isBrowser || !animate) {
     return { pause: () => {} };
@@ -119,6 +115,7 @@ export function bounceReveal(
     });
   } catch (error) {
     console.warn("Bounce reveal failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -131,7 +128,7 @@ export function fadeScaleReveal(
     scale: [number, number];
     duration: number;
     ease: string;
-  }> = {}
+  }> = {},
 ) {
   if (!isBrowser || !animate) {
     return { pause: () => {} };
@@ -154,6 +151,7 @@ export function fadeScaleReveal(
     });
   } catch (error) {
     console.warn("Fade scale reveal failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -165,7 +163,7 @@ export function rotateReveal(
     delay: number;
     rotation: number;
     duration: number;
-  }> = {}
+  }> = {},
 ) {
   if (!isBrowser || !animate) {
     return { pause: () => {} };
@@ -183,6 +181,7 @@ export function rotateReveal(
     });
   } catch (error) {
     console.warn("Rotate reveal failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -195,13 +194,18 @@ export function slideReveal(
     direction: "left" | "right" | "top" | "bottom";
     distance: number;
     duration: number;
-  }> = {}
+  }> = {},
 ) {
   if (!isBrowser || !animate) {
     return { pause: () => {} };
   }
 
-  const { delay = 0, direction = "left", distance = 50, duration = 600 } = options;
+  const {
+    delay = 0,
+    direction = "left",
+    distance = 50,
+    duration = 600,
+  } = options;
 
   const transforms: any = {
     opacity: [0, 1],
@@ -224,6 +228,7 @@ export function slideReveal(
     return animate(targets, transforms);
   } catch (error) {
     console.warn("Slide reveal failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -237,7 +242,7 @@ export function enterStagger(
     opacity: [number, number];
     duration: number;
     ease: string;
-  }> = {}
+  }> = {},
 ) {
   // Skip animation on server
   if (!isBrowser || !animate) {
@@ -262,6 +267,7 @@ export function enterStagger(
     });
   } catch (error) {
     console.warn("enterStagger animation failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -304,8 +310,10 @@ export function attachHoverTilt(el: HTMLElement, intensity = 8) {
       console.warn("Tilt reset failed:", error);
     }
   };
+
   el.addEventListener("mousemove", handleMove);
   el.addEventListener("mouseleave", reset);
+
   return () => {
     el.removeEventListener("mousemove", handleMove);
     el.removeEventListener("mouseleave", reset);
@@ -328,6 +336,7 @@ export function pulse(el: HTMLElement, scale = 1.03, duration = 1600) {
     });
   } catch (error) {
     console.warn("Pulse animation failed:", error);
+
     return { pause: () => {} };
   }
 }
@@ -340,6 +349,7 @@ export function flash(el: HTMLElement, color = "rgba(16,185,129,0.55)") {
 
   try {
     const overlay = document.createElement("span");
+
     overlay.style.position = "absolute";
     overlay.style.inset = "0";
     overlay.style.pointerEvents = "none";
@@ -369,13 +379,15 @@ export function confetti(el: HTMLElement, count = 15) {
 
   for (let i = 0; i < count; i++) {
     const particle = document.createElement("div");
+
     particle.style.position = "absolute";
     particle.style.left = `${centerX}px`;
     particle.style.top = `${centerY}px`;
     particle.style.width = "8px";
     particle.style.height = "8px";
     particle.style.borderRadius = Math.random() > 0.5 ? "50%" : "2px";
-    particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+    particle.style.backgroundColor =
+      colors[Math.floor(Math.random() * colors.length)];
     particle.style.pointerEvents = "none";
     particle.style.zIndex = "100";
     el.appendChild(particle);
@@ -403,6 +415,7 @@ export function numberPop(el: HTMLElement, value: number, color = "#10b981") {
   if (!isBrowser || !document) return;
 
   const popup = document.createElement("div");
+
   popup.textContent = `+${value}`;
   popup.style.position = "absolute";
   popup.style.top = "50%";
@@ -431,6 +444,7 @@ export function shockwave(el: HTMLElement, color = "rgba(16,185,129,0.3)") {
   if (!isBrowser || !animate || !document) return;
 
   const wave = document.createElement("div");
+
   wave.style.position = "absolute";
   wave.style.top = "50%";
   wave.style.left = "50%";

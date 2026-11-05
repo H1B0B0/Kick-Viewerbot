@@ -26,6 +26,7 @@ export function buildAnnouncement(
 ): string {
   if (!topic.trim() || !when.trim()) throw new Error(copy.missingDetails);
   let url: URL;
+
   try {
     url = new URL(link.trim());
   } catch {
@@ -37,6 +38,7 @@ export function buildAnnouncement(
     YouTube: ["youtube.com", "youtu.be"],
   };
   const host = url.hostname.replace(/^www\./, "");
+
   if (
     url.protocol !== "https:" ||
     url.username ||
@@ -46,5 +48,6 @@ export function buildAnnouncement(
   ) {
     throw new Error(copy.platformUrl(platform));
   }
+
   return `${topic.trim()}\n${copy.liveLine(platform, when.trim())}\n${url.href}\n${copy.callToAction}`;
 }

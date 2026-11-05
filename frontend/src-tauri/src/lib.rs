@@ -5,6 +5,7 @@ use tauri::Emitter;
 use tauri::Manager;
 use tokio::sync::Mutex;
 
+mod creator_exports;
 mod sidecar;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -28,6 +29,7 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new().build())
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
@@ -36,7 +38,11 @@ pub fn run() {
         .manage(sidecar::SidecarState {
             endpoint: Arc::new(Mutex::new(None)),
         })
-        .invoke_handler(tauri::generate_handler![sidecar::get_runtime_endpoint])
+        .invoke_handler(tauri::generate_handler![
+            sidecar::get_runtime_endpoint,
+            creator_exports::export_creator_asset,
+            creator_exports::select_recording_folder
+        ])
         .setup(|app| {
             sidecar::spawn_sidecar(app.handle());
 

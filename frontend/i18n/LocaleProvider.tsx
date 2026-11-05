@@ -22,40 +22,48 @@ const localeLabels: Record<Locale, string> = {
 
 const en = {
   language: "Language",
-  subtitle: "ViewerBot legacy · Creator Growth beta",
   guest: "Guest",
   logout: "Log out",
+  localStudioBadge: "Local Studio",
+  continueLocalStudio: "Continue in Local Studio (without account)",
+  multiPlatformBadge: "Twitch · Kick · YouTube Live",
   launching: "Launching…",
   engineConnected: "Engine connected",
   disconnected: "Disconnected",
   connectionFailed: "Connection failed",
   retry: "Retry",
-  betaTitle: "Beta workspace",
-  betaBody:
-    "Live planning · highlight markers · CSV exports · announcement drafts.",
-  betaSafety: "Legacy synthetic-engagement controls are paused in this beta.",
-  legacyTitle: "ViewerBot",
-  migrationMode: "Legacy",
-  legacyBody:
-    "The ViewerBot space remains part of V4 so your community has a clear bridge to the new product. The legacy workflow is visible here, but its synthetic-audience and proxy actions are paused.",
-  legacySafety:
-    "Legacy actions do not contact Kick, Twitch, or YouTube in this beta.",
-  workspace: "Legacy workspace",
-  workspaceBody: "Channel context",
-  legacyAutomation: "Runtime",
-  pausedForMigration: "Paused",
-  legacyAutomationBody: "Unavailable in V4 beta.",
-  nextStep: "Creator Growth",
-  nextStepTitle: "Live planning & clips",
-  nextStepBody: "Markers, CSV exports and announcement drafts.",
-  clipsTitle: "Clip automation status",
-  clipsBody: "Clip creation status appears after platform confirmation.",
-  kickClip:
-    "Marker and review export only. This beta does not use a Kick clip-creation endpoint.",
-  twitchClip:
-    "Official clip creation needs a connected account with the clips:edit scope. The OAuth integration is not enabled in this beta.",
-  youtubeClip:
-    "Marker and review export only. This beta does not create YouTube clips or uploads.",
+  automationStudio: "Automation Studio",
+  automationLocalRun: "Local run",
+  automationStudioBody:
+    "Build one live run and keep its announcement, live flow, highlights, clip review and performance review in one queue.",
+  automationStage: "Run status",
+  automationLiveTitle: "Live title",
+  automationLiveTitlePlaceholder: "Example: Friday challenge run",
+  automationSchedule: "Schedule",
+  automationPlatforms: "Platforms",
+  automationCreateRun: "Create live run",
+  automationMissingDetails:
+    "Add a live title, schedule, and at least one platform.",
+  automationScheduled: "Scheduled",
+  automationLiveNow: "Live now",
+  automationInReview: "In review",
+  automationFinished: "Finished",
+  automationStartLive: "Start live",
+  automationFinishLive: "Finish live",
+  automationCloseReview: "Close review",
+  automationReset: "Clear live run",
+  automationAnnouncement: "Announcement pack",
+  automationLive: "Live run",
+  automationMarkers: "Highlight markers",
+  automationClips: "Clip review",
+  automationAnalytics: "Performance review",
+  automationReady: "Ready",
+  automationWaiting: "Waiting",
+  automationActive: "Active",
+  automationReview: "Review",
+  automationComplete: "Complete",
+  automationProviderNote:
+    "This local queue never marks a public action as delivered. Direct publishing, official clips and analytics require each creator’s connected official account.",
   creatorTitle: "Creator Growth Toolkit",
   localOnly: "Local only",
   creatorBody: "Live planning, highlights and campaign preparation.",
@@ -141,42 +149,48 @@ const messages: Record<Locale, Messages> = {
   en,
   fr: messageSet({
     language: "Langue",
-    subtitle: "ViewerBot historique · bêta Creator Growth",
     guest: "Invité",
     logout: "Déconnexion",
+    localStudioBadge: "Studio Local",
+    continueLocalStudio: "Continuer en mode Studio Local (sans compte)",
+    multiPlatformBadge: "Twitch · Kick · YouTube Live",
     launching: "Démarrage…",
     engineConnected: "Moteur connecté",
     disconnected: "Déconnecté",
     connectionFailed: "Connexion impossible",
     retry: "Réessayer",
-    betaTitle: "Espace bêta",
-    betaBody:
-      "Planification de lives · marqueurs de temps · exports CSV · brouillons d’annonces.",
-    betaSafety:
-      "Les contrôles historiques d’engagement synthétique sont en pause dans cette bêta.",
-    legacyTitle: "ViewerBot",
-    migrationMode: "Historique",
-    legacyBody:
-      "L’espace ViewerBot reste présent dans la V4 afin d’offrir à votre communauté une transition claire vers le nouveau produit. Le workflow historique est visible, mais les actions d’audience synthétique et de proxy sont en pause.",
-    legacySafety:
-      "Les actions historiques ne contactent ni Kick, ni Twitch, ni YouTube dans cette bêta.",
-    workspace: "Espace historique",
-    workspaceBody: "Contexte de chaîne",
-    legacyAutomation: "Runtime",
-    pausedForMigration: "En pause",
-    legacyAutomationBody: "Indisponible dans la bêta V4.",
-    nextStep: "Creator Growth",
-    nextStepTitle: "Planification et clips",
-    nextStepBody: "Marqueurs, exports CSV et brouillons d’annonces.",
-    clipsTitle: "État de l’automatisation des clips",
-    clipsBody:
-      "Le statut de création apparaît après confirmation de la plateforme.",
-    kickClip:
-      "Marqueurs et export de revue uniquement. Cette bêta n’utilise pas d’endpoint de création de clips Kick.",
-    twitchClip:
-      "La création officielle de clips nécessite un compte connecté avec le scope clips:edit. L’intégration OAuth n’est pas active dans cette bêta.",
-    youtubeClip:
-      "Marqueurs et export de revue uniquement. Cette bêta ne crée ni clips ni uploads YouTube.",
+    automationStudio: "Studio d’automatisation",
+    automationLocalRun: "Flux local",
+    automationStudioBody:
+      "Créez un flux de live et gardez son annonce, son déroulé, ses marqueurs, sa revue de clips et son bilan au même endroit.",
+    automationStage: "État du flux",
+    automationLiveTitle: "Titre du live",
+    automationLiveTitlePlaceholder: "Exemple : Défi du vendredi",
+    automationSchedule: "Programmation",
+    automationPlatforms: "Plateformes",
+    automationCreateRun: "Créer le flux live",
+    automationMissingDetails:
+      "Ajoutez un titre, une programmation et au moins une plateforme.",
+    automationScheduled: "Programmé",
+    automationLiveNow: "En direct",
+    automationInReview: "À réviser",
+    automationFinished: "Terminé",
+    automationStartLive: "Démarrer le live",
+    automationFinishLive: "Terminer le live",
+    automationCloseReview: "Clore la revue",
+    automationReset: "Effacer le flux live",
+    automationAnnouncement: "Pack d’annonce",
+    automationLive: "Flux live",
+    automationMarkers: "Marqueurs de temps",
+    automationClips: "Revue de clips",
+    automationAnalytics: "Bilan de performance",
+    automationReady: "Prêt",
+    automationWaiting: "En attente",
+    automationActive: "Actif",
+    automationReview: "À réviser",
+    automationComplete: "Terminé",
+    automationProviderNote:
+      "Ce flux local ne marque jamais une action publique comme livrée. La publication directe, les clips officiels et les analyses nécessitent le compte officiel connecté de chaque créateur.",
     creatorTitle: "Boîte à outils de croissance",
     localOnly: "Local uniquement",
     creatorBody:
@@ -257,41 +271,48 @@ const messages: Record<Locale, Messages> = {
   }),
   "pt-BR": messageSet({
     language: "Idioma",
-    subtitle: "ViewerBot legado · beta Creator Growth",
     guest: "Convidado",
     logout: "Sair",
+    localStudioBadge: "Estúdio Local",
+    continueLocalStudio: "Continuar no Estúdio Local (sem conta)",
+    multiPlatformBadge: "Twitch · Kick · YouTube Live",
     launching: "Iniciando…",
     engineConnected: "Mecanismo conectado",
     disconnected: "Desconectado",
     connectionFailed: "Falha na conexão",
     retry: "Tentar novamente",
-    betaTitle: "Espaço beta",
-    betaBody:
-      "Planejamento de lives · marcadores de destaque · exportações CSV · rascunhos de anúncios.",
-    betaSafety:
-      "Os controles legados de engajamento sintético estão pausados nesta beta.",
-    legacyTitle: "ViewerBot",
-    migrationMode: "Legado",
-    legacyBody:
-      "O espaço ViewerBot continua na V4 para dar à sua comunidade uma ponte clara para o novo produto. O fluxo legado está visível, mas as ações de audiência sintética e proxy estão pausadas.",
-    legacySafety:
-      "As ações legadas não contatam Kick, Twitch ou YouTube nesta beta.",
-    workspace: "Espaço legado",
-    workspaceBody: "Contexto do canal",
-    legacyAutomation: "Runtime",
-    pausedForMigration: "Pausada",
-    legacyAutomationBody: "Indisponível na beta V4.",
-    nextStep: "Creator Growth",
-    nextStepTitle: "Planejamento e clipes",
-    nextStepBody: "Marcadores, exportações CSV e rascunhos de anúncios.",
-    clipsTitle: "Status da automação de clipes",
-    clipsBody: "O status de criação aparece após a confirmação da plataforma.",
-    kickClip:
-      "Somente marcadores e exportação para revisão. Esta beta não usa um endpoint de criação de clipes Kick.",
-    twitchClip:
-      "A criação oficial de clipes exige uma conta conectada com o escopo clips:edit. A integração OAuth não está ativa nesta beta.",
-    youtubeClip:
-      "Somente marcadores e exportação para revisão. Esta beta não cria clipes ou uploads do YouTube.",
+    automationStudio: "Estúdio de automação",
+    automationLocalRun: "Fluxo local",
+    automationStudioBody:
+      "Crie um fluxo de live e mantenha anúncio, condução ao vivo, destaques, revisão de clipes e análise em uma única fila.",
+    automationStage: "Status do fluxo",
+    automationLiveTitle: "Título da live",
+    automationLiveTitlePlaceholder: "Exemplo: Desafio de sexta-feira",
+    automationSchedule: "Agendamento",
+    automationPlatforms: "Plataformas",
+    automationCreateRun: "Criar fluxo de live",
+    automationMissingDetails:
+      "Adicione um título, agendamento e pelo menos uma plataforma.",
+    automationScheduled: "Agendado",
+    automationLiveNow: "Ao vivo",
+    automationInReview: "Em revisão",
+    automationFinished: "Concluído",
+    automationStartLive: "Iniciar live",
+    automationFinishLive: "Encerrar live",
+    automationCloseReview: "Fechar revisão",
+    automationReset: "Limpar fluxo de live",
+    automationAnnouncement: "Pacote de anúncio",
+    automationLive: "Fluxo de live",
+    automationMarkers: "Marcadores de destaque",
+    automationClips: "Revisão de clipes",
+    automationAnalytics: "Análise de desempenho",
+    automationReady: "Pronto",
+    automationWaiting: "Aguardando",
+    automationActive: "Ativo",
+    automationReview: "Revisar",
+    automationComplete: "Concluído",
+    automationProviderNote:
+      "Este fluxo local nunca marca uma ação pública como entregue. Publicação direta, clipes oficiais e análises exigem a conta oficial conectada de cada criador.",
     creatorTitle: "Kit de crescimento do criador",
     localOnly: "Somente local",
     creatorBody: "Planejamento de lives, destaques e preparação de campanha.",
@@ -369,42 +390,48 @@ const messages: Record<Locale, Messages> = {
   }),
   es: messageSet({
     language: "Idioma",
-    subtitle: "ViewerBot heredado · beta Creator Growth",
     guest: "Invitado",
     logout: "Cerrar sesión",
+    localStudioBadge: "Estudio Local",
+    continueLocalStudio: "Continuar en modo Estudio Local (sin cuenta)",
+    multiPlatformBadge: "Twitch · Kick · YouTube Live",
     launching: "Iniciando…",
     engineConnected: "Motor conectado",
     disconnected: "Desconectado",
     connectionFailed: "Error de conexión",
     retry: "Reintentar",
-    betaTitle: "Espacio beta",
-    betaBody:
-      "Planificación de directos · marcadores destacados · exportaciones CSV · borradores de anuncios.",
-    betaSafety:
-      "Los controles heredados de interacción sintética están pausados en esta beta.",
-    legacyTitle: "ViewerBot",
-    migrationMode: "Heredado",
-    legacyBody:
-      "El espacio ViewerBot sigue en V4 para dar a tu comunidad un puente claro hacia el nuevo producto. El flujo heredado es visible, pero las acciones de audiencia sintética y proxy están pausadas.",
-    legacySafety:
-      "Las acciones heredadas no contactan Kick, Twitch ni YouTube en esta beta.",
-    workspace: "Espacio heredado",
-    workspaceBody: "Contexto del canal",
-    legacyAutomation: "Runtime",
-    pausedForMigration: "Pausada",
-    legacyAutomationBody: "No disponible en la beta V4.",
-    nextStep: "Creator Growth",
-    nextStepTitle: "Planificación y clips",
-    nextStepBody: "Marcadores, exportaciones CSV y borradores de anuncios.",
-    clipsTitle: "Estado de la automatización de clips",
-    clipsBody:
-      "El estado de creación aparece tras la confirmación de la plataforma.",
-    kickClip:
-      "Solo marcadores y exportación para revisión. Esta beta no usa un endpoint de creación de clips de Kick.",
-    twitchClip:
-      "La creación oficial de clips necesita una cuenta conectada con el alcance clips:edit. La integración OAuth no está habilitada en esta beta.",
-    youtubeClip:
-      "Solo marcadores y exportación para revisión. Esta beta no crea clips ni cargas de YouTube.",
+    automationStudio: "Estudio de automatización",
+    automationLocalRun: "Flujo local",
+    automationStudioBody:
+      "Crea un flujo de directo y mantén su anuncio, emisión, destacados, revisión de clips y análisis en una sola cola.",
+    automationStage: "Estado del flujo",
+    automationLiveTitle: "Título del directo",
+    automationLiveTitlePlaceholder: "Ejemplo: Reto del viernes",
+    automationSchedule: "Programación",
+    automationPlatforms: "Plataformas",
+    automationCreateRun: "Crear flujo de directo",
+    automationMissingDetails:
+      "Añade un título, una programación y al menos una plataforma.",
+    automationScheduled: "Programado",
+    automationLiveNow: "En directo",
+    automationInReview: "En revisión",
+    automationFinished: "Finalizado",
+    automationStartLive: "Iniciar directo",
+    automationFinishLive: "Finalizar directo",
+    automationCloseReview: "Cerrar revisión",
+    automationReset: "Borrar flujo de directo",
+    automationAnnouncement: "Paquete de anuncio",
+    automationLive: "Flujo de directo",
+    automationMarkers: "Marcadores destacados",
+    automationClips: "Revisión de clips",
+    automationAnalytics: "Análisis de rendimiento",
+    automationReady: "Listo",
+    automationWaiting: "En espera",
+    automationActive: "Activo",
+    automationReview: "Revisar",
+    automationComplete: "Completado",
+    automationProviderNote:
+      "Este flujo local nunca marca una acción pública como entregada. La publicación directa, los clips oficiales y las analíticas requieren la cuenta oficial conectada de cada creador.",
     creatorTitle: "Kit de crecimiento para creadores",
     localOnly: "Solo local",
     creatorBody:
@@ -483,41 +510,48 @@ const messages: Record<Locale, Messages> = {
   }),
   de: messageSet({
     language: "Sprache",
-    subtitle: "ViewerBot Altbestand · Creator-Growth-Beta",
     guest: "Gast",
     logout: "Abmelden",
+    localStudioBadge: "Lokales Studio",
+    continueLocalStudio: "Im lokalen Studio fortfahren (ohne Konto)",
+    multiPlatformBadge: "Twitch · Kick · YouTube Live",
     launching: "Wird gestartet…",
     engineConnected: "Engine verbunden",
     disconnected: "Getrennt",
     connectionFailed: "Verbindung fehlgeschlagen",
     retry: "Erneut versuchen",
-    betaTitle: "Beta-Arbeitsbereich",
-    betaBody:
-      "Live-Planung · Highlight-Markierungen · CSV-Exporte · Ankündigungsentwürfe.",
-    betaSafety:
-      "Historische Controls für synthetisches Engagement sind in dieser Beta pausiert.",
-    legacyTitle: "ViewerBot",
-    migrationMode: "Altbestand",
-    legacyBody:
-      "Der ViewerBot-Bereich bleibt Teil von V4, damit deine Community eine klare Brücke zum neuen Produkt hat. Der alte Workflow ist sichtbar, aber synthetische Zuschauer- und Proxy-Aktionen sind pausiert.",
-    legacySafety:
-      "Alte Aktionen kontaktieren in dieser Beta weder Kick noch Twitch oder YouTube.",
-    workspace: "Alter Arbeitsbereich",
-    workspaceBody: "Kanal-Kontext",
-    legacyAutomation: "Runtime",
-    pausedForMigration: "Pausiert",
-    legacyAutomationBody: "In V4 Beta nicht verfügbar.",
-    nextStep: "Creator Growth",
-    nextStepTitle: "Live-Planung und Clips",
-    nextStepBody: "Markierungen, CSV-Exporte und Ankündigungsentwürfe.",
-    clipsTitle: "Status der Clip-Automatisierung",
-    clipsBody: "Der Erstellungsstatus erscheint nach Plattformbestätigung.",
-    kickClip:
-      "Nur Markierungen und Prüfexport. Diese Beta nutzt keinen Kick-Endpunkt zum Erstellen von Clips.",
-    twitchClip:
-      "Die offizielle Clip-Erstellung benötigt ein verbundenes Konto mit dem Scope clips:edit. Die OAuth-Integration ist in dieser Beta nicht aktiv.",
-    youtubeClip:
-      "Nur Markierungen und Prüfexport. Diese Beta erstellt keine YouTube-Clips oder Uploads.",
+    automationStudio: "Automationsstudio",
+    automationLocalRun: "Lokaler Ablauf",
+    automationStudioBody:
+      "Erstelle einen Live-Ablauf und bündele Ankündigung, Live-Flow, Highlights, Clip-Prüfung und Performance-Review in einer Warteschlange.",
+    automationStage: "Ablaufstatus",
+    automationLiveTitle: "Live-Titel",
+    automationLiveTitlePlaceholder: "Beispiel: Freitags-Challenge",
+    automationSchedule: "Zeitplan",
+    automationPlatforms: "Plattformen",
+    automationCreateRun: "Live-Ablauf erstellen",
+    automationMissingDetails:
+      "Füge einen Live-Titel, Zeitplan und mindestens eine Plattform hinzu.",
+    automationScheduled: "Geplant",
+    automationLiveNow: "Jetzt live",
+    automationInReview: "In Prüfung",
+    automationFinished: "Abgeschlossen",
+    automationStartLive: "Live starten",
+    automationFinishLive: "Live beenden",
+    automationCloseReview: "Prüfung abschließen",
+    automationReset: "Live-Ablauf löschen",
+    automationAnnouncement: "Ankündigungspaket",
+    automationLive: "Live-Ablauf",
+    automationMarkers: "Highlight-Markierungen",
+    automationClips: "Clip-Prüfung",
+    automationAnalytics: "Performance-Review",
+    automationReady: "Bereit",
+    automationWaiting: "Wartet",
+    automationActive: "Aktiv",
+    automationReview: "Prüfen",
+    automationComplete: "Abgeschlossen",
+    automationProviderNote:
+      "Dieser lokale Ablauf markiert keine öffentliche Aktion als zugestellt. Direktveröffentlichung, offizielle Clips und Analysen benötigen das verbundene offizielle Konto jedes Creators.",
     creatorTitle: "Creator-Growth-Toolkit",
     localOnly: "Nur lokal",
     creatorBody: "Live-Planung, Highlights und Kampagnenvorbereitung.",
@@ -608,6 +642,7 @@ const STORAGE_KEY = "velbots.locale.v1";
 function browserLocale(): Locale {
   if (typeof navigator === "undefined") return "en";
   const candidates = navigator.languages ?? [navigator.language];
+
   if (candidates.some((value) => value.toLowerCase().startsWith("pt")))
     return "pt-BR";
   if (candidates.some((value) => value.toLowerCase().startsWith("fr")))
@@ -616,6 +651,7 @@ function browserLocale(): Locale {
     return "es";
   if (candidates.some((value) => value.toLowerCase().startsWith("de")))
     return "de";
+
   return "en";
 }
 
@@ -624,6 +660,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(STORAGE_KEY);
+
     setLocale(
       LOCALES.includes(stored as Locale) ? (stored as Locale) : browserLocale(),
     );
@@ -640,9 +677,11 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       setLocale,
       t: (key, values) => {
         let text = messages[locale][key];
+
         for (const [name, replacement] of Object.entries(values ?? {})) {
           text = text.replaceAll(`{{${name}}}`, replacement);
         }
+
         return text;
       },
     }),
@@ -656,15 +695,18 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
 
 export function useLocale(): LocaleContextValue {
   const context = useContext(LocaleContext);
+
   if (!context) throw new Error("useLocale must be used within LocaleProvider");
+
   return context;
 }
 
 export function LanguageSelector() {
   const { locale, setLocale, t } = useLocale();
+
   return (
-    <label className="sr-only">
-      {t("language")}
+    <label>
+      <span className="sr-only">{t("language")}</span>
       <select
         aria-label={t("language")}
         className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 outline-none focus:border-zinc-500"

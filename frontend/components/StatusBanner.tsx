@@ -1,15 +1,16 @@
+import type { StudioRuntimeStatus } from "../services/runtimeDiagnostics";
+
 import React from "react";
-import type { BotStatus } from "../services/WebSocketService";
 
 export function StatusBanner({
   status,
 }: {
-  status: Pick<BotStatus, "code" | "message" | "startup_progress">;
+  status: Pick<StudioRuntimeStatus, "code" | "message">;
 }) {
   const stateColor =
-    status.code === "running"
+    status.code === "ready"
       ? "text-emerald-500"
-      : status.code === "stopping" || status.code === "warning"
+      : status.code === "warning"
         ? "text-amber-500"
         : status.code === "starting"
           ? "text-blue-500"
@@ -24,18 +25,9 @@ export function StatusBanner({
           {status.code}
         </span>
         <span className="text-sm text-zinc-400">
-          {status.message || "Awaiting instructions"}
+          {status.message || "Awaiting workspace status"}
         </span>
       </div>
-
-      {status.startup_progress > 0 && status.startup_progress < 100 && (
-        <div className="w-32 bg-zinc-800 rounded-full h-1 overflow-hidden">
-          <div
-            className="bg-white h-1 transition-all duration-300"
-            style={{ width: `${status.startup_progress}%` }}
-          />
-        </div>
-      )}
     </div>
   );
 }

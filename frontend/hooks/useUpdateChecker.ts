@@ -1,13 +1,14 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { getVersion } from "@tauri-apps/api/app";
+import { isTauri } from "@tauri-apps/api/core";
+
 import {
   checkForDesktopUpdate,
   installDesktopUpdate,
   shouldCheckForDesktopUpdate,
   UpdateInfo,
 } from "../services/desktopUpdater";
-import { getVersion } from '@tauri-apps/api/app';
-import { isTauri } from "@tauri-apps/api/core";
 
 export function useUpdateChecker() {
   const [updateAvailable, setUpdateAvailable] = useState(false);
@@ -36,9 +37,11 @@ export function useUpdateChecker() {
 
       try {
         const currentVersion = await getVersion();
+
         console.log(`Current app version: ${currentVersion}`);
 
         const update = await checkForDesktopUpdate();
+
         if (update) {
           setUpdateAvailable(true);
           setLatestVersion(update);
@@ -62,6 +65,6 @@ export function useUpdateChecker() {
     dismissUpdate,
     installUpdate,
     isInstalling,
-    installProgress
+    installProgress,
   };
 }

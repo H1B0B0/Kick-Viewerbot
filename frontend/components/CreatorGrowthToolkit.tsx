@@ -14,6 +14,7 @@ import {
 
 import { openExternal } from "../app/functions/openExternal";
 import { useLocale } from "../i18n/LocaleProvider";
+
 import { LiveAnnouncement } from "./LiveAnnouncement";
 
 const STORAGE_KEY = "velbots.creator-growth-toolkit.v1";

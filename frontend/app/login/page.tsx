@@ -46,7 +46,7 @@ export default function LoginPage() {
 
       await login({ username, password });
       router.push("/");
-    } catch (err: any) {
+    } catch (err: unknown) {
       let errorMessage = t("genericError");
 
       if (err instanceof Error) {
@@ -120,6 +120,14 @@ export default function LoginPage() {
             type="submit"
           >
             {isLoading ? t("signingIn") : t("signIn")}
+          </button>
+
+          <button
+            className="w-full py-2 border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-medium text-sm rounded-md transition-colors"
+            type="button"
+            onClick={() => router.push("/")}
+          >
+            {t("continueLocalStudio")}
           </button>
 
           <div className="relative py-4">

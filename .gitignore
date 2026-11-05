@@ -124,6 +124,8 @@ venv.bak/
 
 # Local code intelligence index
 /.codegraph/
+/creator-data/
+/creator-oauth.json
 
 # One-off migration scripts
 /clean_deps.py
@@ -156,4 +158,5 @@ backend/certs/velbots.shop.key.backup
 backend/certs/velbots.shop.cert.backup
 backend/certs/velbots.shop.key
 .omo/
-docs/
+docs/*
+!docs/creator-studio-release.md
